@@ -63,6 +63,12 @@ public class GenerateTest extends BaseSQLTest {
     testGenerateText(sql, ast);
   }
 
+  public void testMultiplicationOperator() {
+    String sql = "select price * (1 - discount) as disc_price, count(*) as count_order from src;";
+    String ast = "(TOK_QUERY (TOK_FROM (TOK_TABREF (TOK_TABNAME src))) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (* (TOK_TABLE_OR_COL price) (- 1 discount)) disc_price) (TOK_SELEXPR (TOK_FUNCTIONSTAR count) count_order))))";
+    testGenerateText(sql, ast);
+  }
+
   public void testUnion() {
     String sql = "select unionsrc.key, unionsrc.value from (select s1.key as key, s1.value as value from src s1 union  all select s2.key as key, s2.value as value from src s2 union  all select s3.key as key, s3.value as value from src s3) unionsrc;";
     String ast = "(TOK_QUERY (TOK_FROM (TOK_SUBQUERY (TOK_UNION (TOK_UNION (TOK_QUERY (TOK_FROM (TOK_TABREF (TOK_TABNAME src) s1)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (. (TOK_TABLE_OR_COL s1) key) key) (TOK_SELEXPR (. (TOK_TABLE_OR_COL s1) value) value)))) (TOK_QUERY (TOK_FROM (TOK_TABREF (TOK_TABNAME src) s2)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (. (TOK_TABLE_OR_COL s2) key) key) (TOK_SELEXPR (. (TOK_TABLE_OR_COL s2) value) value))))) (TOK_QUERY (TOK_FROM (TOK_TABREF (TOK_TABNAME src) s3)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (. (TOK_TABLE_OR_COL s3) key) key) (TOK_SELEXPR (. (TOK_TABLE_OR_COL s3) value) value))))) unionsrc)) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (. (TOK_TABLE_OR_COL unionsrc) key)) (TOK_SELEXPR (. (TOK_TABLE_OR_COL unionsrc) value)))))";
