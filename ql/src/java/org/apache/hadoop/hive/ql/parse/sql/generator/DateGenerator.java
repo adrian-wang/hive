@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hive.ql.parse.sql.generator;
 
-import java.util.List;
-
 import org.apache.hadoop.hive.ql.parse.ASTNode;
 import org.apache.hadoop.hive.ql.parse.HiveParser;
 import org.apache.hadoop.hive.ql.parse.sql.SqlASTNode;
@@ -27,37 +25,30 @@ import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
 
 import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
 
-public class CharStringGenerator extends BaseHiveASTGenerator {
+/**
+ * Generator for SQL92_RESERVED_DATE node. 
+ *
+ * The expected SQL AST structure for a Date value expression is a SQL92_RESERVED_DATE node
+ * followed by a sibling CHAR_STRING or CHAR_STRING_PERL or NATIONAL_CHAR_STRING_LIT node.
+ *
+ */
+public class DateGenerator extends BaseHiveASTGenerator {
 
   @Override
   public boolean generate(ASTNode hiveRoot, SqlASTNode sqlRoot, ASTNode currentHiveNode,
       SqlASTNode currentSqlNode, TranslateContext context) throws Exception {
-    ASTNode ret = SqlXlateUtil.newASTNode(HiveParser.StringLiteral, currentSqlNode.getText());
-
     //
-    // Special handling for Date value expression.
-    // If the immediate preceding sibling node is SQL92_RESERVED_DATE, then attach the
-    // newly created StringLiteral HIVE AST node to the TOK_FUNCTION HIVE AST node which is
-    // the last child of the current HIVE node at present.
+    // Create a HIVE TOK_FUNCTION node and attach it to the current HIVE node.
     //
-    int childIndex = currentSqlNode.getChildIndex();
-    if (childIndex > 0) {
-      SqlASTNode parent = (SqlASTNode) currentSqlNode.getParent();
-      assert (parent != null);
+    ASTNode func = SqlXlateUtil.newASTNode(HiveParser.TOK_FUNCTION, "TOK_FUNCTION");
+    attachHiveNode(hiveRoot, currentHiveNode, func);
+    //
+    // Create a HIVE TOK_DATE node as the first child of the TOK_FUNCTION node
+    //
+    ASTNode date = SqlXlateUtil.newASTNode(HiveParser.TOK_DATE, "TOK_DATE");
+    attachHiveNode(hiveRoot, func, date);
 
-      SqlASTNode preSibling = (SqlASTNode) parent.getChild(childIndex - 1);
-      if (preSibling.getType() == PantheraParser_PLSQLParser.SQL92_RESERVED_DATE) {
-        int childCount = currentHiveNode.getChildCount();
-        assert (childCount > 0);
-        ASTNode node = (ASTNode) currentHiveNode.getChild(childCount - 1);
-        assert(node.getType() == HiveParser.TOK_FUNCTION && node.getChildCount() == 1);
-        assert(((ASTNode) node.getChild(0)).getType() == HiveParser.TOK_DATE);
-        attachHiveNode(hiveRoot, node, ret);
-        return true;
-      }
-    }
-    
-    super.attachHiveNode(hiveRoot, currentHiveNode, ret);
+    assert(currentSqlNode.getChildren() == null || currentSqlNode.getChildren().size() == 0);
     return true;
   }
 

@@ -146,6 +146,7 @@ public class GeneratorFactory {
     genMap.put(PantheraParser_PLSQLParser.EXTRACT_VK, new NothingGenerator());
     genMap.put(PantheraParser_PLSQLParser.REGULAR_ID, new RegularIdGenerator());
     genMap.put(PantheraParser_PLSQLParser.SUBSTRING_VK, new SubstringFuncGenerator());
+    genMap.put(PantheraParser_PLSQLParser.SQL92_RESERVED_DATE, new DateGenerator());
   }
 
   static {
