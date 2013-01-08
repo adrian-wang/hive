@@ -23,10 +23,18 @@ import org.apache.hadoop.hive.ql.parse.sql.SqlASTNode;
 import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
 
 public class MinusSignGenerator extends BaseHiveASTGenerator {
+  private DateIntervalExpressionGenerator dateIntervalExpressionGenerator = DateIntervalExpressionGenerator.getInstance();
 
   @Override
   public boolean generate(ASTNode hiveRoot, SqlASTNode sqlRoot, ASTNode currentHiveNode,
       SqlASTNode currentSqlNode, TranslateContext context) throws Exception {
+    //
+    // Special handling for "date value expression - interval value expression".
+    //
+    if (dateIntervalExpressionGenerator.generate (hiveRoot, sqlRoot, currentHiveNode, currentSqlNode, context)) {
+      return true;
+    }
+
     return super.baseProcess(HiveParser.MINUS, "-", hiveRoot, sqlRoot, currentHiveNode, currentSqlNode, context);
   }
 
