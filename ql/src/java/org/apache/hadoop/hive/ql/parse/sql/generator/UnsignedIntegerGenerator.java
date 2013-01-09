@@ -28,7 +28,15 @@ public class UnsignedIntegerGenerator extends BaseHiveASTGenerator {
   @Override
   public boolean generate(ASTNode hiveRoot, SqlASTNode sqlRoot, ASTNode currentHiveNode,
       SqlASTNode currentSqlNode, TranslateContext context) throws Exception {
-    ASTNode ret = SqlXlateUtil.newASTNode(HiveParser.Number, currentSqlNode.getText());
+    //
+    // SQL92 allows omission of the leading zero for a decimal. for example, ".01".
+    // HIVE does not support this type of literal, so we need to add back the omitted 0.
+    //
+    String numericLiteral = currentSqlNode.getText();
+    if (numericLiteral.charAt(0) == '.') {
+      numericLiteral = "0" + numericLiteral;
+    }
+    ASTNode ret = SqlXlateUtil.newASTNode(HiveParser.Number, numericLiteral);
     super.attachHiveNode(hiveRoot, currentHiveNode, ret);
     return true;
   }
