@@ -47,6 +47,8 @@ public class PLSQLFilterBlockFactory extends FilterBlockFactory {
     typeMap.put(PantheraParser_PLSQLParser.GREATER_THAN_OR_EQUALS_OP, GREATER_THAN_OR_EQUALS);
     typeMap.put(PantheraParser_PLSQLParser.NOT_IN, NOT_IN);
     typeMap.put(PantheraParser_PLSQLParser.SQL92_RESERVED_IN, IN);
+    typeMap.put(PantheraParser_PLSQLParser.NOT_BETWEEN, NOT_BETWEEN);
+    typeMap.put(PantheraParser_PLSQLParser.SQL92_RESERVED_BETWEEN, BETWEEN);
     typeMap.put(PantheraParser_PLSQLParser.NOT_LIKE, NOT_LIKE);
     typeMap.put(PantheraParser_PLSQLParser.SQL92_RESERVED_LIKE, LIKE);
     typeMap.put(PantheraParser_PLSQLParser.SQL92_RESERVED_AND, AND);

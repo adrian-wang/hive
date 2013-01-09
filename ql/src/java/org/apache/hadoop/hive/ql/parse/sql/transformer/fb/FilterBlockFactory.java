@@ -73,6 +73,8 @@ public abstract class FilterBlockFactory {
   static final int SELECT_LIST = 16;
   static final int WHERE = 17;
   static final int HAVING = 18;
+  static final int NOT_BETWEEN = 19;
+  static final int BETWEEN = 20;
 
 
 
@@ -90,6 +92,8 @@ public abstract class FilterBlockFactory {
     fbMap.put(GREATER_THAN_OR_EQUALS, new OpBuilder());
     fbMap.put(NOT_IN, new OpBuilder());
     fbMap.put(IN, new OpBuilder());
+    fbMap.put(NOT_BETWEEN, new OpBuilder());
+    fbMap.put(BETWEEN, new OpBuilder());
     fbMap.put(NOT_LIKE, new OpBuilder());
     fbMap.put(LIKE, new OpBuilder());
     fbMap.put(AND, new AndBuilder());
