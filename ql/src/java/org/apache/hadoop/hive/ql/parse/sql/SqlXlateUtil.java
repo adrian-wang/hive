@@ -253,7 +253,9 @@ public final class SqlXlateUtil {
   }
 
   /**
-   * Collect all src table names and aliases (normally in from clause)
+   * Collect all src table names or aliases in from clause.
+   *
+   * If a table has an alias, then its alias instead of its name is returned.
    *
    * @param n
    *          root of SQL AST subtree
@@ -261,6 +263,39 @@ public final class SqlXlateUtil {
    *          result set
    */
   public static void getSrcTblAlias(CommonTree n, Set<String> srcTbls) {
+    boolean skipRecursion = false;
+    if (n.getType() == PantheraParser_PLSQLParser.TABLE_REF_ELEMENT) {
+      if (n.getChild(0).getType() == PantheraParser_PLSQLParser.ALIAS) {
+        srcTbls.add(n.getChild(0).getChild(0).getText());
+        skipRecursion = true;
+      }
+    } else if (n.getType() == PantheraParser_PLSQLParser.TABLEVIEW_NAME) {
+      if (n.getChildCount() == 1) {
+        srcTbls.add(n.getChild(0).getText());
+      } else if (n.getChildCount() == 2) {
+        // only record table name ignore schema name
+        srcTbls.add(n.getChild(1).getText());
+      }
+    }
+    // recurse for all children
+    if (!skipRecursion) {
+      for (int i = 0; i < n.getChildCount(); i++) {
+        getSrcTblAlias((SqlASTNode) n.getChild(i), srcTbls);
+      }
+    }
+  }
+
+  /**
+   * Collect all src table names and aliases in from clause.
+   *
+   * If a table has an alias, then both its alias and name are returned.
+   *
+   * @param n
+   *          root of SQL AST subtree
+   * @param collection
+   *          result set
+   */
+  public static void getSrcTblAndAlias(CommonTree n, Set<String> srcTbls) {
     if (n.getType() == PantheraParser_PLSQLParser.TABLE_REF_ELEMENT) {
       if (n.getChild(0).getType() == PantheraParser_PLSQLParser.ALIAS) {
         srcTbls.add(n.getChild(0).getChild(0).getText());
@@ -275,7 +310,7 @@ public final class SqlXlateUtil {
     }
     // recurse for all children
     for (int i = 0; i < n.getChildCount(); i++) {
-      getSrcTblAlias((CommonTree) n.getChild(i), srcTbls);
+      getSrcTblAndAlias((SqlASTNode) n.getChild(i), srcTbls);
     }
   }
 

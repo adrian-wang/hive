@@ -105,7 +105,7 @@ public class FilterBlockUtil {
    */
   public static Set<String> getTableName(CommonTree select) {
     Set<String> result = new HashSet<String>();
-    SqlXlateUtil.getSrcTblAlias((CommonTree) select
+    SqlXlateUtil.getSrcTblAndAlias((CommonTree) select
         .getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_FROM), result);
     return result;
   }
