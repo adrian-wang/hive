@@ -356,17 +356,7 @@ public class QueryInfo {
 
   public Set<String> getSrcTblAlias() {
     SqlASTNode select = this.getSelectKeyForThisQ();
-    if (selectKeyToSrcTblAlias == null) {
-      selectKeyToSrcTblAlias = new HashMap<SqlASTNode, Set<String>>();
-    }
-    Set<String> srcTblAlias = selectKeyToSrcTblAlias.get(select);
-    if (srcTblAlias == null) {
-      srcTblAlias = new HashSet<String>();
-      SqlXlateUtil.getSrcTblAlias((SqlASTNode) select
-          .getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_FROM), srcTblAlias);
-      selectKeyToSrcTblAlias.put(select, srcTblAlias);
-    }
-    return srcTblAlias;
+    return getSrcTblAliasForSelectKey(select);
   }
 
 

@@ -25,6 +25,7 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 import org.antlr33.runtime.tree.CommonTree;
+import org.antlr33.runtime.tree.Tree;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -844,5 +845,17 @@ public final class SqlXlateUtil {
   public static void exchangeChildrenPosition(CommonTree branch) {
     CommonTree left = (CommonTree) branch.deleteChild(0);
     branch.addChild(left);
+  }
+
+  public static boolean containTableName(String tableName, Tree node) {
+    if (node.getType() == PantheraParser_PLSQLParser.ID && node.getText().equals(tableName)) {
+      return true;
+    }
+    for (int i = 0; i < node.getChildCount(); i++) {
+      if (containTableName(tableName, node.getChild(i))) {
+        return true;
+      }
+    }
+    return false;
   }
 }

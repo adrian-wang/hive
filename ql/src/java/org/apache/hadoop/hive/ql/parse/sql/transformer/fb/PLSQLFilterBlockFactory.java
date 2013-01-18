@@ -23,6 +23,7 @@ import org.antlr33.runtime.tree.CommonTree;
 import org.antlr33.runtime.tree.Tree;
 import org.apache.hadoop.hive.ql.parse.sql.SqlASTNode;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
+import org.apache.hadoop.hive.ql.parse.sql.SqlXlateUtil;
 
 import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
 
@@ -77,12 +78,12 @@ public class PLSQLFilterBlockFactory extends FilterBlockFactory {
           if (selectStack.size() <= 1) {
             return false;
           }
-          if (containTableName(child.getChild(0).getText(), selectStack.peek()
+          if (SqlXlateUtil.containTableName(child.getChild(0).getText(), selectStack.peek()
               .getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_FROM))) {
             return false;
           }
           CommonTree temp = selectStack.pop();
-          boolean correlated = containTableName(child.getChild(0).getText(), selectStack.peek()
+          boolean correlated = SqlXlateUtil.containTableName(child.getChild(0).getText(), selectStack.peek()
               .getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_FROM));
           selectStack.push(temp);
           if (correlated) {
@@ -95,17 +96,4 @@ public class PLSQLFilterBlockFactory extends FilterBlockFactory {
     // FIXME
     return false;
   }
-
-  boolean containTableName(String tableName, Tree node) {
-    if (node.getType() == PantheraParser_PLSQLParser.ID && node.getText().equals(tableName)) {
-      return true;
-    }
-    for (int i = 0; i < node.getChildCount(); i++) {
-      if (containTableName(tableName, node.getChild(i))) {
-        return true;
-      }
-    }
-    return false;
-  }
-
 }
