@@ -27,5 +27,5 @@ import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
  *
  */
 public interface SqlASTTransformer {
-  void transform(SqlASTNode tree, TranslateContext context) throws SqlXlateException;
+  void transformAST(SqlASTNode tree, TranslateContext context) throws SqlXlateException;
 }

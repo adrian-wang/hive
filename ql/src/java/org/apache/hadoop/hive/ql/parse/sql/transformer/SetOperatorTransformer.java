@@ -26,7 +26,7 @@ import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
  * SetOperatorTransformer.
  *
  */
-public class SetOperatorTransformer implements SqlASTTransformer {
+public class SetOperatorTransformer  extends BaseSqlASTTransformer  {
 
   @Override
   public void transform(SqlASTNode tree, TranslateContext context) throws SqlXlateException {

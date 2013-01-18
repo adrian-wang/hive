@@ -65,7 +65,7 @@ public class SqlASTTranslator {
     if (transformer == null) {
       transformer = TransformerBuilder.buildTransformer();
     }
-    transformer.transform(sqlASTRoot, context);
+    transformer.transformAST(sqlASTRoot, context);
     LOG.info("Transformed SQL AST : " + sqlASTRoot.toStringTree());
 
     HiveASTGenerator generator = GeneratorFactory.getGenerator(sqlASTRoot);

@@ -17,25 +17,32 @@
  */
 package org.apache.hadoop.hive.ql.parse.sql.transformer;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hive.ql.parse.sql.SqlASTNode;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
 import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
 /**
- * Transform rownum clause of Oracle.
- * RowNumTransformer.
+ * Do something before or after transform.
+ * BaseSqlASTTransformer.
  *
  */
-public class RowNumTransformer  extends BaseSqlASTTransformer  {
+public abstract class BaseSqlASTTransformer implements SqlASTTransformer {
+  private static final Log LOG = LogFactory.getLog(BaseSqlASTTransformer.class);
 
-  SqlASTTransformer tf;
-
-  public RowNumTransformer(SqlASTTransformer tf) {
-    this.tf = tf;
-  }
 
   @Override
-  public void transform(SqlASTNode tree, TranslateContext context) throws SqlXlateException {
-    tf.transformAST(tree, context);
+  public void transformAST(SqlASTNode tree, TranslateContext context) throws SqlXlateException {
+
+    transform(tree, context);
+
+    //track log
+    LOG.info("After "+ this.getClass().getSimpleName()+", sql ast is:"+tree.toStringTree());
+    LOG.info("After "+ this.getClass().getSimpleName()+", query info is:"+context.getQInfoRoot().toStringTree());
+    LOG.info("After "+ this.getClass().getSimpleName()+", filterBlock is:"+context.getQInfoRoot().toFilterBlockStringTree());
   }
+
+  protected abstract void transform(SqlASTNode tree, TranslateContext context)
+      throws SqlXlateException;
 
 }

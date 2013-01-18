@@ -26,7 +26,7 @@ import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
  * TopQueryTransformer.
  *
  */
-public class TopQueryTransformer implements SqlASTTransformer {
+public class TopQueryTransformer extends BaseSqlASTTransformer {
 
   SqlASTTransformer tf;
 
@@ -36,7 +36,7 @@ public class TopQueryTransformer implements SqlASTTransformer {
 
   @Override
   public void transform(SqlASTNode tree, TranslateContext context) throws SqlXlateException {
-    tf.transform(tree, context);
+    tf.transformAST(tree, context);
   }
 
 }

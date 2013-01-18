@@ -33,14 +33,14 @@ import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
  * PrepareQueryInfoTransformer.
  *
  */
-public class PrepareQueryInfoTransformer implements SqlASTTransformer {
+public class PrepareQueryInfoTransformer extends BaseSqlASTTransformer  {
 
   SqlASTTransformer tf;
   private final SqlXlateUtil.AliasGenerator aliasGen = new SqlXlateUtil.AliasGenerator();
 
   @Override
   public void transform(SqlASTNode tree, TranslateContext context) throws SqlXlateException {
-    this.tf.transform(tree, context);
+    this.tf.transformAST(tree, context);
     prepareQueryInfo(tree, context);
 
   }

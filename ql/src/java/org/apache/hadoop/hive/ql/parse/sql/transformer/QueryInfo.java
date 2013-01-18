@@ -375,7 +375,7 @@ public class QueryInfo {
     return false;
   }
 
-  private void buildTree(QueryInfo qf,StringBuilder sb) {
+  private void buildTree(QueryInfo qf, StringBuilder sb) {
     if (qf.hasChildren()) {
       sb.append("(");
     }
@@ -386,7 +386,7 @@ public class QueryInfo {
     }
     if (qf.hasChildren()) {
       for (QueryInfo qc : qf.getChildren()) {
-        qc.buildTree(qc,sb);
+        qc.buildTree(qc, sb);
       }
       sb.append(")");
     }
@@ -394,21 +394,24 @@ public class QueryInfo {
 
   public String toStringTree() {
     StringBuilder sb = new StringBuilder();
-    this.buildTree(this,sb);
+    this.buildTree(this, sb);
     return sb.toString();
   }
 
-  public String toFilterBlockStringTree(){
+  public String toFilterBlockStringTree() {
 
-    if (children == null||children.size()==0) {
-      return this.getFilterBlockTreeRoot().toStringTree();
+    if (children == null || children.size() == 0) {
+      return this.getFilterBlockTreeRoot() == null ? null : this.getFilterBlockTreeRoot()
+          .toStringTree();
     }
     StringBuilder sb = new StringBuilder();
     sb.append("[");
-    sb.append(this.getFilterBlockTreeRoot()==null?"root":this.getFilterBlockTreeRoot().toStringTree());
+    sb.append(this.getFilterBlockTreeRoot() == null ? "root" : this.getFilterBlockTreeRoot()
+        .toStringTree());
     sb.append(" ");
-    for(int i=0;i<children.size();i++){
-      sb.append(children.get(i).getFilterBlockTreeRoot().toStringTree());
+    for (int i = 0; i < children.size(); i++) {
+      sb.append(children.get(i).getFilterBlockTreeRoot() == null ? null : children.get(i)
+          .getFilterBlockTreeRoot().toStringTree());
       sb.append(" ");
     }
     sb.append("]");

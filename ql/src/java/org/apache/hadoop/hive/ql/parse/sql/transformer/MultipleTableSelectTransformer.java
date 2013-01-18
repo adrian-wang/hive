@@ -36,7 +36,7 @@ import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
  * Transformer for multiple-table select.
  *
  */
-public class MultipleTableSelectTransformer implements SqlASTTransformer {
+public class MultipleTableSelectTransformer extends BaseSqlASTTransformer {
   SqlASTTransformer tf;
 
   private static class JoinPair<T> {
@@ -81,7 +81,7 @@ public class MultipleTableSelectTransformer implements SqlASTTransformer {
 
   @Override
   public void transform(SqlASTNode tree, TranslateContext context) throws SqlXlateException {
-    tf.transform(tree, context);
+    tf.transformAST(tree, context);
     for (QueryInfo qf : context.getqInfoList()) {
       transformQuery(qf, qf.getSelectKeyForThisQ());
       // Update the from in the query info in case it was changed by the transformer.
@@ -226,7 +226,7 @@ public class MultipleTableSelectTransformer implements SqlASTTransformer {
         throw new SqlXlateException("Multi-table selection transformer: join operation not supported in the from clause!");
       }
     }
-   
+
     //
     // Create new From node and its child Table Ref node.
     // Replace the old Form node with the new From node.

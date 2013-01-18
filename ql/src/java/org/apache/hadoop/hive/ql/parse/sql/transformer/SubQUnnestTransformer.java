@@ -29,7 +29,7 @@ import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.QueryBlock;
  * FilterBlockTransformer.
  *
  */
-public class SubQUnnestTransformer implements SqlASTTransformer {
+public class SubQUnnestTransformer  extends BaseSqlASTTransformer  {
 
 
   SqlASTTransformer tf;
@@ -40,7 +40,7 @@ public class SubQUnnestTransformer implements SqlASTTransformer {
 
   @Override
   public void transform(SqlASTNode tree, TranslateContext context) throws SqlXlateException {
-    tf.transform(tree, context);
+    tf.transformAST(tree, context);
     this.transformQInfo(tree, context);
   }
 

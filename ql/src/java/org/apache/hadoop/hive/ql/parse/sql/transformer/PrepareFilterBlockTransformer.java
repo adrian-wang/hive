@@ -36,7 +36,7 @@ import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
  * FilterBlockPrepareTransformer.
  *
  */
-public class PrepareFilterBlockTransformer implements SqlASTTransformer {
+public class PrepareFilterBlockTransformer extends BaseSqlASTTransformer {
   SqlASTTransformer tf;
 
   public PrepareFilterBlockTransformer(SqlASTTransformer tf) {
@@ -45,7 +45,7 @@ public class PrepareFilterBlockTransformer implements SqlASTTransformer {
 
   @Override
   public void transform(SqlASTNode tree, TranslateContext context) throws SqlXlateException {
-    tf.transform(tree, context);
+    tf.transformAST(tree, context);
     for (QueryInfo qf : context.getqInfoList()) {
       this.buildFilterBlockTree(qf, context);
     }
