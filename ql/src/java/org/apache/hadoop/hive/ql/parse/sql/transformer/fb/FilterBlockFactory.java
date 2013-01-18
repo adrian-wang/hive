@@ -130,12 +130,16 @@ public abstract class FilterBlockFactory {
           + node.getText());
     }
     FilterBlock fb;
-    if (fbl.get(0) instanceof UnCorrelatedFilterBlock
-        && fbl.get(1) instanceof UnCorrelatedFilterBlock) {
-      fb = new UnCorrelatedFilterBlock();
-    } else if (fbl.get(0) instanceof CorrelatedFilterBlock
-        && fbl.get(1) instanceof CorrelatedFilterBlock) {
-      fb = new CorrelatedFilterBlock();
+    // merge normalFilterBlock
+    if (fbl != null && fbl.size() == 2 && fbl.get(0) instanceof NormalFilterBlack
+        && fbl.get(1) instanceof NormalFilterBlack) {
+      // both UnCorrelatedFilterBlock
+      if (fbl.get(0) instanceof UnCorrelatedFilterBlock
+          && fbl.get(1) instanceof UnCorrelatedFilterBlock) {
+        fb = new UnCorrelatedFilterBlock();
+      } else { // have CorrelatedFilterBlock
+        fb = new CorrelatedFilterBlock();
+      }
     } else {
       switch (type) {
       case AND:

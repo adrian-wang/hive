@@ -311,7 +311,7 @@ public final class SqlXlateUtil {
     }
     // recurse for all children
     for (int i = 0; i < n.getChildCount(); i++) {
-      getSrcTblAndAlias((SqlASTNode) n.getChild(i), srcTbls);
+      getSrcTblAndAlias((CommonTree) n.getChild(i), srcTbls);
     }
   }
 

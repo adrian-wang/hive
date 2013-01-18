@@ -47,7 +47,7 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
   CommonTree bottomSelect;
   CommonTree subQNode;
   FilterBlockContext fbContext;
-  FilterBlock fb;// current filter block
+  FilterBlock fb;// current normalFilterBlock
   TranslateContext context;
   Map<String, String> tableAliasMap = new HashMap<String, String>();
   Map<String, Map<String, String>> columnAliasMap = new HashMap<String, Map<String, String>>();
@@ -215,22 +215,24 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
   }
 
   /**
-   * extract join key from current fb.
+   * extract join key from filter op node.
+   * TODO optimize it.
    *
    * @return [0] bottom key<br>
    *         [1] top key
    * @throws SqlXlateException
    */
-  CommonTree[] getJoinKey() throws SqlXlateException {
+  CommonTree[] getFilterKey(CommonTree filterOp) throws SqlXlateException {
     CommonTree[] result = new CommonTree[2];
     Stack<CommonTree> selectStack = new Stack<CommonTree>();
     selectStack.push(topSelect);
     selectStack.push(bottomSelect);
-    CommonTree op = (CommonTree) fb.getASTNode();
-    for (int i = 0; i < op.getChildCount(); i++) {
-      CommonTree child = (CommonTree) op.getChild(i);
+    for (int i = 0; i < filterOp.getChildCount(); i++) {
+      CommonTree child = (CommonTree) filterOp.getChild(i);
       if (!PLSQLFilterBlockFactory.getInstance().isCorrelated(selectStack, child)) {
-        result[0] = child;
+        if (child.getType() == PantheraParser_PLSQLParser.CASCATED_ELEMENT) {
+          result[0] = child;
+        }
       }
 
       if (PLSQLFilterBlockFactory.getInstance().isCorrelated(selectStack, child)) {
@@ -239,6 +241,52 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
     }
 
     return result;
+  }
+
+  List<CommonTree[]> getWherekey() throws SqlXlateException {
+    List<CommonTree[]> result = new ArrayList<CommonTree[]>();
+    this.getWhereKey(fb.getASTNode(), result);
+    return result;
+  }
+
+  private void getWhereKey(CommonTree filterOp, List<CommonTree[]> list) throws SqlXlateException {
+    if (isFilterOp(filterOp)) {
+      list.add(getFilterKey(filterOp));
+      return;
+    }
+    if (isLogicOp(filterOp)) {
+      for (int i = 0; i < filterOp.getChildCount(); i++) {
+        getWhereKey((CommonTree) filterOp.getChild(i), list);
+      }
+    }
+    throw new SqlXlateException("unknow filter operation:" + filterOp.getText());
+
+  }
+
+  private boolean isFilterOp(CommonTree node) {
+    int type = node.getType();
+    switch (type) {
+    case PantheraParser_PLSQLParser.EQUALS_OP:
+    case PantheraParser_PLSQLParser.GREATER_THAN_OP:
+    case PantheraParser_PLSQLParser.GREATER_THAN_OR_EQUALS_OP:
+    case PantheraParser_PLSQLParser.LESS_THAN_OP:
+    case PantheraParser_PLSQLParser.LESS_THAN_OR_EQUALS_OP:
+    case PantheraParser_PLSQLParser.NOT_EQUAL_OP:
+      return true;
+    default:
+      return false;
+    }
+  }
+
+  private boolean isLogicOp(CommonTree node) {
+    int type = node.getType();
+    switch (type) {
+    case PantheraParser_PLSQLParser.SQL92_RESERVED_AND:
+    case PantheraParser_PLSQLParser.SQL92_RESERVED_OR:
+      return true;
+    default:
+      return false;
+    }
   }
 
   /**
@@ -267,9 +315,12 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
 
 
   void buildGroup(CommonTree cascatedElement) {
-    CommonTree group = this.createSqlASTNode(PantheraParser_PLSQLParser.SQL92_RESERVED_GROUP,
-        "group");
-    this.attachChild(bottomSelect, group);
+    CommonTree group = (CommonTree) bottomSelect
+        .getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_GROUP);
+    if (group == null) {
+      group = this.createSqlASTNode(PantheraParser_PLSQLParser.SQL92_RESERVED_GROUP, "group");
+      this.attachChild(bottomSelect, group);
+    }
     CommonTree groupByElement = this.createSqlASTNode(PantheraParser_PLSQLParser.GROUP_BY_ELEMENT,
         "GROUP_BY_ELEMENT");
     this.attachChild(group, groupByElement);
@@ -310,14 +361,28 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
     return logicExpr;
   }
 
+  void addConditionToWhere(CommonTree where, CommonTree op, CommonTree child0, CommonTree child1) {
+    CommonTree logicExpr = (CommonTree) where
+        .getFirstChildWithType(PantheraParser_PLSQLParser.LOGIC_EXPR);
+    assert (logicExpr.getChildCount() == 1);
+    CommonTree current = (CommonTree) logicExpr.deleteChild(0);
+    CommonTree and = this.createSqlASTNode(PantheraParser_PLSQLParser.SQL92_RESERVED_AND, "and");
+    this.attachChild(logicExpr, and);
+    this.attachChild(and, current);
+    this.attachChild(op, child0);
+    this.attachChild(op, child1);
+    this.attachChild(and, op);
+  }
 
-  void deleteBranch(CommonTree root, int branchType) {
+
+  CommonTree deleteBranch(CommonTree root, int branchType) {
     for (int i = 0; i < root.getChildCount(); i++) {
       if (root.getChild(i).getType() == branchType) {
-        root.deleteChild(i);
-        break;
+        return (CommonTree) root.deleteChild(i);
+
       }
     }
+    return null;
   }
 
   /**

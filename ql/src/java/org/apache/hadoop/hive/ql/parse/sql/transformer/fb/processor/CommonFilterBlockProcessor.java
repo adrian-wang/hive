@@ -97,36 +97,57 @@ public abstract class CommonFilterBlockProcessor extends BaseFilterBlockProcesso
   void processCompareC(CommonTree joinType) throws SqlXlateException {
     // join
     CommonTree join = this.createJoin(topSelect);
-    CommonTree joinSubAlias = super.buildJoin(joinType, join, bottomSelect);
+    CommonTree joinSubAlias = super.buildJoin(super.createSqlASTNode(
+        PantheraParser_PLSQLParser.CROSS_VK, "cross"), join, bottomSelect);
 
     // select list
     CommonTree compareKeyAlias = super.addAlias((CommonTree) ((CommonTree) bottomSelect
         .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST)).getChild(0));
-    CommonTree[] joinKey = super.getJoinKey();
-    CommonTree joinKeyAlias = super.addSelectItem((CommonTree) bottomSelect
-        .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST), FilterBlockUtil
-        .cloneTree(joinKey[0]));
+    List<CommonTree[]> joinKeys = super.getWherekey();
+    for (int i = 0; i < joinKeys.size(); i++) {
+      CommonTree joinKey = joinKeys.get(i)[0];
 
+
+      if (joinKey != null) {
+        // group
+        super.buildGroup(FilterBlockUtil.cloneTree(joinKey));
+        //add select item
+        CommonTree joinKeyAlias = super.addSelectItem((CommonTree) bottomSelect
+            .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST), FilterBlockUtil
+            .cloneTree(joinKey));
+        //modify filter to alias
+        CommonTree anyElement = (CommonTree)joinKey.getChild(0);
+        if(anyElement.getChildCount()==2){
+          ((CommonTree)anyElement.getChild(0)).getToken().setText(joinSubAlias.getChild(0).getText());
+          ((CommonTree)anyElement.getChild(1)).getToken().setText(joinKeyAlias.getChild(0).getText());
+        }
+
+      }
+    }
+
+    // TODO cross join optimization will do it
     // on
-    CommonTree on = super.buildOn(FilterBlockUtil.dupNode(this.fb.getASTNode()), FilterBlockUtil
-        .cloneTree((CommonTree) joinKey[1]), super.createCascatedElementWithTableName(
-        (CommonTree) joinSubAlias.getChild(0), FilterBlockUtil.cloneTree((CommonTree) joinKeyAlias
-            .getChild(0))));
-    super.attachChild(join, on);
+    // CommonTree on = super.buildOn(FilterBlockUtil.dupNode(this.fb.getASTNode()), FilterBlockUtil
+    // .cloneTree((CommonTree) joinKey[1]), super.createCascatedElementWithTableName(
+    // (CommonTree) joinSubAlias.getChild(0), FilterBlockUtil.cloneTree((CommonTree) joinKeyAlias
+    // .getChild(0))));
+    // super.attachChild(join, on);
 
-    // group
-    super.buildGroup(FilterBlockUtil.cloneTree(joinKey[0]));
+
 
     // where
-    CommonTree where = super.buildWhere(FilterBlockUtil.dupNode(super.subQNode),
+    super.deleteBranch(bottomSelect,
+        PantheraParser_PLSQLParser.SQL92_RESERVED_WHERE);
+    CommonTree where = super.createSqlASTNode(PantheraParser_PLSQLParser.SQL92_RESERVED_WHERE, "where");
+    CommonTree logicExpr = super.createSqlASTNode(PantheraParser_PLSQLParser.LOGIC_EXPR, "LOGIC_EXPR");
+    super.attachChild(where, logicExpr);
+    super.attachChild(logicExpr, fb.getASTNode());
+    super.addConditionToWhere(where, FilterBlockUtil.dupNode(super.subQNode),
         (CommonTree) super.subQNode
             .getFirstChildWithType(PantheraParser_PLSQLParser.CASCATED_ELEMENT), super
             .createCascatedElement(FilterBlockUtil
                 .cloneTree((CommonTree) compareKeyAlias.getChild(0))));
     super.attachChild(topSelect, where);
-
-    // TODO naive, simple
-    super.deleteBranch(bottomSelect, PantheraParser_PLSQLParser.SQL92_RESERVED_WHERE);
   }
 
   /**
