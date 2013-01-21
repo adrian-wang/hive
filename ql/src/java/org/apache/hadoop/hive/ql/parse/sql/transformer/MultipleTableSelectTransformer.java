@@ -261,8 +261,6 @@ public class MultipleTableSelectTransformer extends BaseSqlASTTransformer {
         } else if (alreadyJoinedTables.contains(tableJoinPair.getFirst()) && alreadyJoinedTables.contains(tableJoinPair.getSecond())) {
           SqlASTNode expressionRoot = (SqlASTNode) newTableRef.getChild(newTableRef.getChildCount() - 1).getChild(1).getChild(0);
           addJoinCondition(joinInfo.get(tableJoinPair), expressionRoot);
-          alreadyJoinedTables.add(tableJoinPair.getFirst());
-          alreadyJoinedTables.add(tableJoinPair.getSecond());
         } else if (alreadyJoinedTables.contains(tableJoinPair.getFirst())) {
           generateJoin(tableJoinPair.getSecond(), joinInfo.get(tableJoinPair), oldFrom, newTableRef);
           alreadyJoinedTables.add(tableJoinPair.getSecond());

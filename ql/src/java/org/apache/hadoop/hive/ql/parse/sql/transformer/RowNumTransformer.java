@@ -17,12 +17,24 @@
  */
 package org.apache.hadoop.hive.ql.parse.sql.transformer;
 
+import java.util.Stack;
+
+import org.apache.hadoop.hive.ql.parse.sql.PantheraExpParser;
 import org.apache.hadoop.hive.ql.parse.sql.SqlASTNode;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
+import org.apache.hadoop.hive.ql.parse.sql.SqlXlateUtil;
 import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
+
+import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
+
 /**
  * Transform rownum clause of Oracle.
- * RowNumTransformer.
+ *
+ * Tranform the form "select ... from ... where rownum (< | <=) <int>" to "select ... from ... limit <int>".
+ * note that there is only one condition in the where clause, that is, rownum (< | <=) <int>.
+ *
+ * Optimization: in the case where "select * from (subquery) limit <int>" then drop the outer query,
+ *                     and promote the subquery after attaching the parent's limit token to it.
  *
  */
 public class RowNumTransformer  extends BaseSqlASTTransformer  {
@@ -36,6 +48,109 @@ public class RowNumTransformer  extends BaseSqlASTTransformer  {
   @Override
   public void transform(SqlASTNode tree, TranslateContext context) throws SqlXlateException {
     tf.transformAST(tree, context);
+
+    Stack<SqlASTNode> stack = new Stack<SqlASTNode>();
+    stack.push (null);
+    transformRownum (tree, stack);
   }
 
+  private void transformRownum(SqlASTNode node, Stack<SqlASTNode> stack) {
+    if (node.getType() == PantheraParser_PLSQLParser.SQL92_RESERVED_SELECT) {
+      stack.push (node);
+      //
+      // If this select has where clause, and the where clause has only one condition: rownum (< | <=) <int>,
+      // then transform it to limit.
+      //
+      SqlASTNode where = (SqlASTNode) node.getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_WHERE);
+      if (where != null) {
+        SqlASTNode operator = (SqlASTNode) where.getChild(0).getChild(0);
+        int operatorType = operator.getType();
+        if (operatorType == PantheraParser_PLSQLParser.LESS_THAN_OP ||
+            operatorType == PantheraParser_PLSQLParser.LESS_THAN_OR_EQUALS_OP) {
+          if (operator.getChild(0).getType() == PantheraParser_PLSQLParser.CASCATED_ELEMENT &&
+              operator.getChild(0).getChild(0).getType() == PantheraParser_PLSQLParser.ANY_ELEMENT &&
+              operator.getChild(0).getChild(0).getChild(0).getType() == PantheraParser_PLSQLParser.ID &&
+              operator.getChild(0).getChild(0).getChild(0).getText().equals("rownum") &&
+              operator.getChild(1).getType() == PantheraParser_PLSQLParser.UNSIGNED_INTEGER) {
+
+            int rownum = Integer.parseInt(operator.getChild(1).getText());
+            if (operatorType == PantheraParser_PLSQLParser.LESS_THAN_OP && rownum > 0) {
+              --rownum;
+            }
+            //
+            // Create a limit token and attach it to the select node as the last child.
+            //
+            SqlASTNode limit = SqlXlateUtil.newSqlASTNode(PantheraExpParser.LIMIT_VK, "limit");
+            node.addChild(limit);
+            //
+            // Create a UNSIGNED_INTEGER token and attach it to the limit token.
+            //
+            SqlASTNode limitNum = SqlXlateUtil.newSqlASTNode(PantheraExpParser.UNSIGNED_INTEGER, Integer.toString(rownum));
+            limit.addChild(limitNum);
+            //
+            // Delete the where child.
+            //
+            node.deleteChild(where.getChildIndex());
+          }
+        }
+      }
+    }
+
+    for (int i = 0; i < node.getChildCount(); i++) {
+      transformRownum((SqlASTNode) node.getChild(i), stack);
+    }
+
+    if (node.getType() == PantheraParser_PLSQLParser.SQL92_RESERVED_SELECT) {
+      //
+      // Node may be changed by the subquery. Restore it from the stack.
+      //
+      node = stack.pop ();
+      //
+      // Optimization: in the case where "select * from (subquery) limit <int>" then drop the outer query,
+      //                     and promote the subquery after attaching the parent's limit token to it.
+      //
+
+      //
+      // Make sure this query is the only child of the parent query.
+      //
+      SqlASTNode parentSelect = stack.peek();
+      if (parentSelect == null || parentSelect.getChildCount() > 3) {
+        return;
+      }
+      SqlASTNode parentFrom = (SqlASTNode) parentSelect.getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_FROM);
+      if (parentFrom.getChildCount() != 1) {
+        return;
+      }
+
+      //
+      // If not select *, return
+      //
+      if (parentSelect.getFirstChildWithType(PantheraParser_PLSQLParser.ASTERISK) == null) {
+        return;
+      }
+
+      if (parentSelect.getChildCount() == 3) {
+        SqlASTNode limitParent = (SqlASTNode) parentSelect.getFirstChildWithType(PantheraExpParser.LIMIT_VK);
+        if (limitParent == null) {
+          return;
+        }
+        //
+        // Move down the limit token of the parent query to this query. If this query also has a limit,
+        // then choose the min limit.
+        //
+        SqlASTNode limitThis = (SqlASTNode) node.getFirstChildWithType(PantheraExpParser.LIMIT_VK);
+        if (limitThis == null) {
+          node.addChild(limitParent);
+        } else {
+          int limit1 = Integer.parseInt(limitParent.getChild(0).getText());
+          int limit2 = Integer.parseInt(limitThis.getChild(0).getText());
+          ((SqlASTNode) limitThis.getChild(0)).getToken().setText(Integer.toString(limit1 < limit2 ? limit1 : limit2));
+        }
+      }
+      //
+      // Replace the parent select with the current select.
+      //
+      parentSelect.getParent().setChild(parentSelect.getChildIndex(), node);
+    }
+  }
 }

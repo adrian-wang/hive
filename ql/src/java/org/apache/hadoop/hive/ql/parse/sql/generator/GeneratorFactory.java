@@ -152,6 +152,7 @@ public class GeneratorFactory {
     genMap.put(PantheraParser_PLSQLParser.SQL92_RESERVED_DATE, new DateGenerator());
     genMap.put(PantheraParser_PLSQLParser.SQL92_RESERVED_BETWEEN, new BetweenGenerator());
     genMap.put(PantheraParser_PLSQLParser.NOT_BETWEEN, new BetweenGenerator());
+    genMap.put(PantheraExpParser.LIMIT_VK, new LimitGenerator());
   }
 
   static {
