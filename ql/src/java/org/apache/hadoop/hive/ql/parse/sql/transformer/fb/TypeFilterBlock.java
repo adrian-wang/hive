@@ -32,9 +32,7 @@ public abstract class TypeFilterBlock extends BaseFilterBlock {
       throws SqlXlateException {
     fbContext.getTypeStack().push(this);
 
-    for (FilterBlock fb : getChildren()) {
-      fb.process(fbContext, context);
-    }
+    super.processChildren(fbContext, context);
 
     this.setTransformedNode(this.getChildren() == null ? null : this.getChildren().get(0)
         .getTransformedNode());// null or one child.

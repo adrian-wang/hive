@@ -60,6 +60,7 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
   public void process(FilterBlockContext fbContext, FilterBlock fb, TranslateContext context)
       throws SqlXlateException {
     bottomQuery = fbContext.getQueryStack().pop();
+    bottomQuery.setAggregationList(null);//TODO naive
     topQuery = fbContext.getQueryStack().peek();
     fbContext.getQueryStack().push(bottomQuery);
     subQ = fbContext.getSubQStack().peek();

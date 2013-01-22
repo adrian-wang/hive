@@ -45,10 +45,11 @@ public abstract class BaseSqlASTTransformer implements SqlASTTransformer {
     LOG.info(myself + " spend time(ms):" + (end - begin));
 
     // track log
+    QueryInfo qf = context.getQInfoRoot();
     LOG.info("After " + myself + ", sql ast is:" + tree.toStringTree());
-    LOG.info("After " + myself + ", query info is:" + context.getQInfoRoot().toStringTree());
-    LOG.info("After " + myself + ", filterBlock is:"
-        + context.getQInfoRoot().toFilterBlockStringTree());
+    LOG.info("After " + myself + ", query info is:" + (qf == null ? "null" : qf.toStringTree()));
+    LOG.info("After " + myself + ", filterBlock is:" + (qf == null ? "null" : qf
+        .toFilterBlockStringTree()));
   }
 
   protected abstract void transform(SqlASTNode tree, TranslateContext context)

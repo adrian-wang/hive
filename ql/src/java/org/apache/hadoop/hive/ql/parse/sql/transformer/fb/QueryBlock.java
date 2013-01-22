@@ -45,10 +45,7 @@ public class QueryBlock extends BaseFilterBlock {
       throws SqlXlateException {
 
     fbContext.getQueryStack().push(this);
-
-    for (FilterBlock fb : this.getChildren()) {
-      fb.process(fbContext, context);
-    }
+    super.processChildren(fbContext, context);
 
     FilterBlock childFb = this.getChildren().size() == 0 ? null : this.getChildren().get(0);
     // has child filter block & transformed tree
@@ -87,6 +84,7 @@ public class QueryBlock extends BaseFilterBlock {
         }
       }
     } else {// current' is bottom query block
+      //FIXME bugs
       if (this.getTransformedNode() == null) {
         if (fbContext.getTypeStack().peek() instanceof HavingFilterBlock) {
           FilterBlockProcessorFactory.getHavingUnCorrelatedTransfer(fbContext.getSubQStack().peek()

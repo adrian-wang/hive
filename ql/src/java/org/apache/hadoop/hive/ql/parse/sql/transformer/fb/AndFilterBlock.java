@@ -17,13 +17,26 @@
  */
 package org.apache.hadoop.hive.ql.parse.sql.transformer.fb;
 
+import org.antlr33.runtime.tree.CommonTree;
+import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
 import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
 
+/**
+ * transform and to intersect
+ * AndFilterBlock.
+ *
+ */
 public class AndFilterBlock extends LogicFilterBlock {
 
+  /**
+   * this must have two children.
+   * @throws SqlXlateException
+   */
   @Override
-  public void process(FilterBlockContext fbContext, TranslateContext context) {
-    // TODO Auto-generated method stub
-
+  public void process(FilterBlockContext fbContext, TranslateContext context) throws SqlXlateException {
+    super.processChildren(fbContext, context);
+    CommonTree left = this.getChildren().get(0).getASTNode();
+    CommonTree right = this.getChildren().get(1).getASTNode();
+    
   }
 }

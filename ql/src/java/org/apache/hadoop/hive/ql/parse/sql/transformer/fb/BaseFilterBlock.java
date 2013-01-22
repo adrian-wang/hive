@@ -21,6 +21,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.antlr33.runtime.tree.CommonTree;
+import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
+import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
 
 
 public abstract class BaseFilterBlock implements FilterBlock {
@@ -78,6 +80,11 @@ public abstract class BaseFilterBlock implements FilterBlock {
     }
   }
 
+  void processChildren(FilterBlockContext fbContext, TranslateContext context) throws SqlXlateException{
+    for (FilterBlock fb : this.getChildren()) {
+      fb.process(fbContext, context);
+    }
+  }
 
 
   @Override
