@@ -104,7 +104,7 @@ public class RowNumTransformer  extends BaseSqlASTTransformer  {
       //
       // Node may be changed by the subquery. Restore it from the stack.
       //
-      node = stack.pop ();
+      node = stack.pop();
       //
       // Optimization: in the case where "select * from (subquery) limit <int>" then drop the outer query,
       //                     and promote the subquery after attaching the parent's limit token to it.
@@ -151,6 +151,8 @@ public class RowNumTransformer  extends BaseSqlASTTransformer  {
       // Replace the parent select with the current select.
       //
       parentSelect.getParent().setChild(parentSelect.getChildIndex(), node);
+      stack.pop();
+      stack.push(node);
     }
   }
 }
