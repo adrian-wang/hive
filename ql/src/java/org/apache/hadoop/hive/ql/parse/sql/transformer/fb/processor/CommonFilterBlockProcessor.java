@@ -20,6 +20,7 @@ package org.apache.hadoop.hive.ql.parse.sql.transformer.fb.processor;
 import java.util.List;
 
 import org.antlr33.runtime.tree.CommonTree;
+import org.apache.hadoop.hive.ql.parse.sql.PantheraExpParser;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
 import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.FilterBlockUtil;
 
@@ -103,27 +104,7 @@ public abstract class CommonFilterBlockProcessor extends BaseFilterBlockProcesso
     // select list
     CommonTree compareKeyAlias = super.addAlias((CommonTree) ((CommonTree) bottomSelect
         .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST)).getChild(0));
-    List<CommonTree[]> joinKeys = super.getWherekey();
-    for (int i = 0; i < joinKeys.size(); i++) {
-      CommonTree joinKey = joinKeys.get(i)[0];
-
-
-      if (joinKey != null) {
-        // group
-        super.buildGroup(FilterBlockUtil.cloneTree(joinKey));
-        //add select item
-        CommonTree joinKeyAlias = super.addSelectItem((CommonTree) bottomSelect
-            .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST), FilterBlockUtil
-            .cloneTree(joinKey));
-        //modify filter to alias
-        CommonTree anyElement = (CommonTree)joinKey.getChild(0);
-        if(anyElement.getChildCount()==2){
-          ((CommonTree)anyElement.getChild(0)).getToken().setText(joinSubAlias.getChild(0).getText());
-          ((CommonTree)anyElement.getChild(1)).getToken().setText(joinKeyAlias.getChild(0).getText());
-        }
-
-      }
-    }
+    super.rebuildSelectListByFilter(true, joinSubAlias,null);
 
     // TODO cross join optimization will do it
     // on
@@ -136,18 +117,8 @@ public abstract class CommonFilterBlockProcessor extends BaseFilterBlockProcesso
 
 
     // where
-    super.deleteBranch(bottomSelect,
-        PantheraParser_PLSQLParser.SQL92_RESERVED_WHERE);
-    CommonTree where = super.createSqlASTNode(PantheraParser_PLSQLParser.SQL92_RESERVED_WHERE, "where");
-    CommonTree logicExpr = super.createSqlASTNode(PantheraParser_PLSQLParser.LOGIC_EXPR, "LOGIC_EXPR");
-    super.attachChild(where, logicExpr);
-    super.attachChild(logicExpr, fb.getASTNode());
-    super.addConditionToWhere(where, FilterBlockUtil.dupNode(super.subQNode),
-        (CommonTree) super.subQNode
-            .getFirstChildWithType(PantheraParser_PLSQLParser.CASCATED_ELEMENT), super
-            .createCascatedElement(FilterBlockUtil
-                .cloneTree((CommonTree) compareKeyAlias.getChild(0))));
-    super.attachChild(topSelect, where);
+    super.buildWhereByFB(subQNode, compareKeyAlias);
+
   }
 
   /**
@@ -184,23 +155,31 @@ public abstract class CommonFilterBlockProcessor extends BaseFilterBlockProcesso
    * process exists with correlated
    *
    * @param joinType
+   * @throws SqlXlateException
    */
-  void processExistsC(CommonTree joinType) {
+  void processExistsC(CommonTree joinType) throws SqlXlateException {
     this.makeTop();
+    super.rebuildGroupOrder(topAlias);
 
-    this.makeJoin(joinType);
+    this.makeJoin(super.createSqlASTNode(PantheraParser_PLSQLParser.CROSS_VK,
+        PantheraExpParser.LEFTSEMI_STR));
 
-    // delete where
-    super.deleteBranch(bottomSelect, PantheraParser_PLSQLParser.SQL92_RESERVED_WHERE);
 
-    // on
-    CommonTree on = super.buildOn(FilterBlockUtil.dupNode(fb.getASTNode()), super
-        .rebuildCascatedElement((CommonTree) fb.getASTNode().getChild(0)), super
-        .rebuildCascatedElement((CommonTree) fb.getASTNode().getChild(1)));
-    super.attachChild(join, on);
+    super.processSelectAsterisk(bottomSelect);
+    super.rebuildSelectListByFilter(false, bottomAlias,topAlias);
+
+//    // delete where
+//    super.deleteBranch(bottomSelect, PantheraParser_PLSQLParser.SQL92_RESERVED_WHERE);
+//
+//    // on
+//    CommonTree on = super.buildOn(FilterBlockUtil.dupNode(fb.getASTNode()), super
+//        .rebuildCascatedElement((CommonTree) fb.getASTNode().getChild(0)), super
+//        .rebuildCascatedElement((CommonTree) fb.getASTNode().getChild(1)));
+//    super.attachChild(join, on);
+
 
     this.makeEnd();
-
+    super.buildWhereByFB(null, null);
   }
 
   /**

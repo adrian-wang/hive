@@ -49,8 +49,8 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
   FilterBlockContext fbContext;
   FilterBlock fb;// current normalFilterBlock
   TranslateContext context;
-  Map<String, String> tableAliasMap = new HashMap<String, String>();
-  Map<String, Map<String, String>> columnAliasMap = new HashMap<String, Map<String, String>>();
+  Map<String, String> tableAliasMap = new HashMap<String, String>();// <tableName,tableAlias>
+  Map<String, Map<String, String>> columnAliasMap = new HashMap<String, Map<String, String>>();// <tableAlias,<columnNam,columnAliase>>
 
 
   /**
@@ -222,8 +222,8 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
    *         [1] top key
    * @throws SqlXlateException
    */
-  CommonTree[] getFilterKey(CommonTree filterOp) throws SqlXlateException {
-    CommonTree[] result = new CommonTree[2];
+  Map<Boolean, List<CommonTree>> getFilterKey(CommonTree filterOp) throws SqlXlateException {
+    Map<Boolean, List<CommonTree>> result = new HashMap<Boolean, List<CommonTree>>();
     Stack<CommonTree> selectStack = new Stack<CommonTree>();
     selectStack.push(topSelect);
     selectStack.push(bottomSelect);
@@ -231,35 +231,46 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
       CommonTree child = (CommonTree) filterOp.getChild(i);
       if (!PLSQLFilterBlockFactory.getInstance().isCorrelated(selectStack, child)) {
         if (child.getType() == PantheraParser_PLSQLParser.CASCATED_ELEMENT) {
-          result[0] = child;
+          List<CommonTree> uncorrelatedList = result.get(false);
+          if (uncorrelatedList == null) {
+            uncorrelatedList = new ArrayList<CommonTree>();
+            result.put(false, uncorrelatedList);
+          }
+          uncorrelatedList.add(child);
         }
       }
 
       if (PLSQLFilterBlockFactory.getInstance().isCorrelated(selectStack, child)) {
-        result[1] = child;
+        List<CommonTree> correlatedList = result.get(true);
+        if (correlatedList == null) {
+          correlatedList = new ArrayList<CommonTree>();
+          result.put(true, correlatedList);
+        }
+        correlatedList.add(child);
       }
     }
 
     return result;
   }
 
-  List<CommonTree[]> getWherekey() throws SqlXlateException {
-    List<CommonTree[]> result = new ArrayList<CommonTree[]>();
+  List<Map<Boolean, List<CommonTree>>> getFilterkey() throws SqlXlateException {
+    List<Map<Boolean, List<CommonTree>>> result = new ArrayList<Map<Boolean, List<CommonTree>>>();
     this.getWhereKey(fb.getASTNode(), result);
     return result;
   }
 
-  private void getWhereKey(CommonTree filterOp, List<CommonTree[]> list) throws SqlXlateException {
+  private void getWhereKey(CommonTree filterOp, List<Map<Boolean, List<CommonTree>>> list)
+      throws SqlXlateException {
     if (isFilterOp(filterOp)) {
       list.add(getFilterKey(filterOp));
       return;
-    }
-    if (isLogicOp(filterOp)) {
+    } else if (isLogicOp(filterOp)) {
       for (int i = 0; i < filterOp.getChildCount(); i++) {
         getWhereKey((CommonTree) filterOp.getChild(i), list);
       }
+    } else {
+      throw new SqlXlateException("unknow filter operation:" + filterOp.getText());
     }
-    throw new SqlXlateException("unknow filter operation:" + filterOp.getText());
 
   }
 
@@ -399,6 +410,7 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
     Map<String, String> columnMap = this.columnAliasMap.get(aliasName);
     if (columnMap == null) {
       columnMap = new HashMap<String, String>();
+      this.columnAliasMap.put(aliasName, columnMap);
     }
     for (int i = 0; i < selectList.getChildCount(); i++) {
       CommonTree selectItem = (CommonTree) selectList.getChild(i);
@@ -410,11 +422,17 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
         this.attachChild(selectItem, columnAlias);
       }
       aliasList.add(columnAlias);
-      String columnName = selectItem.getChild(0).getChild(0).getChild(0).getChild(0).getText();
+      CommonTree anyElement = (CommonTree) selectItem.getChild(0).getChild(0).getChild(0);
+      String columnName;
+      if (anyElement.getChildCount() == 2) {
+        columnName = anyElement.getChild(1).getText();
+      } else {
+        columnName = anyElement.getChild(0).getText();
+      }
       String columnAliasName = columnAlias.getChild(0).getText();
       columnMap.put(columnName, columnAliasName);
     }
-    this.columnAliasMap.put(aliasName, columnMap);
+
     return aliasList;
   }
 
@@ -479,7 +497,9 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
     CommonTree selectList = this.createSqlASTNode(PantheraParser_PLSQLParser.SELECT_LIST,
         "SELECT_LIST");
     for (CommonTree alias : aliasList) {
-      this.addSelectItem(selectList, this.createCascatedElement((CommonTree) alias.getChild(0)));
+      CommonTree newAlias = this.addSelectItem(selectList, this
+          .createCascatedElement((CommonTree) alias.getChild(0)));
+      this.reRebuildGroupOrder(alias, newAlias);
     }
     return selectList;
   }
@@ -587,5 +607,160 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
     }
     return cascatedElement;
   }
+
+  void processSelectAsterisk(CommonTree select) {
+    for (int i = 0; i < select.getChildCount(); i++) {
+      CommonTree node = (CommonTree) select.getChild(i);
+      if (node.getType() == PantheraParser_PLSQLParser.ASTERISK) {
+        node.getToken().setType(PantheraParser_PLSQLParser.SELECT_LIST);
+        node.getToken().setText("SELECT_LIST");
+      }
+    }
+  }
+
+  void rebuildSelectListByFilter(boolean needGroup, CommonTree joinSubAlias, CommonTree topAlias)
+      throws SqlXlateException {
+    List<Map<Boolean, List<CommonTree>>> joinKeys = this.getFilterkey();
+    for (int i = 0; i < joinKeys.size(); i++) {
+      List<CommonTree> bottomKeys = joinKeys.get(i).get(false);
+      List<CommonTree> topKeys = joinKeys.get(i).get(true);
+
+
+      if (bottomKeys != null) {
+        for (CommonTree bottomKey : bottomKeys) {
+          if (needGroup) {
+            // group
+            this.buildGroup(FilterBlockUtil.cloneTree(bottomKey));
+          }
+          // add select item
+          CommonTree joinKeyAlias = this.addSelectItem((CommonTree) bottomSelect
+              .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST), FilterBlockUtil
+              .cloneTree(bottomKey));
+          // modify filter to alias
+          CommonTree anyElement = (CommonTree) bottomKey.getChild(0);
+          if (anyElement.getChildCount() == 2) {
+            ((CommonTree) anyElement.getChild(0)).getToken().setText(
+                joinSubAlias.getChild(0).getText());
+            ((CommonTree) anyElement.getChild(1)).getToken().setText(
+                joinKeyAlias.getChild(0).getText());
+          }
+
+        }
+      }
+      if (topKeys != null && topAlias != null) {
+        CommonTree topKey = topKeys.get(0);// can't more than one topkey.
+        // modify filter to alias
+        CommonTree anyElement = (CommonTree) topKey.getChild(0);
+        if (anyElement.getChildCount() == 2) {// must be, unless prepare it.
+
+        }
+        ((CommonTree) anyElement.getChild(0)).getToken().setText(
+              topAlias.getChild(0).getText());
+        Map<String, String> columnMap = columnAliasMap.get(topAlias.getChild(0).getText());
+        // for (Entry<String, String> e : columnMap.entrySet()) {
+        // String columnAlias = e.getKey();
+        // String columnName = e.getValue();
+        // if (columnName.equals(anyElement.getChild(1).getText())) {
+        // ;
+        // }
+        // ((CommonTree) anyElement.getChild(1)).getToken().setText(columnAlias);
+        // }
+        String alias = columnMap.get(anyElement.getChild(1).getText());
+        ((CommonTree) anyElement.getChild(1)).getToken().setText(alias);
+      }
+    }
+  }
+
+  void buildWhereByFB(CommonTree subQCondition, CommonTree compareKeyAlias) {
+    this.deleteBranch(bottomSelect,
+        PantheraParser_PLSQLParser.SQL92_RESERVED_WHERE);
+    CommonTree where = this.createSqlASTNode(PantheraParser_PLSQLParser.SQL92_RESERVED_WHERE,
+        "where");
+    CommonTree logicExpr = this.createSqlASTNode(PantheraParser_PLSQLParser.LOGIC_EXPR,
+        "LOGIC_EXPR");
+    this.attachChild(where, logicExpr);
+    this.attachChild(logicExpr, fb.getASTNode());
+    if (compareKeyAlias != null) {
+      this.addConditionToWhere(where, FilterBlockUtil.dupNode(subQCondition),
+          (CommonTree) this.subQNode
+              .getFirstChildWithType(PantheraParser_PLSQLParser.CASCATED_ELEMENT), this
+              .createCascatedElement(FilterBlockUtil
+                  .cloneTree((CommonTree) compareKeyAlias.getChild(0))));
+    }
+    this.attachChild(topSelect, where);
+  }
+
+  void rebuildGroupOrder(CommonTree topAlias) {
+    CommonTree group = topQuery.getGroup();
+    CommonTree order = topQuery.getOrder();
+    if (group != null) {
+      for (int i = 0; i < group.getChildCount(); i++) {
+        CommonTree groupElement = (CommonTree) group.getChild(i);
+        CommonTree anyElement = (CommonTree) groupElement.getChild(0).getChild(0).getChild(0);
+        this.rebuildAnyElementAlias(topAlias, anyElement);
+      }
+    }
+    if (order != null) {
+      CommonTree orderByElements = (CommonTree) order.getChild(0);
+      for (int i = 0; i < orderByElements.getChildCount(); i++) {
+        CommonTree orderByElement = (CommonTree) orderByElements.getChild(i);
+        CommonTree anyElement = (CommonTree) orderByElement.getChild(0).getChild(0).getChild(0);
+        this.rebuildAnyElementAlias(topAlias, anyElement);
+      }
+    }
+  }
+
+  void rebuildAnyElementAlias(CommonTree topAlias, CommonTree anyElement) {
+    CommonTree column;
+    if (anyElement.getChildCount() == 2) {
+      ((CommonTree) anyElement.getChild(0)).getToken().setText(topAlias.getChild(0).getText());//TODO remove
+      anyElement.deleteChild(0);// needn't table alias.
+      column = (CommonTree) anyElement.getChild(0);
+    } else {
+      column = (CommonTree) anyElement.getChild(0);
+    }
+    Map<String, String> columnMap = this.columnAliasMap.get(topAlias.getChild(0).getText());
+    String columnAlias = columnMap.get(column.getText());
+    if (columnAlias != null) {
+      column.getToken().setText(columnAlias);
+    }
+  }
+
+  /**
+   * rebuild order&group with alias when create closing select list
+   *
+   * @param oldAlias
+   * @param newAlias
+   */
+  void reRebuildGroupOrder(CommonTree oldAlias, CommonTree newAlias) {
+
+    CommonTree group = topQuery.getGroup();
+    CommonTree order = topQuery.getOrder();
+    if (group != null) {
+      // do nothing currently.
+    }
+    if (order != null) {
+      CommonTree orderByElements = (CommonTree) order.getChild(0);
+      for (int i = 0; i < orderByElements.getChildCount(); i++) {
+        CommonTree orderByElement = (CommonTree) orderByElements.getChild(i);
+        CommonTree anyElement = (CommonTree) orderByElement.getChild(0).getChild(0).getChild(0);
+        this.reRebuildAnyElement(oldAlias, newAlias, anyElement);
+      }
+    }
+
+  }
+
+  private void reRebuildAnyElement(CommonTree oldAlias, CommonTree newAlias, CommonTree anyElement) {
+
+    if (anyElement.getChildCount() == 2) {
+      anyElement.deleteChild(0);
+    }
+    CommonTree child = (CommonTree) anyElement.getChild(0);
+    if (child.getText().equals(oldAlias.getChild(0).getText())) {
+      child.getToken().setText(newAlias.getChild(0).getText());
+    }
+
+  }
+
 
 }

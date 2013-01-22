@@ -35,6 +35,8 @@ public class QueryBlock extends BaseFilterBlock {
   private Set<String> tableNameSet;
   private CommonTree queryForTransfer;
   private List<CommonTree> aggregationList;
+  private CommonTree group;
+  private CommonTree order;
 
 
 
@@ -80,6 +82,9 @@ public class QueryBlock extends BaseFilterBlock {
         CommonTree subQueryNode = (CommonTree) this.getASTNode().getParent();// PantheraParser_PLSQLParser.SUBQUERY
         subQueryNode.deleteChild(0);
         subQueryNode.addChild(this.getTransformedNode());
+        if (group != null) {
+          this.getTransformedNode().addChild(group);// restore group;
+        }
       }
     } else {// current' is bottom query block
       if (this.getTransformedNode() == null) {
@@ -99,8 +104,16 @@ public class QueryBlock extends BaseFilterBlock {
   }
 
   public void init() {
+    recordGroupOrder();
     buildTableNameSet();
     buildQueryForTransfer();
+  }
+
+  void recordGroupOrder() {
+    group = (CommonTree) this.getASTNode().getFirstChildWithType(
+        PantheraParser_PLSQLParser.SQL92_RESERVED_GROUP);
+    order = (CommonTree) ((CommonTree) this.getASTNode().getParent().getParent())
+        .getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_ORDER);
   }
 
   void buildTableNameSet() {
@@ -170,4 +183,14 @@ public class QueryBlock extends BaseFilterBlock {
     }
     o.getToken().setText(a.getText());
   }
+
+  public CommonTree getGroup() {
+    return group;
+  }
+
+  public CommonTree getOrder() {
+    return order;
+  }
+
+
 }

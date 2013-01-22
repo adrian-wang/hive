@@ -22,6 +22,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hive.ql.parse.sql.SqlASTNode;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
 import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
+
 /**
  * Do something before or after transform.
  * BaseSqlASTTransformer.
@@ -33,13 +34,21 @@ public abstract class BaseSqlASTTransformer implements SqlASTTransformer {
 
   @Override
   public void transformAST(SqlASTNode tree, TranslateContext context) throws SqlXlateException {
+    String myself = this.getClass().getSimpleName();
+    long begin = System.currentTimeMillis();
 
     transform(tree, context);
 
-    //track log
-    LOG.info("After "+ this.getClass().getSimpleName()+", sql ast is:"+tree.toStringTree());
-    LOG.info("After "+ this.getClass().getSimpleName()+", query info is:"+context.getQInfoRoot().toStringTree());
-    LOG.info("After "+ this.getClass().getSimpleName()+", filterBlock is:"+context.getQInfoRoot().toFilterBlockStringTree());
+    long end = System.currentTimeMillis();
+
+    // performance log
+    LOG.info(myself + " spend time(ms):" + (end - begin));
+
+    // track log
+    LOG.info("After " + myself + ", sql ast is:" + tree.toStringTree());
+    LOG.info("After " + myself + ", query info is:" + context.getQInfoRoot().toStringTree());
+    LOG.info("After " + myself + ", filterBlock is:"
+        + context.getQInfoRoot().toFilterBlockStringTree());
   }
 
   protected abstract void transform(SqlASTNode tree, TranslateContext context)
