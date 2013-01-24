@@ -82,7 +82,7 @@ public abstract class CommonFilterBlockProcessor extends BaseFilterBlockProcesso
    */
   private void makeEnd() {
     // closing select list
-    CommonTree selectList = super.createSelectList(topAliasList);
+    CommonTree selectList = super.createSelectListForClosingSelect(topAliasList);
     super.attachChild(closingSelect, selectList);
 
     // set closing select to top select
@@ -96,15 +96,21 @@ public abstract class CommonFilterBlockProcessor extends BaseFilterBlockProcesso
    * @throws SqlXlateException
    */
   void processCompareC(CommonTree joinType) throws SqlXlateException {
+
+    this.makeTop();
+    this.makeJoin(super.createSqlASTNode(PantheraParser_PLSQLParser.CROSS_VK, "cross"));
+
+
+
     // join
-    CommonTree join = this.createJoin(topSelect);
-    CommonTree joinSubAlias = super.buildJoin(super.createSqlASTNode(
-        PantheraParser_PLSQLParser.CROSS_VK, "cross"), join, bottomSelect);
+    // CommonTree join = this.createJoin(topSelect);
+    // CommonTree joinSubAlias = super.buildJoin(super.createSqlASTNode(
+    // PantheraParser_PLSQLParser.CROSS_VK, "cross"), join, bottomSelect);
 
     // select list
     CommonTree compareKeyAlias = super.addAlias((CommonTree) ((CommonTree) bottomSelect
         .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST)).getChild(0));
-    super.rebuildSelectListByFilter(true, joinSubAlias,null);
+    super.rebuildSelectListByFilter(true, bottomAlias, null);
 
     // TODO cross join optimization will do it
     // on
@@ -114,7 +120,7 @@ public abstract class CommonFilterBlockProcessor extends BaseFilterBlockProcesso
     // .getChild(0))));
     // super.attachChild(join, on);
 
-
+    this.makeEnd();
 
     // where
     super.buildWhereByFB(subQNode, compareKeyAlias);
@@ -159,23 +165,23 @@ public abstract class CommonFilterBlockProcessor extends BaseFilterBlockProcesso
    */
   void processExistsC(CommonTree joinType) throws SqlXlateException {
     this.makeTop();
-    super.rebuildGroupOrder(topAlias);
+    // super.rebuildGroupOrder(topAlias);
 
     this.makeJoin(super.createSqlASTNode(PantheraParser_PLSQLParser.CROSS_VK,
         PantheraExpParser.LEFTSEMI_STR));
 
 
     super.processSelectAsterisk(bottomSelect);
-    super.rebuildSelectListByFilter(false, bottomAlias,topAlias);
+    super.rebuildSelectListByFilter(false, bottomAlias, topAlias);
 
-//    // delete where
-//    super.deleteBranch(bottomSelect, PantheraParser_PLSQLParser.SQL92_RESERVED_WHERE);
-//
-//    // on
-//    CommonTree on = super.buildOn(FilterBlockUtil.dupNode(fb.getASTNode()), super
-//        .rebuildCascatedElement((CommonTree) fb.getASTNode().getChild(0)), super
-//        .rebuildCascatedElement((CommonTree) fb.getASTNode().getChild(1)));
-//    super.attachChild(join, on);
+    // // delete where
+    // super.deleteBranch(bottomSelect, PantheraParser_PLSQLParser.SQL92_RESERVED_WHERE);
+    //
+    // // on
+    // CommonTree on = super.buildOn(FilterBlockUtil.dupNode(fb.getASTNode()), super
+    // .rebuildCascatedElement((CommonTree) fb.getASTNode().getChild(0)), super
+    // .rebuildCascatedElement((CommonTree) fb.getASTNode().getChild(1)));
+    // super.attachChild(join, on);
 
 
     this.makeEnd();
@@ -222,7 +228,7 @@ public abstract class CommonFilterBlockProcessor extends BaseFilterBlockProcesso
         .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST)).getChild(0));
 
     // closing select list
-    CommonTree selectList = super.createSelectList(topAliasList);
+    CommonTree selectList = super.createSelectListForClosingSelect(topAliasList);
     super.attachChild(closingSelect, selectList);
 
     // where
@@ -373,8 +379,19 @@ public abstract class CommonFilterBlockProcessor extends BaseFilterBlockProcesso
         .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST));
 
     this.makeEnd();
+  }
 
+  void processAnd(CommonTree joinType) {
+    this.makeTop();
+    this.makeJoin(joinType);
+    CommonTree topSelectList = (CommonTree) topSelect
+        .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST);
+    CommonTree bottomSelectList = (CommonTree) bottomSelect
+        .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST);
+    // on
+    CommonTree on = super.makeOn(topSelectList, bottomSelectList, topAlias, bottomAlias);
+    super.attachChild(join, on);
 
-
+    this.makeEnd();
   }
 }

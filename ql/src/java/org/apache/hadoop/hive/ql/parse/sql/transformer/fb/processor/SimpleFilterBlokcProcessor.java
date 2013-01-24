@@ -18,6 +18,10 @@
 package org.apache.hadoop.hive.ql.parse.sql.transformer.fb.processor;
 
 import org.antlr33.runtime.tree.CommonTree;
+import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
+import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
+import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.FilterBlock;
+import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.FilterBlockContext;
 
 import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
 
@@ -28,18 +32,23 @@ import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
  */
 public class SimpleFilterBlokcProcessor extends BaseFilterBlockProcessor {
 
-  /**
-   * FIXME:Unfinshed
-   */
-  @Override
-  public void processFB() {
-    CommonTree tree = fbContext.getQueryStack().peek().cloneSimpleQuery();
-    fb.setTransformedNode(tree);
-    CommonTree where = super.createSqlASTNode(PantheraParser_PLSQLParser.SQL92_RESERVED_WHERE,
-        "where");
-    tree.addChild(where);
-    where.addChild(fb.getASTNode());
 
+  @Override
+  public void process(FilterBlockContext fbContext, FilterBlock fb, TranslateContext context) {
+    super.context = context;
+    super.fbContext = fbContext;
+    topSelect = fbContext.getQueryStack().peek().cloneSimpleQuery();
+    super.buildSelectListAlias(null, (CommonTree) topSelect
+        .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST));
+
+    super.builldSimpleWhere(fb.getASTNode());
+
+    fb.setTransformedNode(topSelect);
+  }
+
+  @Override
+  void processFB() throws SqlXlateException {
+    // TODO Auto-generated method stub
 
   }
 

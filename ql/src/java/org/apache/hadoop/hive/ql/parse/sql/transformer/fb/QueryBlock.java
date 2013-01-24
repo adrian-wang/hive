@@ -39,7 +39,9 @@ public class QueryBlock extends BaseFilterBlock {
   private CommonTree order;
 
 
-
+  /**
+   * FIXME just process two level subquery
+   */
   @Override
   public void process(FilterBlockContext fbContext, TranslateContext context)
       throws SqlXlateException {
@@ -79,12 +81,12 @@ public class QueryBlock extends BaseFilterBlock {
         CommonTree subQueryNode = (CommonTree) this.getASTNode().getParent();// PantheraParser_PLSQLParser.SUBQUERY
         subQueryNode.deleteChild(0);
         subQueryNode.addChild(this.getTransformedNode());
-        if (group != null) {
+        if (group != null && fbContext.getTypeStack().isEmpty()) {
           this.getTransformedNode().addChild(group);// restore group;
         }
       }
     } else {// current' is bottom query block
-      //FIXME bugs
+      // FIXME bugs
       if (this.getTransformedNode() == null) {
         if (fbContext.getTypeStack().peek() instanceof HavingFilterBlock) {
           FilterBlockProcessorFactory.getHavingUnCorrelatedTransfer(fbContext.getSubQStack().peek()

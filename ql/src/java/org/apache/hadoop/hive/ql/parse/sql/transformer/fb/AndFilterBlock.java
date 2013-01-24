@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hive.ql.parse.sql.transformer.fb;
 
-import org.antlr33.runtime.tree.CommonTree;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
 import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
+import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.processor.FilterBlockProcessorFactory;
 
 /**
  * transform and to intersect
@@ -35,8 +35,6 @@ public class AndFilterBlock extends LogicFilterBlock {
   @Override
   public void process(FilterBlockContext fbContext, TranslateContext context) throws SqlXlateException {
     super.processChildren(fbContext, context);
-    CommonTree left = this.getChildren().get(0).getASTNode();
-    CommonTree right = this.getChildren().get(1).getASTNode();
-    
+    FilterBlockProcessorFactory.getAndProcess().process(fbContext, this, context);
   }
 }

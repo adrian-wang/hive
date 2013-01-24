@@ -74,4 +74,8 @@ public class FilterBlockProcessorFactory {
 
   private FilterBlockProcessorFactory() {
   }
+
+  public static FilterBlockProcessor getAndProcess(){
+    return new AndProcessor();
+  }
 }
