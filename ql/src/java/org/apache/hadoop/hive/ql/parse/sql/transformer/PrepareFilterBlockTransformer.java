@@ -55,36 +55,37 @@ public class PrepareFilterBlockTransformer extends BaseSqlASTTransformer {
   void buildFilterBlockTree(QueryInfo qFNode, TranslateContext context) throws SqlXlateException {
     CommonTree subRoot = qFNode.getSelectKeyForThisQ();
     Stack<CommonTree> selectStack = new Stack<CommonTree>();
-    FilterBlock fbRoot = buildFilterBlock(selectStack,subRoot);
+    FilterBlock fbRoot = buildFilterBlock(selectStack, subRoot);
     qFNode.setFilterBlockTreeRoot(fbRoot);
   }
 
-  FilterBlock buildFilterBlock(Stack<CommonTree> selectStack,CommonTree node) throws SqlXlateException {
+  FilterBlock buildFilterBlock(Stack<CommonTree> selectStack, CommonTree node)
+      throws SqlXlateException {
     if (needSkip(node)) {
       return null;
     }
-    if(node.getType()==PantheraParser_PLSQLParser.SQL92_RESERVED_SELECT){
+    if (node.getType() == PantheraParser_PLSQLParser.SQL92_RESERVED_SELECT) {
       selectStack.push(node);
     }
     List<FilterBlock> fbl = new ArrayList<FilterBlock>();
     for (int i = 0; i < node.getChildCount(); i++) {
       CommonTree t = (CommonTree) node.getChild(i);
-      FilterBlock fb = buildFilterBlock(selectStack,t);
+      FilterBlock fb = buildFilterBlock(selectStack, t);
       if (fb != null) {
         fbl.add(fb);
       }
     }
-    if(node.getType()==PantheraParser_PLSQLParser.SQL92_RESERVED_SELECT){
+    if (node.getType() == PantheraParser_PLSQLParser.SQL92_RESERVED_SELECT) {
       selectStack.pop();
     }
-    return PLSQLFilterBlockFactory.getInstance().getFilterBlock(selectStack,node, fbl);
+    return PLSQLFilterBlockFactory.getInstance().getFilterBlock(selectStack, node, fbl);
   }
 
   boolean needSkip(Tree node) {
     int type = node.getType();
     return type == PantheraParser_PLSQLParser.SQL92_RESERVED_FROM
+        || type == PantheraParser_PLSQLParser.SELECT_LIST
         || type == PantheraParser_PLSQLParser.ORDER_BY_ELEMENTS
         || type == PantheraParser_PLSQLParser.GROUP_BY_ELEMENT;
   }
-
 }

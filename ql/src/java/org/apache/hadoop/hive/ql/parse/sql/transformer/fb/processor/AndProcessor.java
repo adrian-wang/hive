@@ -14,6 +14,7 @@ public class AndProcessor extends CommonFilterBlockProcessor {
   @Override
   public void process(FilterBlockContext fbContext, FilterBlock fb, TranslateContext context)
       throws SqlXlateException {
+    topQuery = fbContext.getQueryStack().firstElement();//TODO how about group?
     topSelect = fb.getChildren().get(0).getTransformedNode();
     bottomSelect = fb.getChildren().get(1).getTransformedNode();
     this.fbContext = fbContext;

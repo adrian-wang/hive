@@ -518,7 +518,7 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
     for (CommonTree alias : aliasList) {
       CommonTree newAlias = this.addSelectItem(selectList, this
           .createCascatedElement((CommonTree) alias.getChild(0)));
-      // this.reRebuildGroupOrder(alias, newAlias);
+       this.reRebuildGroupOrder(alias, newAlias);
     }
     return selectList;
   }
@@ -732,7 +732,7 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
     this.attachChild(topSelect, where);
   }
 
-  void rebuildGroupOrder_TBD(CommonTree topAlias) {
+  void rebuildGroupOrder(CommonTree topAlias) {
     CommonTree group = topQuery.getGroup();
     CommonTree order = topQuery.getOrder();
     if (group != null) {
@@ -775,7 +775,7 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
    * @param oldAlias
    * @param newAlias
    */
-  void reRebuildGroupOrder_TBD(CommonTree oldAlias, CommonTree newAlias) {
+  void reRebuildGroupOrder(CommonTree oldAlias, CommonTree newAlias) {
 
     CommonTree group = topQuery.getGroup();
     CommonTree order = topQuery.getOrder();

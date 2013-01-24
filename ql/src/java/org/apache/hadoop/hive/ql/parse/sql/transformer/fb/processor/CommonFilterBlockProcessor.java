@@ -169,7 +169,7 @@ public abstract class CommonFilterBlockProcessor extends BaseFilterBlockProcesso
    */
   void processExistsC(CommonTree joinType) throws SqlXlateException {
     this.makeTop();
-    // super.rebuildGroupOrder(topAlias);
+     super.rebuildGroupOrder(topAlias);
 
     this.makeJoin(super.createSqlASTNode(PantheraParser_PLSQLParser.CROSS_VK,
         PantheraExpParser.LEFTSEMI_STR));
