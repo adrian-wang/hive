@@ -17,9 +17,11 @@
  */
 package org.apache.hadoop.hive.ql.parse.sql.transformer;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -75,6 +77,11 @@ public class MultipleTableSelectTransformer extends BaseSqlASTTransformer {
     }
   }
 
+  private class JoinInfo {
+    public Map<JoinPair<String>, List<SqlASTNode>> joinPairInfo = new HashMap<JoinPair<String>, List<SqlASTNode>>();
+    public Map<String, List<SqlASTNode>> joinFilterInfo = new HashMap<String, List<SqlASTNode>>();
+  }
+
   public MultipleTableSelectTransformer(SqlASTTransformer tf) {
     this.tf = tf;
   }
@@ -96,7 +103,7 @@ public class MultipleTableSelectTransformer extends BaseSqlASTTransformer {
       //
       SqlASTNode from = (SqlASTNode) node.getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_FROM);
       if (from.getChildCount() > 1) {
-        Map<JoinPair<String>, Set<JoinPair<Column>>> joinInfo = new HashMap<JoinPair<String>, Set<JoinPair<Column>>>();
+        JoinInfo joinInfo = new JoinInfo();
         Set<String> srcTables = qf.getSrcTblAliasForSelectKey(node);
 
         //
@@ -124,7 +131,7 @@ public class MultipleTableSelectTransformer extends BaseSqlASTTransformer {
     }
   }
 
-  private void transformWhereCondition(SqlASTNode node, Set<String> srcTables, Map<JoinPair<String>, Set<JoinPair<Column>>> joinInfo) throws SqlXlateException {
+  private void transformWhereCondition(SqlASTNode node, Set<String> srcTables, JoinInfo joinInfo) throws SqlXlateException {
     //
     // We can only transform equality expression between two columns whose ancesotors are all AND operators
     // into JOIN on ...
@@ -147,42 +154,85 @@ public class MultipleTableSelectTransformer extends BaseSqlASTTransformer {
         //
         node.getParent().setChild(node.getChildIndex(), leftChild);
       }
-    } else if (node.getType() == PantheraParser_PLSQLParser.EQUALS_OP) {
-      //
-      // Check if this is a equality expression between two columns
-      //
-      if ((node.getChild(0).getType() == PantheraParser_PLSQLParser.CASCATED_ELEMENT &&
-        node.getChild(0).getChild(0).getType() == PantheraParser_PLSQLParser.ANY_ELEMENT) &&
-        (node.getChild(1).getType() == PantheraParser_PLSQLParser.CASCATED_ELEMENT &&
-        node.getChild(1).getChild(0).getType() == PantheraParser_PLSQLParser.ANY_ELEMENT)) {
-        Column column1 = getColumn((SqlASTNode) node.getChild(0).getChild(0), srcTables);
-        Column column2 = getColumn((SqlASTNode) node.getChild(1).getChild(0), srcTables);
+    } else {
+      if (node.getType() == PantheraParser_PLSQLParser.EQUALS_OP) {
+        //
+        // Check if this is a equality expression between two columns
+        //
+        if (IsColumnRef(node.getChild(0)) && IsColumnRef(node.getChild(1))) {
+          Column column1 = getColumn((SqlASTNode) node.getChild(0).getChild(0), srcTables);
+          Column column2 = getColumn((SqlASTNode) node.getChild(1).getChild(0), srcTables);
 
+          //
+          // Skip columns not in a src table.
+          //
+          if (column1.getTblAlias() == null || column2.getTblAlias() == null) {
+            return;
+          }
+          //
+          // Update join info.
+          //
+          JoinPair<String> tableJoinPair = new JoinPair<String>(column1.getTblAlias(), column2.getTblAlias());
+          List<SqlASTNode> joinEqualityNodes = joinInfo.joinPairInfo.get(tableJoinPair);
+          if (joinEqualityNodes == null) {
+            joinEqualityNodes = new ArrayList<SqlASTNode>();
+          }
+          joinEqualityNodes.add(node);
+          joinInfo.joinPairInfo.put(tableJoinPair, joinEqualityNodes);
+
+          //
+          // Create a new TRUE node and replace the current node with this new node.
+          //
+          SqlASTNode trueNode = SqlXlateUtil.newSqlASTNode(PantheraParser_PLSQLParser.SQL92_RESERVED_TRUE, "true");
+          node.getParent().setChild(node.getChildIndex(), trueNode);
+          return;
+        }
+      }
+
+      //
+      // For a where condition that refers a single column and no subquery, then it can be a join filter.
+      //
+      int columnRefCount = 0;
+      int childIndex = 0;
+      for (int i = 0; i < node.getChildCount(); i++) {
+        if (IsColumnRef(node.getChild(i))) {
+          childIndex = i;
+          ++columnRefCount;
+        }
+      }
+      if (columnRefCount == 1 && !SqlXlateUtil.hasNodeTypeInTree(node, PantheraParser_PLSQLParser.SQL92_RESERVED_SELECT)) {
+        Column column = getColumn((SqlASTNode) node.getChild(childIndex).getChild(0), srcTables);
+        String srcTable = column.getTblAlias();
         //
-        // Skip columns not in a src table.
+        // Skip if the column is not in any of the src tables.
         //
-        if (column1.getTblAlias() == null || column2.getTblAlias() == null) {
+        if (srcTable == null) {
           return;
         }
         //
         // Update join info.
         //
-        JoinPair<String> tableJoinPair = new JoinPair<String>(column1.getTblAlias(), column2.getTblAlias());
-        Set<JoinPair<Column>> columnJoinPairSet = joinInfo.get(tableJoinPair);
-        if (columnJoinPairSet == null) {
-          columnJoinPairSet = new HashSet<JoinPair<Column>>();
+        List<SqlASTNode> joinFilterNodes = joinInfo.joinFilterInfo.get(srcTable);
+        if (joinFilterNodes == null) {
+          joinFilterNodes = new ArrayList<SqlASTNode>();
         }
-        if (columnJoinPairSet.add(new JoinPair<Column>(column1, column2))) {
-          joinInfo.put(tableJoinPair, columnJoinPairSet);
-        }
-
+        joinFilterNodes.add(node);
+        joinInfo.joinFilterInfo.put(srcTable, joinFilterNodes);
         //
-        // Chang the current node to a TRUE node.
+        // Create a new TRUE node and replace the current node with this new node.
         //
-        SqlXlateUtil.changeNodeToken(node, PantheraParser_PLSQLParser.SQL92_RESERVED_TRUE, "true");
-        node.deleteChild(0);
-        node.deleteChild(0);
+        SqlASTNode trueNode = SqlXlateUtil.newSqlASTNode(PantheraParser_PLSQLParser.SQL92_RESERVED_TRUE, "true");
+        node.getParent().setChild(node.getChildIndex(), trueNode);
       }
+    }
+  }
+
+  private boolean IsColumnRef (Tree node) {
+    if (node.getType() == PantheraParser_PLSQLParser.CASCATED_ELEMENT &&
+        node.getChild(0).getType() == PantheraParser_PLSQLParser.ANY_ELEMENT) {
+      return true;
+    } else {
+      return false;
     }
   }
 
@@ -214,10 +264,7 @@ public class MultipleTableSelectTransformer extends BaseSqlASTTransformer {
     throw new SqlXlateException("Multi-table selection transformer: table name must be explicitly specified for a column!");
   }
 
-  private void transformFromClause(SqlASTNode oldFrom, Set<String> srcTables, Map<JoinPair<String>, Set<JoinPair<Column>>> joinInfo) throws SqlXlateException {
-    if (joinInfo.isEmpty()) {
-      return;
-    }
+  private void transformFromClause(SqlASTNode oldFrom, Set<String> srcTables, JoinInfo joinInfo) throws SqlXlateException {
     //
     // Check if there is any join operation in the from clause. If yes, such case is not supported and TBD.
     //
@@ -241,51 +288,91 @@ public class MultipleTableSelectTransformer extends BaseSqlASTTransformer {
     //
 
     Set<String> alreadyJoinedTables = new HashSet<String>();
-    Set<JoinPair<String>> tableJoinPairs = joinInfo.keySet();
+    if (!joinInfo.joinPairInfo.isEmpty()) {
+      Set<JoinPair<String>> tableJoinPairs = joinInfo.joinPairInfo.keySet();
 
-    Iterator<JoinPair<String>> iterator = tableJoinPairs.iterator();
-    JoinPair<String> tableJoinPair = iterator.next();
-    generateTableRefElement(tableJoinPair.getFirst(), oldFrom, newTableRef);
-    generateJoin(tableJoinPair.getSecond(), joinInfo.get(tableJoinPair), oldFrom, newTableRef);
-    alreadyJoinedTables.add(tableJoinPair.getFirst());
-    alreadyJoinedTables.add(tableJoinPair.getSecond());
-    iterator.remove();
+      Iterator<JoinPair<String>> iterator = tableJoinPairs.iterator();
+      JoinPair<String> tableJoinPair = iterator.next();
+      generateTableRefElement(tableJoinPair.getFirst(), oldFrom, newTableRef);
+      generateJoin(tableJoinPair.getSecond(), joinInfo.joinPairInfo.get(tableJoinPair), joinInfo.joinFilterInfo.get(tableJoinPair.getSecond()), oldFrom, newTableRef);
+      addJoinCondition(joinInfo.joinFilterInfo.get(tableJoinPair.getFirst()), (SqlASTNode) newTableRef.getChild(newTableRef.getChildCount() - 1).getChild(1).getChild(0));
+      alreadyJoinedTables.add(tableJoinPair.getFirst());
+      alreadyJoinedTables.add(tableJoinPair.getSecond());
+      iterator.remove();
 
-    boolean newJoinItem;
-    do {
-      newJoinItem = false;
-      for (iterator = tableJoinPairs.iterator(); iterator.hasNext();) {
-        tableJoinPair = iterator.next();
-        if (!alreadyJoinedTables.contains(tableJoinPair.getFirst()) && !alreadyJoinedTables.contains(tableJoinPair.getSecond())) {
-          continue;
-        } else if (alreadyJoinedTables.contains(tableJoinPair.getFirst()) && alreadyJoinedTables.contains(tableJoinPair.getSecond())) {
-          SqlASTNode expressionRoot = (SqlASTNode) newTableRef.getChild(newTableRef.getChildCount() - 1).getChild(1).getChild(0);
-          addJoinCondition(joinInfo.get(tableJoinPair), expressionRoot);
-        } else if (alreadyJoinedTables.contains(tableJoinPair.getFirst())) {
-          generateJoin(tableJoinPair.getSecond(), joinInfo.get(tableJoinPair), oldFrom, newTableRef);
-          alreadyJoinedTables.add(tableJoinPair.getSecond());
-        } else {
-          generateJoin(tableJoinPair.getFirst(), joinInfo.get(tableJoinPair), oldFrom, newTableRef);
-          alreadyJoinedTables.add(tableJoinPair.getFirst());
+      boolean newJoinItem;
+      do {
+        newJoinItem = false;
+        for (iterator = tableJoinPairs.iterator(); iterator.hasNext();) {
+          tableJoinPair = iterator.next();
+          if (!alreadyJoinedTables.contains(tableJoinPair.getFirst()) && !alreadyJoinedTables.contains(tableJoinPair.getSecond())) {
+            continue;
+          } else if (alreadyJoinedTables.contains(tableJoinPair.getFirst()) && alreadyJoinedTables.contains(tableJoinPair.getSecond())) {
+            int firstIndex;
+            for (firstIndex = 0; firstIndex < newTableRef.getChildCount() - 1; firstIndex++) {
+              if (SqlXlateUtil.containTableName(tableJoinPair.getFirst(), newTableRef.getChild(firstIndex))) {
+                break;
+              }
+            }
+            int secondIndex;
+            for (secondIndex = 0; secondIndex < newTableRef.getChildCount() - 1; secondIndex++) {
+              if (SqlXlateUtil.containTableName(tableJoinPair.getSecond(), newTableRef.getChild(secondIndex))) {
+                break;
+              }
+            }
+            int childIndex = firstIndex > secondIndex ? firstIndex : secondIndex;
+            SqlASTNode expressionRoot = (SqlASTNode) newTableRef.getChild(childIndex).getChild(1).getChild(0);
+            addJoinCondition(joinInfo.joinPairInfo.get(tableJoinPair), expressionRoot);
+          } else if (alreadyJoinedTables.contains(tableJoinPair.getFirst())) {
+            generateJoin(tableJoinPair.getSecond(), joinInfo.joinPairInfo.get(tableJoinPair), joinInfo.joinFilterInfo.get(tableJoinPair.getSecond()), oldFrom, newTableRef);
+            alreadyJoinedTables.add(tableJoinPair.getSecond());
+          } else {
+            generateJoin(tableJoinPair.getFirst(), joinInfo.joinPairInfo.get(tableJoinPair), joinInfo.joinFilterInfo.get(tableJoinPair.getFirst()), oldFrom, newTableRef);
+            alreadyJoinedTables.add(tableJoinPair.getFirst());
+          }
+          iterator.remove();
+          newJoinItem = true;
         }
-        iterator.remove();
-        newJoinItem = true;
-      }
-    } while (newJoinItem);
+      } while (newJoinItem);
 
-    if (!tableJoinPairs.isEmpty()) {
-      //
-      // Complex cases invovled generation of new subquery is not supported and TBD.
-      //
-      throw new SqlXlateException("Multi-table selection transformer: Complex cases invovled generation of new subquery is not supported!");
+      if (!tableJoinPairs.isEmpty()) {
+        //
+        // Complex cases invovled generation of new subquery is not supported and TBD.
+        //
+        throw new SqlXlateException("Multi-table selection transformer: Complex cases invovled generation of new subquery is not supported!");
+      }
     }
 
     //
     // Generate cross joins for the left source tables.
     //
+    String preTable = null;
     for (String srcTable : srcTables) {
       if (!alreadyJoinedTables.contains(srcTable)) {
-        generateCrossJoin(srcTable, oldFrom, newTableRef);
+        if (newTableRef.getChildCount() == 0) {
+          generateTableRefElement(srcTable, oldFrom, newTableRef);
+          preTable = srcTable;
+        } else {
+          List<SqlASTNode> joinFilters = joinInfo.joinFilterInfo.get(srcTable);
+          if (preTable != null) {
+            List<SqlASTNode> preJoinFilters = joinInfo.joinFilterInfo.get(preTable);
+            preTable = null;
+
+            if (preJoinFilters != null) {
+              //
+              // Merge the first table's join filters of the join sequence into next table.
+              //
+              if (joinFilters == null) {
+                joinFilters = preJoinFilters;
+              } else {
+                for (SqlASTNode preJoinFilter : preJoinFilters) {
+                  joinFilters.add(preJoinFilter);
+                }
+              }
+            }
+          }
+          generateCrossJoin(srcTable, joinFilters, oldFrom, newTableRef);
+        }
       }
     }
   }
@@ -307,7 +394,7 @@ public class MultipleTableSelectTransformer extends BaseSqlASTTransformer {
     }
   }
 
-  private void generateJoin(String tableName, Set<JoinPair<Column>> columnJoinPairs, SqlASTNode oldFrom, SqlASTNode tableRef) {
+  private void generateJoin(String tableName, List<SqlASTNode> joinEqualityNodes, List<SqlASTNode> joinFilterNodes, SqlASTNode oldFrom, SqlASTNode tableRef) {
     //
     // Create a Join node and attach it to the new table as the last child.
     //
@@ -326,54 +413,19 @@ public class MultipleTableSelectTransformer extends BaseSqlASTTransformer {
     SqlASTNode logicExprNode = SqlXlateUtil.newSqlASTNode(PantheraParser_PLSQLParser.LOGIC_EXPR, "LOGIC_EXPR");
     onNode.addChild(logicExprNode);
 
-    addJoinCondition(columnJoinPairs, logicExprNode);
+    addJoinCondition(joinEqualityNodes, logicExprNode);
+    addJoinCondition(joinFilterNodes, logicExprNode);
   }
 
-  private SqlASTNode generateEquality(JoinPair<Column> joinPair) {
-    SqlASTNode equalsNode = SqlXlateUtil.newSqlASTNode(PantheraParser_PLSQLParser.EQUALS_OP, "=");
+  private void addJoinCondition(List<SqlASTNode> joinConditionNodes, SqlASTNode logicExpr) {
+    if (joinConditionNodes == null) {
+      return;
+    }
 
-    //
-    // First column.
-    //
-
-    SqlASTNode cascatedElementNode = SqlXlateUtil.newSqlASTNode(PantheraParser_PLSQLParser.CASCATED_ELEMENT, "CASCATED_ELEMENT");
-    equalsNode.addChild(cascatedElementNode);
-    SqlASTNode anyElementNode = SqlXlateUtil.newSqlASTNode(PantheraParser_PLSQLParser.ANY_ELEMENT, "ANY_ELEMENT");
-    cascatedElementNode.addChild(anyElementNode);
-    //
-    // Hive needs <table name>.<column name>.
-    //
-    SqlASTNode tableIdNode = SqlXlateUtil.newSqlASTNode(PantheraParser_PLSQLParser.ID, joinPair.getFirst().getTblAlias());
-    anyElementNode.addChild(tableIdNode);
-    SqlASTNode columnIdNode = SqlXlateUtil.newSqlASTNode(PantheraParser_PLSQLParser.ID, joinPair.getFirst().getColAlias());
-    anyElementNode.addChild(columnIdNode);
-
-    //
-    // Second column.
-    //
-
-    cascatedElementNode = SqlXlateUtil.newSqlASTNode(PantheraParser_PLSQLParser.CASCATED_ELEMENT, "CASCATED_ELEMENT");
-    equalsNode.addChild(cascatedElementNode);
-    anyElementNode = SqlXlateUtil.newSqlASTNode(PantheraParser_PLSQLParser.ANY_ELEMENT, "ANY_ELEMENT");
-    cascatedElementNode.addChild(anyElementNode);
-    //
-    // Hive needs <table name>.<column name>.
-    //
-    tableIdNode = SqlXlateUtil.newSqlASTNode(PantheraParser_PLSQLParser.ID, joinPair.getSecond().getTblAlias());
-    anyElementNode.addChild(tableIdNode);
-    columnIdNode = SqlXlateUtil.newSqlASTNode(PantheraParser_PLSQLParser.ID, joinPair.getSecond().getColAlias());
-    anyElementNode.addChild(columnIdNode);
-
-    return equalsNode;
-  }
-
-  private void addJoinCondition(Set<JoinPair<Column>> columnJoinPairs, SqlASTNode logicExpr) {
-    Iterator<JoinPair<Column>> iterator = columnJoinPairs.iterator();
-
+    Iterator<SqlASTNode> iterator = joinConditionNodes.iterator();
     SqlASTNode expressionRoot;
     if (logicExpr.getChildCount() == 0) {
-      JoinPair<Column> firstJoinCondition = iterator.next();
-      expressionRoot = generateEquality(firstJoinCondition);
+      expressionRoot =  iterator.next();
     } else {
       expressionRoot = (SqlASTNode) logicExpr.getChild(0);
     }
@@ -381,7 +433,7 @@ public class MultipleTableSelectTransformer extends BaseSqlASTTransformer {
     while(iterator.hasNext()) {
       SqlASTNode andNode = SqlXlateUtil.newSqlASTNode(PantheraParser_PLSQLParser.SQL92_RESERVED_AND, "and");
       andNode.addChild(expressionRoot);
-      andNode.addChild(generateEquality(iterator.next()));
+      andNode.addChild(iterator.next());
       expressionRoot = andNode;
     }
 
@@ -392,7 +444,7 @@ public class MultipleTableSelectTransformer extends BaseSqlASTTransformer {
     }
   }
 
-  private void generateCrossJoin(String tableName, SqlASTNode oldFrom, SqlASTNode tableRef) {
+  private void generateCrossJoin(String tableName, List<SqlASTNode> joinFilterNodes, SqlASTNode oldFrom, SqlASTNode tableRef) {
     //
     // Create a Join node and attach it to the new table as the last child.
     //
@@ -407,5 +459,18 @@ public class MultipleTableSelectTransformer extends BaseSqlASTTransformer {
     // Generate the table ref element tree as the second child of the join node.
     //
     generateTableRefElement(tableName, oldFrom, joinNode);
+
+    if (joinFilterNodes != null) {
+      //
+      // Generate the join condition sub-tree.
+      //
+      SqlASTNode onNode = SqlXlateUtil.newSqlASTNode(PantheraParser_PLSQLParser.SQL92_RESERVED_ON, "on");
+      joinNode.addChild(onNode);
+
+      SqlASTNode logicExprNode = SqlXlateUtil.newSqlASTNode(PantheraParser_PLSQLParser.LOGIC_EXPR, "LOGIC_EXPR");
+      onNode.addChild(logicExprNode);
+
+      addJoinCondition(joinFilterNodes, logicExprNode);
+    }
   }
 }
