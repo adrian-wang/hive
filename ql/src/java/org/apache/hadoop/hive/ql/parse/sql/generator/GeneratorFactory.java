@@ -153,6 +153,7 @@ public class GeneratorFactory {
     genMap.put(PantheraParser_PLSQLParser.SQL92_RESERVED_BETWEEN, new BetweenGenerator());
     genMap.put(PantheraParser_PLSQLParser.NOT_BETWEEN, new BetweenGenerator());
     genMap.put(PantheraExpParser.LIMIT_VK, new LimitGenerator());
+    genMap.put(PantheraParser_PLSQLParser.SEARCHED_CASE, new SearchedCaseGenerator());
   }
 
   static {

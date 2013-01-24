@@ -20,25 +20,32 @@ package org.apache.hadoop.hive.ql.parse.sql.generator;
 import org.antlr33.runtime.tree.CommonTree;
 import org.apache.hadoop.hive.ql.parse.ASTNode;
 import org.apache.hadoop.hive.ql.parse.HiveParser;
+import org.apache.hadoop.hive.ql.parse.sql.SqlXlateUtil;
 import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
 
 /**
  * Generator for case node.
  *
  * This generator handles the syntax:
- *    CASE value WHEN [compare_value] THEN result [WHEN [compare_value] THEN result ...] [<ELSE result] END
- *
+ *    CASE WHEN [condition] THEN result [WHEN [condition] THEN result ...] [ELSE result] END
  */
-public class SimpleCaseGenerator extends BaseHiveASTGenerator {
+public class SearchedCaseGenerator extends BaseHiveASTGenerator {
 
   @Override
   public boolean generate(ASTNode hiveRoot, CommonTree sqlRoot, ASTNode currentHiveNode,
       CommonTree currentSqlNode, TranslateContext context) throws Exception {
-    ASTNode ret = super.newHiveASTNode(HiveParser.TOK_FUNCTION, "TOK_FUNCTION");
-    super.attachHiveNode(hiveRoot, currentHiveNode, ret);
-    ASTNode caseNode = super.newHiveASTNode(HiveParser.KW_CASE, "case");
-    super.attachHiveNode(hiveRoot, ret, caseNode);
-    return super.generateChildren(hiveRoot, sqlRoot, ret, currentSqlNode, context);
+    //
+    // Create a HIVE TOK_FUNCTION node and attach it to the current HIVE node.
+    //
+    ASTNode func = SqlXlateUtil.newASTNode(HiveParser.TOK_FUNCTION, "TOK_FUNCTION");
+    attachHiveNode(hiveRoot, currentHiveNode, func);
+    //
+    // Create a HIVE Identifier node as the first child of the TOK_FUNCTION node.
+    //
+    ASTNode identifer = SqlXlateUtil.newASTNode(HiveParser.Identifier, "when");
+    attachHiveNode(hiveRoot, func, identifer);
+
+    return super.generateChildren(hiveRoot, sqlRoot, func, currentSqlNode, context);
   }
 
 }
