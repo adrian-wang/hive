@@ -51,8 +51,8 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
   FilterBlock fb;// current normalFilterBlock
   TranslateContext context;
   Map<String, String> tableAliasMap = new HashMap<String, String>();// <tableName,tableAlias>
-  Map<String, Map<String, String>> columnAliasMap = new HashMap<String, Map<String, String>>();// <tableAlias,<columnNam,columnAliase>>
-
+  // <tableAlias,<columnNam,columnAliase>> TODO how to do duplicated columnName?
+  Map<String, Map<String, String>> columnAliasMap = new HashMap<String, Map<String, String>>();
 
   /**
    * template method
@@ -443,7 +443,7 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
       String columnAliasName = columnAlias.getChild(0).getText();
       columnMap.put(columnName, columnAliasName);
     }
-
+    this.rebuildGroupOrder(alias);
     return aliasList;
   }
 
@@ -518,7 +518,7 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
     for (CommonTree alias : aliasList) {
       CommonTree newAlias = this.addSelectItem(selectList, this
           .createCascatedElement((CommonTree) alias.getChild(0)));
-       this.reRebuildGroupOrder(alias, newAlias);
+      this.reRebuildGroupOrder(alias, newAlias);
     }
     return selectList;
   }
@@ -692,11 +692,11 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
                 joinKeyAlias.getChild(0).getText());
         }
 
-//        ((CommonTree) anyElement.getChild(0)).getToken().setText(
-//              topAlias.getChild(0).getText());
-//        Map<String, String> columnMap = columnAliasMap.get(topAlias.getChild(0).getText());
-//        String alias = columnMap.get(anyElement.getChild(1).getText());
-//        ((CommonTree) anyElement.getChild(1)).getToken().setText(alias);
+        // ((CommonTree) anyElement.getChild(0)).getToken().setText(
+        // topAlias.getChild(0).getText());
+        // Map<String, String> columnMap = columnAliasMap.get(topAlias.getChild(0).getText());
+        // String alias = columnMap.get(anyElement.getChild(1).getText());
+        // ((CommonTree) anyElement.getChild(1)).getToken().setText(alias);
       }
     }
   }
@@ -755,14 +755,14 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
   void rebuildAnyElementAlias(CommonTree topAlias, CommonTree anyElement) {
     CommonTree column;
     if (anyElement.getChildCount() == 2) {
-      ((CommonTree) anyElement.getChild(0)).getToken().setText(topAlias.getChild(0).getText());// TODO
-      // remove
-      anyElement.deleteChild(0);// needn't table alias.
+//      ((CommonTree) anyElement.getChild(0)).getToken().setText(topAlias.getChild(0).getText());// TODO
+      // remove, needn't table alias.
+      anyElement.deleteChild(0);
       column = (CommonTree) anyElement.getChild(0);
     } else {
       column = (CommonTree) anyElement.getChild(0);
     }
-    Map<String, String> columnMap = this.columnAliasMap.get(topAlias.getChild(0).getText());
+    Map<String, String> columnMap = this.columnAliasMap.get(topAlias==null?"":topAlias.getChild(0).getText());
     String columnAlias = columnMap.get(column.getText());
     if (columnAlias != null) {
       column.getToken().setText(columnAlias);
@@ -780,7 +780,13 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
     CommonTree group = topQuery.getGroup();
     CommonTree order = topQuery.getOrder();
     if (group != null) {
-      // do nothing currently.
+      //should be rebuild group alias in query block, use select_list's column replace alias
+
+//      for (int i = 0; i < group.getChildCount(); i++) {
+//        CommonTree groupElement = (CommonTree) group.getChild(i);
+//        CommonTree anyElement = (CommonTree) groupElement.getChild(0).getChild(0).getChild(0);
+//        this.reRebuildAnyElement(oldAlias, newAlias, anyElement);
+//      }
     }
     if (order != null) {
       CommonTree orderByElements = (CommonTree) order.getChild(0);

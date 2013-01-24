@@ -63,6 +63,7 @@ public abstract class CommonFilterBlockProcessor extends BaseFilterBlockProcesso
         .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST));
 
 
+
     // create closing select
     closingSelect = super.createClosingSelect(topTableRefElement);
   }
@@ -169,7 +170,7 @@ public abstract class CommonFilterBlockProcessor extends BaseFilterBlockProcesso
    */
   void processExistsC(CommonTree joinType) throws SqlXlateException {
     this.makeTop();
-     super.rebuildGroupOrder(topAlias);
+
 
     this.makeJoin(super.createSqlASTNode(PantheraParser_PLSQLParser.CROSS_VK,
         PantheraExpParser.LEFTSEMI_STR));

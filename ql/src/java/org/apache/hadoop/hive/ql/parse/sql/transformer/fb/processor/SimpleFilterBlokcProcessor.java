@@ -37,7 +37,8 @@ public class SimpleFilterBlokcProcessor extends BaseFilterBlockProcessor {
   public void process(FilterBlockContext fbContext, FilterBlock fb, TranslateContext context) {
     super.context = context;
     super.fbContext = fbContext;
-    topSelect = fbContext.getQueryStack().peek().cloneSimpleQuery();
+    super.topQuery = fbContext.getQueryStack().peek();
+    topSelect = topQuery.cloneSimpleQuery();
     super.buildSelectListAlias(null, (CommonTree) topSelect
         .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST));
 
