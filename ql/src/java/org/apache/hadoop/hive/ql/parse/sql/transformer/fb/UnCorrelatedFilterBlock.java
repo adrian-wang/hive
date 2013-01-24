@@ -33,15 +33,15 @@ public class UnCorrelatedFilterBlock extends NormalFilterBlack {
     if ((fbContext.getSubQStack().size() == 0)
         && (fbContext.getQueryStack().size() == 1)) {
       // if (this.getParent() == fbContext.getQueryStack().peek()) {// simple filter, do nothing.
-      FilterBlockProcessorFactory.getSimpleTransfer().process(fbContext, this, context);
+      FilterBlockProcessorFactory.getSimpleProcessor().process(fbContext, this, context);
       return;
       // }
       // FilterBlockProcessorFactory.getSimpleTransfer().process(fbContext, this, context);
       // return;
     }
-    FilterBlockProcessorFactory.getUnCorrelatedTransfer(
+    FilterBlockProcessorFactory.getUnCorrelatedProcessor(
         fbContext.getSubQStack().peek().getASTNode().getType()).process(fbContext, this, context);
-
+    super.processStackSubq(fbContext, context);
   }
 
 

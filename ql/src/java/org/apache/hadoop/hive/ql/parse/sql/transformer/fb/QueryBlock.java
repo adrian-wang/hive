@@ -89,11 +89,11 @@ public class QueryBlock extends BaseFilterBlock {
       // FIXME bugs
       if (this.getTransformedNode() == null) {
         if (fbContext.getTypeStack().peek() instanceof HavingFilterBlock) {
-          FilterBlockProcessorFactory.getHavingUnCorrelatedTransfer(fbContext.getSubQStack().peek()
+          FilterBlockProcessorFactory.getHavingUnCorrelatedProcessor(fbContext.getSubQStack().peek()
               .getASTNode().getType()).process(fbContext, this, context);
         }
         if (fbContext.getTypeStack().peek() instanceof WhereFilterBlock) {
-          FilterBlockProcessorFactory.getUnCorrelatedTransfer(fbContext.getSubQStack().peek()
+          FilterBlockProcessorFactory.getUnCorrelatedProcessor(fbContext.getSubQStack().peek()
               .getASTNode().getType()).process(fbContext, this, context);
         }
       }

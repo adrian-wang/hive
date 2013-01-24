@@ -29,7 +29,7 @@ public class FilterBlockProcessorFactory {
 
 
 
-  public static FilterBlockProcessor getUnCorrelatedTransfer(int type) throws SqlXlateException {
+  public static FilterBlockProcessor getUnCorrelatedProcessor(int type) throws SqlXlateException {
     switch (type) {
     case PantheraParser_PLSQLParser.GREATER_THAN_OP:
       return new GreaterThanProcessor4UC();
@@ -45,7 +45,7 @@ public class FilterBlockProcessorFactory {
 
   }
 
-  public static FilterBlockProcessor getCorrelatedTransfer(int type) throws SqlXlateException {
+  public static FilterBlockProcessor getCorrelatedProcessor(int type) throws SqlXlateException {
     switch (type) {
     case PantheraParser_PLSQLParser.EQUALS_OP:
     case PantheraParser_PLSQLParser.GREATER_THAN_OP:
@@ -58,7 +58,7 @@ public class FilterBlockProcessorFactory {
     }
   }
 
-  public static FilterBlockProcessor getHavingUnCorrelatedTransfer(int type)
+  public static FilterBlockProcessor getHavingUnCorrelatedProcessor(int type)
       throws SqlXlateException {
     switch (type) {
     case PantheraParser_PLSQLParser.GREATER_THAN_OP:
@@ -68,14 +68,14 @@ public class FilterBlockProcessorFactory {
     }
   }
 
-  public static FilterBlockProcessor getSimpleTransfer() {
+  public static FilterBlockProcessor getSimpleProcessor() {
     return new SimpleFilterBlokcProcessor();
   }
 
   private FilterBlockProcessorFactory() {
   }
 
-  public static FilterBlockProcessor getAndProcess(){
+  public static FilterBlockProcessor getAndProcessor(){
     return new AndProcessor();
   }
 }

@@ -29,24 +29,9 @@ public class SubQFilterBlock extends BaseFilterBlock {
     fbContext.getSubQStack().push(this);
     super.processChildren(fbContext, context);
     SubQFilterBlock subqFB = fbContext.getSubQStack().pop();
-
     this.setTransformedNode(this.getChildren().get(0).getTransformedNode());
   }
 
-  /**
-   * TODO
-   * @param fbContext
-   * @param context
-   * @param subqFB
-   */
-  private void processStackSubq(FilterBlockContext fbContext, TranslateContext context,
-      SubQFilterBlock subqFB) {
-    subqFB = fbContext.getSubQStack().peek();
-    if (subqFB != null) {
-      subqFB = fbContext.getSubQStack().pop();
 
-      fbContext.getSubQStack().push(subqFB);
-    }
-  }
 
 }

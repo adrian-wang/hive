@@ -35,6 +35,6 @@ public class AndFilterBlock extends LogicFilterBlock {
   @Override
   public void process(FilterBlockContext fbContext, TranslateContext context) throws SqlXlateException {
     super.processChildren(fbContext, context);
-    FilterBlockProcessorFactory.getAndProcess().process(fbContext, this, context);
+    FilterBlockProcessorFactory.getAndProcessor().process(fbContext, this, context);
   }
 }

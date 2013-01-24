@@ -17,9 +17,51 @@
  */
 package org.apache.hadoop.hive.ql.parse.sql.transformer.fb;
 
+import java.util.EmptyStackException;
+
+import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
+import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
+import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.processor.FilterBlockProcessorFactory;
+
 
 public abstract class NormalFilterBlack extends BaseFilterBlock {
 
-
-
+  /**
+   * TODO
+   *
+   * @param fbContext
+   * @param context
+   * @param subqFB
+   * @throws SqlXlateException
+   */
+  void processStackSubq(FilterBlockContext fbContext, TranslateContext context)
+      throws SqlXlateException {
+    SubQFilterBlock subqFB;
+    QueryBlock queryBlock;
+    SubQFilterBlock currentSubqFB;
+    try {
+      subqFB = fbContext.getSubQStack().pop();
+    } catch (EmptyStackException e) {
+      return;
+    }
+    try {
+      queryBlock = fbContext.getQueryStack().pop();
+    } catch (EmptyStackException e) {
+      fbContext.getSubQStack().push(subqFB);
+      return;
+    }
+    try {
+      currentSubqFB = fbContext.getSubQStack().peek();
+    } catch (EmptyStackException e) {
+      fbContext.getSubQStack().push(subqFB);
+      fbContext.getQueryStack().push(queryBlock);
+      return;
+    }
+    // multi level sub query's non-bottom-query must be uncorrelated.
+    FilterBlockProcessorFactory.getUnCorrelatedProcessor(
+        currentSubqFB.getASTNode().getType()).process(fbContext, this, context);
+    this.processStackSubq(fbContext, context);
+    fbContext.getSubQStack().push(subqFB);
+    fbContext.getQueryStack().push(queryBlock);
+  }
 }

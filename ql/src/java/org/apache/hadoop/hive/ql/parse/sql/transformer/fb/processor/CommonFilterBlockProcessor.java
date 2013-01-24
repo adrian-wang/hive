@@ -62,6 +62,7 @@ public abstract class CommonFilterBlockProcessor extends BaseFilterBlockProcesso
     topAliasList = super.buildSelectListAlias(topAlias, (CommonTree) topSelect
         .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST));
 
+
     // create closing select
     closingSelect = super.createClosingSelect(topTableRefElement);
   }
@@ -100,6 +101,9 @@ public abstract class CommonFilterBlockProcessor extends BaseFilterBlockProcesso
     this.makeTop();
     this.makeJoin(super.createSqlASTNode(PantheraParser_PLSQLParser.CROSS_VK, "cross"));
 
+    CommonTree compareKeyAlias1 = super.addSelectItem((CommonTree) topSelect
+        .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST), (CommonTree) this.subQNode
+        .getFirstChildWithType(PantheraParser_PLSQLParser.CASCATED_ELEMENT));
 
 
     // join
@@ -108,9 +112,9 @@ public abstract class CommonFilterBlockProcessor extends BaseFilterBlockProcesso
     // PantheraParser_PLSQLParser.CROSS_VK, "cross"), join, bottomSelect);
 
     // select list
-    CommonTree compareKeyAlias = super.addAlias((CommonTree) ((CommonTree) bottomSelect
-        .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST)).getChild(0));
-    super.rebuildSelectListByFilter(true, bottomAlias, null);
+    CommonTree compareKeyAlias2 = super.addAlias((CommonTree) ((CommonTree) bottomSelect
+        .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST)).getChild(0));//childCount==0;
+    super.rebuildSelectListByFilter(true, bottomAlias, topAlias);
 
     // TODO cross join optimization will do it
     // on
@@ -123,7 +127,7 @@ public abstract class CommonFilterBlockProcessor extends BaseFilterBlockProcesso
     this.makeEnd();
 
     // where
-    super.buildWhereByFB(subQNode, compareKeyAlias);
+    super.buildWhereByFB(subQNode, compareKeyAlias1, compareKeyAlias2);
 
   }
 
@@ -185,7 +189,7 @@ public abstract class CommonFilterBlockProcessor extends BaseFilterBlockProcesso
 
 
     this.makeEnd();
-    super.buildWhereByFB(null, null);
+    super.buildWhereByFB(null, null, null);
   }
 
   /**
@@ -264,8 +268,7 @@ public abstract class CommonFilterBlockProcessor extends BaseFilterBlockProcesso
       CommonTree expr = (CommonTree) selectItem.getChild(0);
       CommonTree function = super.createFunction("max", (CommonTree) expr.deleteChild(0));
       super.attachChild(expr, function);
-      CommonTree maxAlias = super.createAlias();
-      super.attachChild(selectItem, maxAlias);
+      CommonTree maxAlias = super.addAlias(selectItem);
 
       // where
       super.buildWhereBranch(viewAlias, maxAlias);
