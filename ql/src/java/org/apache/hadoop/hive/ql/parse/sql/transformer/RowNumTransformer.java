@@ -129,7 +129,11 @@ public class RowNumTransformer  extends BaseSqlASTTransformer  {
         return;
       }
 
-      if (parentSelect.getChildCount() == 3) {
+      //
+      // Make sure parent select has no group by,order by,having.
+      // Note that "order by" is a child of select statement node.
+      //
+      if (parentSelect.getChildCount() == 3 && parentSelect.getParent().getParent().getChildCount() == 1) {
         SqlASTNode limitParent = (SqlASTNode) parentSelect.getFirstChildWithType(PantheraExpParser.LIMIT_VK);
         if (limitParent == null) {
           return;
@@ -148,9 +152,10 @@ public class RowNumTransformer  extends BaseSqlASTTransformer  {
         }
       }
       //
-      // Replace the parent select with the current select.
+      // Replace the parent select statement node with the current select statement node (in case missing order by).
       //
-      parentSelect.getParent().setChild(parentSelect.getChildIndex(), node);
+      SqlASTNode parentSelectStatement = (SqlASTNode) parentSelect.getParent().getParent();
+      parentSelectStatement.getParent().setChild(parentSelectStatement.getChildIndex(), node.getParent().getParent());
       stack.pop();
       stack.push(node);
     }
