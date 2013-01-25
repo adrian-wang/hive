@@ -17,21 +17,27 @@
  */
 package org.apache.hadoop.hive.ql.parse.sql.transformer;
 
+import java.util.HashSet;
+import java.util.Set;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hive.ql.parse.sql.SqlASTNode;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
 import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
 import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.FilterBlock;
 import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.FilterBlockContext;
 import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.QueryBlock;
+import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.SubQFilterBlock;
 
 /**
  * Transform filter block tree with every QueryInfo.
  * FilterBlockTransformer.
  *
  */
-public class SubQUnnestTransformer  extends BaseSqlASTTransformer  {
+public class SubQUnnestTransformer extends BaseSqlASTTransformer {
 
-
+  private static final Log LOG = LogFactory.getLog(SubQUnnestTransformer.class);
   SqlASTTransformer tf;
 
   public SubQUnnestTransformer(SqlASTTransformer tf) {
@@ -60,12 +66,36 @@ public class SubQUnnestTransformer  extends BaseSqlASTTransformer  {
   }
 
   void transformFilterBlock(QueryInfo qf, TranslateContext context) throws SqlXlateException {
+    if (!this.hasSubQuery(qf)) {
+      LOG.info("skip subq transform:" + qf.toStringTree());
+      return;
+    }
     FilterBlock fb = qf.getFilterBlockTreeRoot();
     if (!(fb instanceof QueryBlock)) {
       throw new SqlXlateException("Error FilterBlock tree" + fb.toStringTree());
     }
 
     fb.process(new FilterBlockContext(), context);
+  }
+
+  boolean hasSubQuery(QueryInfo qf) {
+    FilterBlock fb = qf.getFilterBlockTreeRoot();
+    Set<Boolean> result = new HashSet<Boolean>();
+    this.isSubQFilterBlock(fb, result);
+    if (result.contains(true)) {
+      return true;
+    }
+    return false;
+  }
+
+  void isSubQFilterBlock(FilterBlock fb, Set<Boolean> result) {
+    if (fb instanceof SubQFilterBlock) {
+      result.add(true);
+      return;
+    }
+    for (FilterBlock child : fb.getChildren()) {
+      isSubQFilterBlock(child, result);
+    }
   }
 
 }

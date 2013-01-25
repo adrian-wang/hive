@@ -47,6 +47,8 @@ public class QueryBlock extends BaseFilterBlock {
       throws SqlXlateException {
 
     fbContext.getQueryStack().push(this);
+
+    //TODO should process having firstly?(because of group processing...)
     super.processChildren(fbContext, context);
 
     FilterBlock childFb = this.getChildren().size() == 0 ? null : this.getChildren().get(0);
@@ -186,6 +188,10 @@ public class QueryBlock extends BaseFilterBlock {
 
   public CommonTree getGroup() {
     return group;
+  }
+
+  public void setGroup(CommonTree group) {
+    this.group=group;
   }
 
   public CommonTree getOrder() {

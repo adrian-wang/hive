@@ -114,7 +114,7 @@ public abstract class CommonFilterBlockProcessor extends BaseFilterBlockProcesso
 
     // select list
     CommonTree compareKeyAlias2 = super.addAlias((CommonTree) ((CommonTree) bottomSelect
-        .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST)).getChild(0));//childCount==0;
+        .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST)).getChild(0));// childCount==0;
     super.rebuildSelectListByFilter(true, bottomAlias, topAlias);
 
     // TODO cross join optimization will do it
@@ -200,13 +200,16 @@ public abstract class CommonFilterBlockProcessor extends BaseFilterBlockProcesso
    */
   void processCompareHavingUC(CommonTree joinType) {
 
-    // clone whole top select tree
-    super.topSelect = super.topQuery.cloneWholeQuery();
-
-    // delete having
-    super.deleteBranch((CommonTree) topSelect
+    // delete having. DO it before clone.
+    FilterBlockUtil.deleteBranch((CommonTree) topQuery.getASTNode()
         .getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_GROUP),
         PantheraParser_PLSQLParser.SQL92_RESERVED_HAVING);
+
+    // needn't group after transformed.
+    super.topQuery.setGroup(null);
+
+    // clone whole top select tree
+    super.topSelect = super.topQuery.cloneWholeQuery();
 
     // create top select table ref node
     topTableRefElement = super.createTableRefElement(topSelect);
@@ -370,7 +373,7 @@ public abstract class CommonFilterBlockProcessor extends BaseFilterBlockProcesso
 
 
     // delete where
-    super.deleteBranch(bottomSelect, PantheraParser_PLSQLParser.SQL92_RESERVED_WHERE);
+    FilterBlockUtil.deleteBranch(bottomSelect, PantheraParser_PLSQLParser.SQL92_RESERVED_WHERE);
 
     // on
     CommonTree on = super.buildOn(FilterBlockUtil.dupNode(fb.getASTNode()), (CommonTree) fb

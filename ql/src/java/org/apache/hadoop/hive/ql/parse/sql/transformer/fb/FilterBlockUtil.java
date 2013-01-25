@@ -110,4 +110,16 @@ public class FilterBlockUtil {
     return result;
   }
 
+  public static CommonTree deleteBranch(CommonTree root, int branchType) {
+    if (root == null) {
+      return null;
+    }
+    for (int i = 0; i < root.getChildCount(); i++) {
+      if (root.getChild(i).getType() == branchType) {
+        return (CommonTree) root.deleteChild(i);
+
+      }
+    }
+    return null;
+  }
 }

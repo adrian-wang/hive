@@ -398,15 +398,7 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
   }
 
 
-  CommonTree deleteBranch(CommonTree root, int branchType) {
-    for (int i = 0; i < root.getChildCount(); i++) {
-      if (root.getChild(i).getType() == branchType) {
-        return (CommonTree) root.deleteChild(i);
 
-      }
-    }
-    return null;
-  }
 
   /**
    * add alias for every column & build column alias map
@@ -703,7 +695,7 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
 
   void buildWhereByFB(CommonTree subQCondition, CommonTree compareKeyAlias1,
       CommonTree compareKeyAlias2) {
-    this.deleteBranch(bottomSelect,
+    FilterBlockUtil.deleteBranch(bottomSelect,
         PantheraParser_PLSQLParser.SQL92_RESERVED_WHERE);
     CommonTree where = this.createSqlASTNode(PantheraParser_PLSQLParser.SQL92_RESERVED_WHERE,
         "where");
@@ -780,7 +772,7 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
     CommonTree group = topQuery.getGroup();
     CommonTree order = topQuery.getOrder();
     if (group != null) {
-      //should be rebuild group alias in query block, use select_list's column replace alias
+      //FIXME should rebuild group alias in query block, use select_list's column replace alias
 
 //      for (int i = 0; i < group.getChildCount(); i++) {
 //        CommonTree groupElement = (CommonTree) group.getChild(i);
