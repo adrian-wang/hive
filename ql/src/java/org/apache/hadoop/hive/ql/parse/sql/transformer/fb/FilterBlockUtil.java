@@ -66,12 +66,31 @@ public class FilterBlockUtil {
     for (int i = 0; i < selectList.getChildCount(); i++) {
       CommonTree selectItem = (CommonTree) selectList.getChild(i);
       CommonTree expr = (CommonTree) selectItem.getChild(0);
-      if (expr.getChild(0).getType() == PantheraParser_PLSQLParser.STANDARD_FUNCTION) {
-        aggregationList.add(cloneTree(expr));
+      List<CommonTree> nodeList = new ArrayList<CommonTree>();
+      findNode(expr, PantheraParser_PLSQLParser.STANDARD_FUNCTION, nodeList);
+      if (nodeList.size() > 0) {// only one supported now, easy to more than one.
+        CommonTree standardFunction = nodeList.get(0);
         // FIXME count,count(*),sum, they have different branch shape
-        CommonTree cascatedElement = (CommonTree) expr.getChild(0).getChild(0).getChild(0)
+        // STANDARD_FUNCTION.functionName.ARGUMENTS.ARGUMENT.EXPR.CASCATED_ELEMENT
+        CommonTree expr2 = (CommonTree) standardFunction.getChild(0).getChild(0).getChild(0)
             .getChild(0);
-        // EXPR.STANDARD_FUNCTION.functionName.ARGUMENTS.ARGUMENT.EXPR.CASCATED_ELEMENT
+        CommonTree cascatedElement = (CommonTree) expr2.deleteChild(0);
+        CommonTree parent = (CommonTree) standardFunction.getParent();
+        for (int j = 0; j < parent.getChildCount(); j++) {
+          if (parent.getChild(0) == standardFunction) {
+            parent.deleteChild(i);
+            if (parent.getChildren() == null) {
+              parent.addChild(cascatedElement);
+            } else {
+              parent.getChildren().add(i, cascatedElement);
+            }
+          }
+        }
+
+        aggregationList.add(cloneTree(standardFunction));
+
+
+
         expr.deleteChild(0);
         expr.addChild(cascatedElement);
       } else {
@@ -79,6 +98,25 @@ public class FilterBlockUtil {
       }
     }
     return aggregationList;
+  }
+
+  /**
+   * find all node which type is input type in the tree which root is node.
+   *
+   * @param node
+   * @param type
+   * @param nodeList
+   */
+  static void findNode(CommonTree node, int type, List<CommonTree> nodeList) {
+    if (node == null) {
+      return;
+    }
+    if (node.getType() == type) {
+      nodeList.add(node);
+    }
+    for (int i = 0; i < node.getChildCount(); i++) {
+      findNode((CommonTree) node.getChild(i), type, nodeList);
+    }
   }
 
   /**

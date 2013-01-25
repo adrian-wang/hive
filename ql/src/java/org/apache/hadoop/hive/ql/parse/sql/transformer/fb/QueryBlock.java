@@ -22,8 +22,8 @@ import java.util.List;
 import java.util.Set;
 
 import org.antlr33.runtime.tree.CommonTree;
+import org.antlr33.runtime.tree.Tree;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
-import org.apache.hadoop.hive.ql.parse.sql.SqlXlateUtil;
 import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
 import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.processor.FilterBlockProcessorFactory;
 
@@ -66,10 +66,14 @@ public class QueryBlock extends BaseFilterBlock {
           CommonTree func = aggregationList.get(i);
           if (func != null) {
             CommonTree selectItem = (CommonTree) selectList.getChild(i);
-            CommonTree expr = (CommonTree) selectItem.deleteChild(0);
-            selectItem.addChild(func);
-            SqlXlateUtil.exchangeChildrenPosition(selectItem);
-            this.convertAlias(func, expr);// use alias
+            CommonTree expr = (CommonTree) selectItem.getChild(0);
+            CommonTree cascatedElement = (CommonTree) expr.deleteChild(0);
+            expr.addChild(func);
+            CommonTree o = func;
+            while(o.getChildCount()>0){
+              o =(CommonTree) o.getChild(0);
+            }
+            o.addChild(cascatedElement);
           }
         }
       }
@@ -176,14 +180,16 @@ public class QueryBlock extends BaseFilterBlock {
    */
   private void convertAlias(CommonTree origin, CommonTree alias) {
     CommonTree o = origin;
-    while (o.getChildCount() > 0) {
+    while (o.getChild(0).getChildCount() > 0) {
       o = (CommonTree) o.getChild(0);
     }
     CommonTree a = alias;
-    while (a.getChildCount() > 0) {
+    while (a.getChild(0).getChildCount() > 0) {
       a = (CommonTree) a.getChild(0);
     }
-    o.getToken().setText(a.getText());
+    Tree t = o.getParent();
+    t.deleteChild(0);
+    t.addChild(a);
   }
 
   public CommonTree getGroup() {

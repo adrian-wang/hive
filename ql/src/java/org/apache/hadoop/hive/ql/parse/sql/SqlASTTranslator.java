@@ -85,7 +85,7 @@ public class SqlASTTranslator {
     ret = (ASTNode) hiveTopNode.getChild(0);
 
     // potential validation, optimization here
-    LOG.info("Generated Hive AST : " + ret.toStringTree());
+    LOG.info("Generated Hive AST : " + ret.toStringTree().replace('(', '[').replace(')', ']'));
     return ret;
   }
 

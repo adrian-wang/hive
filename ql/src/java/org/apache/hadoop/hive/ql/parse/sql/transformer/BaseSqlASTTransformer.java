@@ -21,6 +21,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hive.ql.parse.sql.SqlASTNode;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
+import org.apache.hadoop.hive.ql.parse.sql.SqlXlateUtil;
 import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
 
 /**
@@ -48,6 +49,8 @@ public abstract class BaseSqlASTTransformer implements SqlASTTransformer {
     QueryInfo qf = context.getQInfoRoot();
     LOG.info("After " + myself + ", sql ast is:"
         + tree.toStringTree().replace('(', '[').replace(')', ']'));
+    LOG.info("After " + myself + ", sql ast type is:"
+        + SqlXlateUtil.toTypeStringTree(tree));
     LOG.info("After " + myself + ", query info is:"
         + (qf == null ? "null" : qf.toStringTree().replace('(', '[').replace(')', ']')));
     LOG.info("After " + myself + ", filterBlock is:"

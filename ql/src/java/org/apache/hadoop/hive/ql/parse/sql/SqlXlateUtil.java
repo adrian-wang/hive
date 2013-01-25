@@ -858,4 +858,33 @@ public final class SqlXlateUtil {
     }
     return false;
   }
+
+
+
+
+
+  public static String toTypeStringTree(org.antlr33.runtime.tree.Tree tree) {
+
+    StringBuilder sb = new StringBuilder();
+    toTypeStringBuilder(sb, tree);
+    return sb.toString();
+  }
+
+  private static void toTypeStringBuilder(StringBuilder sb, org.antlr33.runtime.tree.Tree tree) {
+
+    sb.append(" ");
+    if (tree.getChildCount() > 0) {
+      sb.append("[");
+    }
+
+    sb.append(tree.getType());
+
+    if (tree.getChildCount() > 0) {
+      for (int i = 0; i < tree.getChildCount(); i++) {
+        toTypeStringBuilder(sb, tree.getChild(i));
+      }
+      sb.append("]");
+    }
+
+  }
 }
