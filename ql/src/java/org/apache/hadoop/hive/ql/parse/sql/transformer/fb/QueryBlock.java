@@ -38,6 +38,7 @@ public class QueryBlock extends BaseFilterBlock {
   private List<CommonTree> aggregationList;
   private CommonTree group;
   private CommonTree order;
+  private final CountAsterisk countAsterisk = new CountAsterisk();
 
 
   /**
@@ -76,6 +77,9 @@ public class QueryBlock extends BaseFilterBlock {
             expr2.addChild(cascatedElement);
           }
         }
+      }
+      if (countAsterisk.getSelectItem() != null) {
+        selectList.getChildren().add(countAsterisk.getPosition(), countAsterisk.getSelectItem());
       }
       this.setTransformedNode(select);
     }
@@ -142,7 +146,7 @@ public class QueryBlock extends BaseFilterBlock {
       }
     }
     aggregationList = FilterBlockUtil.filterAggregation((CommonTree) cloneRoot
-        .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST));
+        .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST), countAsterisk);
 
     queryForTransfer = cloneRoot;
   }
@@ -205,5 +209,31 @@ public class QueryBlock extends BaseFilterBlock {
     return order;
   }
 
+  /**
+   * record count(*) in query
+   * CountAsterisk.
+   *
+   */
+  public class CountAsterisk {
+    private int position;
+    private CommonTree selectItem;
+
+    public int getPosition() {
+      return position;
+    }
+
+    public void setPosition(int position) {
+      this.position = position;
+    }
+
+    public CommonTree getSelectItem() {
+      return selectItem;
+    }
+
+    public void setSelectItem(CommonTree selectItem) {
+      this.selectItem = selectItem;
+    }
+
+  }
 
 }

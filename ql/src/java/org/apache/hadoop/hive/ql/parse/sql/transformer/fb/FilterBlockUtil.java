@@ -25,6 +25,7 @@ import java.util.Set;
 import org.antlr33.runtime.CommonToken;
 import org.antlr33.runtime.tree.CommonTree;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateUtil;
+import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.QueryBlock.CountAsterisk;
 
 import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
 
@@ -58,7 +59,7 @@ public class FilterBlockUtil {
    * @param selectList
    * @return filtered aggregation function list.It's size equals SELECT_ITEM's number.
    */
-  static List<CommonTree> filterAggregation(CommonTree selectList) {
+  static List<CommonTree> filterAggregation(CommonTree selectList, CountAsterisk countAsterisk) {
     if (selectList == null) {
       return null;
     }
@@ -68,10 +69,16 @@ public class FilterBlockUtil {
       CommonTree expr = (CommonTree) selectItem.getChild(0);
       List<CommonTree> standardFunctionList = new ArrayList<CommonTree>();
       findNode(expr, PantheraParser_PLSQLParser.STANDARD_FUNCTION, standardFunctionList);
-      if (standardFunctionList.size() == 1) {// only one supported now, hard to more than one.
+      // TODO only one function supported now, hard to more than one.
+      if (standardFunctionList.size() == 1) {
         CommonTree standardFunction = standardFunctionList.get(0);
-        // FIXME count,count(*),sum, they have different branch shape
-        // STANDARD_FUNCTION.functionName.ARGUMENTS.ARGUMENT.EXPR.CASCATED_ELEMENT
+        // TODO only support a,count(*) style ,NOT support select count(*) from...
+        if (standardFunction.getChild(0).getType() == PantheraParser_PLSQLParser.COUNT_VK
+            && standardFunction.getChild(0).getChild(0).getType() == PantheraParser_PLSQLParser.ASTERISK) {
+          countAsterisk.setPosition(i);
+          countAsterisk.setSelectItem(selectItem);
+          continue;
+        }
         List<CommonTree> exprList = new ArrayList<CommonTree>();
         findNode(standardFunction, PantheraParser_PLSQLParser.EXPR, exprList);
         CommonTree expr2 = exprList.get(0);
@@ -87,16 +94,15 @@ public class FilterBlockUtil {
             }
           }
         }
-
         aggregationList.add(cloneTree(standardFunction));
-
-
-
         expr.deleteChild(0);
         expr.addChild(cascatedElement);
       } else {
         aggregationList.add(null);
       }
+    }
+    if (countAsterisk.getSelectItem() != null) {
+      selectList.deleteChild(countAsterisk.getPosition());
     }
     return aggregationList;
   }

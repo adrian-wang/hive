@@ -27,7 +27,7 @@ import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
 
 public abstract class BaseFilterBlock implements FilterBlock {
   private CommonTree astNode;
-  private List<FilterBlock> children;
+  private List<FilterBlock> children =new ArrayList<FilterBlock>();
   private CommonTree transformedNode;
   private FilterBlock parent;
 
@@ -62,11 +62,8 @@ public abstract class BaseFilterBlock implements FilterBlock {
   }
 
   public void addChild(FilterBlock fb) {
-    if (children == null) {
-      children = new ArrayList<FilterBlock>();
-    }
-    children.add(fb);
     if (fb != null) {
+      children.add(fb);
       fb.setParent(this);
     }
   }
