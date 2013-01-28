@@ -66,23 +66,24 @@ public class FilterBlockUtil {
     for (int i = 0; i < selectList.getChildCount(); i++) {
       CommonTree selectItem = (CommonTree) selectList.getChild(i);
       CommonTree expr = (CommonTree) selectItem.getChild(0);
-      List<CommonTree> nodeList = new ArrayList<CommonTree>();
-      findNode(expr, PantheraParser_PLSQLParser.STANDARD_FUNCTION, nodeList);
-      if (nodeList.size() > 0) {// only one supported now, easy to more than one.
-        CommonTree standardFunction = nodeList.get(0);
+      List<CommonTree> standardFunctionList = new ArrayList<CommonTree>();
+      findNode(expr, PantheraParser_PLSQLParser.STANDARD_FUNCTION, standardFunctionList);
+      if (standardFunctionList.size() == 1) {// only one supported now, hard to more than one.
+        CommonTree standardFunction = standardFunctionList.get(0);
         // FIXME count,count(*),sum, they have different branch shape
         // STANDARD_FUNCTION.functionName.ARGUMENTS.ARGUMENT.EXPR.CASCATED_ELEMENT
-        CommonTree expr2 = (CommonTree) standardFunction.getChild(0).getChild(0).getChild(0)
-            .getChild(0);
+        List<CommonTree> exprList = new ArrayList<CommonTree>();
+        findNode(standardFunction, PantheraParser_PLSQLParser.EXPR, exprList);
+        CommonTree expr2 = exprList.get(0);
         CommonTree cascatedElement = (CommonTree) expr2.deleteChild(0);
         CommonTree parent = (CommonTree) standardFunction.getParent();
         for (int j = 0; j < parent.getChildCount(); j++) {
-          if (parent.getChild(0) == standardFunction) {
-            parent.deleteChild(i);
+          if (parent.getChild(j) == standardFunction) {
+            parent.deleteChild(j);
             if (parent.getChildren() == null) {
               parent.addChild(cascatedElement);
             } else {
-              parent.getChildren().add(i, cascatedElement);
+              parent.getChildren().add(j, cascatedElement);
             }
           }
         }

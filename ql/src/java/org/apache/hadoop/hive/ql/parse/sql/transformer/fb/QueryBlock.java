@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hive.ql.parse.sql.transformer.fb;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -48,7 +49,7 @@ public class QueryBlock extends BaseFilterBlock {
 
     fbContext.getQueryStack().push(this);
 
-    //TODO should process having firstly?(because of group processing...)
+    // TODO should process having firstly?(because of group processing...)
     super.processChildren(fbContext, context);
 
     FilterBlock childFb = this.getChildren().size() == 0 ? null : this.getChildren().get(0);
@@ -69,11 +70,10 @@ public class QueryBlock extends BaseFilterBlock {
             CommonTree expr = (CommonTree) selectItem.getChild(0);
             CommonTree cascatedElement = (CommonTree) expr.deleteChild(0);
             expr.addChild(func);
-            CommonTree o = func;
-            while(o.getChildCount()>0){
-              o =(CommonTree) o.getChild(0);
-            }
-            o.addChild(cascatedElement);
+            List<CommonTree> exprList = new ArrayList<CommonTree>();
+            FilterBlockUtil.findNode(func, PantheraParser_PLSQLParser.EXPR, exprList);
+            CommonTree expr2 = exprList.get(0);
+            expr2.addChild(cascatedElement);
           }
         }
       }
@@ -95,8 +95,9 @@ public class QueryBlock extends BaseFilterBlock {
       // FIXME bugs
       if (this.getTransformedNode() == null) {
         if (fbContext.getTypeStack().peek() instanceof HavingFilterBlock) {
-          FilterBlockProcessorFactory.getHavingUnCorrelatedProcessor(fbContext.getSubQStack().peek()
-              .getASTNode().getType()).process(fbContext, this, context);
+          FilterBlockProcessorFactory.getHavingUnCorrelatedProcessor(
+              fbContext.getSubQStack().peek()
+                  .getASTNode().getType()).process(fbContext, this, context);
         }
         if (fbContext.getTypeStack().peek() instanceof WhereFilterBlock) {
           FilterBlockProcessorFactory.getUnCorrelatedProcessor(fbContext.getSubQStack().peek()
@@ -197,7 +198,7 @@ public class QueryBlock extends BaseFilterBlock {
   }
 
   public void setGroup(CommonTree group) {
-    this.group=group;
+    this.group = group;
   }
 
   public CommonTree getOrder() {
