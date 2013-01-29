@@ -375,6 +375,36 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
     return where;
   }
 
+  CommonTree buildWhere(CommonTree op, List<CommonTree> leftChildren, List<CommonTree> rightChildren)
+      throws SqlXlateException {
+    if (leftChildren == null || leftChildren.size() != rightChildren.size()
+        || leftChildren.size() == 0) {
+      throw new SqlXlateException("illegal condition.");
+    }
+    CommonTree where = this.createSqlASTNode(PantheraParser_PLSQLParser.SQL92_RESERVED_WHERE,
+        "where");
+    CommonTree logicExpr = this.createSqlASTNode(PantheraParser_PLSQLParser.LOGIC_EXPR,
+        "LOGIC_EXPR");
+    this.attachChild(where, logicExpr);
+    CommonTree currentBranch = logicExpr;
+    for (int i = 0; i < leftChildren.size(); i++) {
+      if (logicExpr.getChildCount() > 0) {
+        CommonTree and = this
+            .createSqlASTNode(PantheraParser_PLSQLParser.SQL92_RESERVED_AND, "and");
+        this.attachChild(and, (CommonTree) logicExpr.deleteChild(0));
+        this.attachChild(logicExpr, and);
+        currentBranch = and;
+      }
+      CommonTree operation = FilterBlockUtil.cloneTree(op);
+      this.attachChild(operation, this.createCascatedElement((CommonTree) leftChildren.get(i)
+          .getChild(0)));
+      this.attachChild(operation, this.createCascatedElement((CommonTree) rightChildren.get(i)
+          .getChild(0)));
+      this.attachChild(currentBranch, operation);
+    }
+    return where;
+  }
+
   CommonTree createLogicExpr(CommonTree op, CommonTree child0, CommonTree child1) {
     CommonTree logicExpr = this.createSqlASTNode(PantheraParser_PLSQLParser.LOGIC_EXPR,
         "LOGIC_EXPR");
@@ -549,39 +579,51 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
    * @throws SqlXlateException
    */
   void rebuildArrayContains(CommonTree logicExpr) throws SqlXlateException {
-    CommonTree op = (CommonTree) logicExpr.deleteChild(0);
-    CommonTree newOp;
-    switch (op.getType()) {
-    case PantheraParser_PLSQLParser.NOT_IN:
-      newOp = this.createSqlASTNode(PantheraParser_PLSQLParser.SQL92_RESERVED_NOT, "not");
-      this.attachChild(logicExpr, newOp);
-      break;
-    default:
-      throw new SqlXlateException("UnProcess logic operator." + op.getText());
-    }
-    CommonTree cascatedElement = this.createSqlASTNode(PantheraParser_PLSQLParser.CASCATED_ELEMENT,
-        "CASCATED_ELEMENT");
-    this.attachChild(newOp, cascatedElement);
-    CommonTree routineCall = this.createSqlASTNode(PantheraParser_PLSQLParser.ROUTINE_CALL,
-        "ROUTINE_CALL");
-    this.attachChild(cascatedElement, routineCall);
-    CommonTree routineName = this.createSqlASTNode(PantheraParser_PLSQLParser.ROUTINE_NAME,
-        "ROUTINE_NAME");
-    this.attachChild(routineCall, routineName);
-    CommonTree arrayContains = this.createSqlASTNode(PantheraParser_PLSQLParser.ID,
-        "array_contains");
-    this.attachChild(routineName, arrayContains);
-    CommonTree arguments = this.createSqlASTNode(PantheraParser_PLSQLParser.ARGUMENTS, "ARGUMENTS");
-    this.attachChild(routineCall, arguments);
-    for (int i = 0; i < op.getChildCount(); i++) {
-      CommonTree arguement = this.createSqlASTNode(PantheraParser_PLSQLParser.ARGUMENT, "ARGUMENT");
-      this.attachChild(arguments, arguement);
-      CommonTree expr = this.createSqlASTNode(PantheraParser_PLSQLParser.EXPR, "EXPR");
-      this.attachChild(arguement, expr);
-      CommonTree element = (CommonTree) op.getChild(i);
-      this.attachChild(expr, element);
+    for (int k = 0; k < logicExpr.getChildCount(); k++) {
+      if (logicExpr.getChild(k).getType() == PantheraParser_PLSQLParser.SQL92_RESERVED_AND) {
+        this.rebuildArrayContains((CommonTree) logicExpr.getChild(k));
+      } else {
+        CommonTree op = (CommonTree) logicExpr.deleteChild(k);
 
+        CommonTree newOp;
+        switch (op.getType()) {
+        case PantheraParser_PLSQLParser.NOT_IN:
+          newOp = this.createSqlASTNode(PantheraParser_PLSQLParser.SQL92_RESERVED_NOT, "not");
+          // this.attachChild(logicExpr, newOp);
+          logicExpr.getChildren().add(k, newOp);
+          break;
+        default:
+          throw new SqlXlateException("UnProcess logic operator." + op.getText());
+        }
+        CommonTree cascatedElement = this.createSqlASTNode(
+              PantheraParser_PLSQLParser.CASCATED_ELEMENT,
+              "CASCATED_ELEMENT");
+        this.attachChild(newOp, cascatedElement);
+        CommonTree routineCall = this.createSqlASTNode(PantheraParser_PLSQLParser.ROUTINE_CALL,
+              "ROUTINE_CALL");
+        this.attachChild(cascatedElement, routineCall);
+        CommonTree routineName = this.createSqlASTNode(PantheraParser_PLSQLParser.ROUTINE_NAME,
+              "ROUTINE_NAME");
+        this.attachChild(routineCall, routineName);
+        CommonTree arrayContains = this.createSqlASTNode(PantheraParser_PLSQLParser.ID,
+              "array_contains");
+        this.attachChild(routineName, arrayContains);
+        CommonTree arguments = this.createSqlASTNode(PantheraParser_PLSQLParser.ARGUMENTS,
+              "ARGUMENTS");
+        this.attachChild(routineCall, arguments);
+        for (int i = 0; i < op.getChildCount(); i++) {
+          CommonTree arguement = this.createSqlASTNode(PantheraParser_PLSQLParser.ARGUMENT,
+                "ARGUMENT");
+          this.attachChild(arguments, arguement);
+          CommonTree expr = this.createSqlASTNode(PantheraParser_PLSQLParser.EXPR, "EXPR");
+          this.attachChild(arguement, expr);
+          CommonTree element = (CommonTree) op.getChild(i);
+          this.attachChild(expr, element);
+        }
+
+      }
     }
+
   }
 
   CommonTree createMinus(CommonTree select) {
@@ -747,14 +789,16 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
   void rebuildAnyElementAlias(CommonTree topAlias, CommonTree anyElement) {
     CommonTree column;
     if (anyElement.getChildCount() == 2) {
-//      ((CommonTree) anyElement.getChild(0)).getToken().setText(topAlias.getChild(0).getText());// TODO
+      // ((CommonTree) anyElement.getChild(0)).getToken().setText(topAlias.getChild(0).getText());//
+      // TODO
       // remove, needn't table alias.
       anyElement.deleteChild(0);
       column = (CommonTree) anyElement.getChild(0);
     } else {
       column = (CommonTree) anyElement.getChild(0);
     }
-    Map<String, String> columnMap = this.columnAliasMap.get(topAlias==null?"":topAlias.getChild(0).getText());
+    Map<String, String> columnMap = this.columnAliasMap.get(topAlias == null ? "" : topAlias
+        .getChild(0).getText());
     String columnAlias = columnMap.get(column.getText());
     if (columnAlias != null) {
       column.getToken().setText(columnAlias);
@@ -772,13 +816,13 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
     CommonTree group = topQuery.getGroup();
     CommonTree order = topQuery.getOrder();
     if (group != null) {
-      //FIXME should rebuild group alias in query block, use select_list's column replace alias
+      // FIXME should rebuild group alias in query block, use select_list's column replace alias
 
-//      for (int i = 0; i < group.getChildCount(); i++) {
-//        CommonTree groupElement = (CommonTree) group.getChild(i);
-//        CommonTree anyElement = (CommonTree) groupElement.getChild(0).getChild(0).getChild(0);
-//        this.reRebuildAnyElement(oldAlias, newAlias, anyElement);
-//      }
+      // for (int i = 0; i < group.getChildCount(); i++) {
+      // CommonTree groupElement = (CommonTree) group.getChild(i);
+      // CommonTree anyElement = (CommonTree) groupElement.getChild(0).getChild(0).getChild(0);
+      // this.reRebuildAnyElement(oldAlias, newAlias, anyElement);
+      // }
     }
     if (order != null) {
       CommonTree orderByElements = (CommonTree) order.getChild(0);
@@ -845,6 +889,64 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
     return on;
   }
 
+  CommonTree buildNotIn4Minus(CommonTree minuendSelect, CommonTree substrahendSelect)
+      throws SqlXlateException {
+    CommonTree notIn = this.createSqlASTNode(PantheraParser_PLSQLParser.NOT_IN, "NOT_IN");
+    this.attachChild(notIn, this.buildNotInParameter(minuendSelect));
+    this.attachChild(notIn, substrahendSelect);
+    return notIn;
+  }
+
+  private CommonTree buildNotInParameter(CommonTree select) throws SqlXlateException {
+    CommonTree selectList = (CommonTree) select
+        .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST);
+    if (selectList == null) {
+      throw new SqlXlateException("unsupport select * from subquery.");
+    }
+    if (selectList.getChildCount() == 1) {
+      return FilterBlockUtil.cloneTree((CommonTree) selectList.getChild(0).getChild(0).getChild(0));
+    }
+    CommonTree vectorExpr = this.createSqlASTNode(PantheraParser_PLSQLParser.VECTOR_EXPR,
+        "VECTOR_EXPR");
+    for (int i = 0; i < selectList.getChildCount(); i++) {
+
+      CommonTree expr = this.createSqlASTNode(PantheraParser_PLSQLParser.EXPR, "EXPR");
+      this.attachChild(vectorExpr, expr);
+      this.attachChild(expr, FilterBlockUtil.cloneTree((CommonTree) selectList.getChild(i)
+          .getChild(0).getChild(0)));
+    }
+    return vectorExpr;
+  }
+
+  /**
+   * add SELECT_ITEM for subq IN
+   *
+   * @param select
+   * @param subq
+   * @return
+   * @throws SqlXlateException
+   */
+  List<CommonTree> addSelectItems4In(CommonTree select, CommonTree subq) throws SqlXlateException {
+    CommonTree left = (CommonTree) subq.getChild(0);
+    List<CommonTree> result = new ArrayList<CommonTree>();
+    if (left.getType() == PantheraParser_PLSQLParser.CASCATED_ELEMENT) {
+      CommonTree compareElementAlias = this.addSelectItem((CommonTree) select
+          .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST), FilterBlockUtil
+          .cloneTree(left));
+      result.add(compareElementAlias);
+      return result;
+    }
+    if (left.getType() == PantheraParser_PLSQLParser.VECTOR_EXPR) {
+      for (int i = 0; i < left.getChildCount(); i++) {
+        CommonTree compareElementAlias = this.addSelectItem((CommonTree) select
+            .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST), FilterBlockUtil
+            .cloneTree((CommonTree) left.getChild(i).getChild(0)));
+        result.add(compareElementAlias);
+      }
+      return result;
+    }
+    return null;
+  }
   /**
    * update selectList's item alias
    *

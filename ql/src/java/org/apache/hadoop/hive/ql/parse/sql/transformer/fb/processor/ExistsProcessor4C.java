@@ -33,9 +33,9 @@ public class ExistsProcessor4C extends CommonFilterBlockProcessor {
     boolean isNot = super.subQNode.getParent().getType() == PantheraParser_PLSQLParser.SQL92_RESERVED_NOT ? true
         : false;
     if (isNot) {
-      super.processNotExistsC(super.createSqlASTNode(PantheraExpParser.LEFTSEMI_VK, "leftsemi"));
+      super.processNotExistsC(super.createSqlASTNode(PantheraExpParser.CROSS_VK, "leftsemi"));
     } else {
-      super.processExistsC(super.createSqlASTNode(PantheraExpParser.LEFTSEMI_VK, "leftsemi"));
+      super.processExistsC(super.createSqlASTNode(PantheraExpParser.CROSS_VK, "leftsemi"));
     }
   }
 

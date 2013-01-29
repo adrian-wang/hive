@@ -18,8 +18,6 @@
 package org.apache.hadoop.hive.ql.parse.sql.transformer.fb.processor;
 
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
-
-import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
 /**
  * uncorrelated not in processor
  * NotInProcessor4UC.
@@ -29,7 +27,7 @@ public class NotInProcessor4UC extends CommonFilterBlockProcessor {
 
   @Override
   void processFB() throws SqlXlateException {
-    super.processNotInUC(super.createSqlASTNode(PantheraParser_PLSQLParser.CROSS_VK, "cross"));
+    super.processNotInUC();
   }
 
 }

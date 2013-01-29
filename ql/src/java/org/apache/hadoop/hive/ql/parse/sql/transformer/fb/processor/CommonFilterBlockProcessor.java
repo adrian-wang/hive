@@ -317,31 +317,30 @@ public abstract class CommonFilterBlockProcessor extends BaseFilterBlockProcesso
    * @param joinType
    * @throws SqlXlateException
    */
-  void processNotInUC(CommonTree joinType) throws SqlXlateException {
-
+  void processNotInUC() throws SqlXlateException {
+    CommonTree joinType = super.createSqlASTNode(PantheraParser_PLSQLParser.CROSS_VK, "cross");
     this.makeTop();
 
 
     // add compare item
-    CommonTree compareElementAlias = super.addSelectItem((CommonTree) topSelect
-        .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST), super.cloneSubQOpElement());
+    List<CommonTree> compareElementAlias = super.addSelectItems4In(topSelect, super.subQNode);
 
 
     this.makeJoin(joinType);
     super.rebuildCollectSet();
 
     // compare alias from subq
-    CommonTree comparSubqAlias = super.addAlias((CommonTree) ((CommonTree) bottomSelect
-        .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST)).getChild(0));
+    List<CommonTree> comparSubqAlias = super.buildSelectListAlias(bottomAlias,
+        (CommonTree) bottomSelect
+            .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST));
 
 
     this.makeEnd();
 
     // where
     // FIXME which is first?
-    CommonTree where = super.buildWhere(FilterBlockUtil.dupNode(subQNode), super
-        .createCascatedElement((CommonTree) comparSubqAlias.getChild(0)), super
-        .createCascatedElement((CommonTree) compareElementAlias.getChild(0)));
+    CommonTree where = super.buildWhere(FilterBlockUtil.dupNode(subQNode), comparSubqAlias,
+        compareElementAlias);
     super.attachChild(closingSelect, where);
     super.rebuildArrayContains((CommonTree) where.getChild(0));
   }
@@ -350,42 +349,22 @@ public abstract class CommonFilterBlockProcessor extends BaseFilterBlockProcesso
    * process not exists with correlated
    *
    * @param joinType
+   * @throws SqlXlateException
    */
-  void processNotExistsC(CommonTree joinType) {
-
+  void processNotExistsC(CommonTree joinType) throws SqlXlateException {
     // minuend tree
-    CommonTree minuend = FilterBlockUtil.cloneTree(topSelect);
+    CommonTree minuendSelect = FilterBlockUtil.cloneTree(topSelect);
 
-    // create minuend select table ref node
-    CommonTree tableRef = super.createTableRefElement(minuend);
-    topAlias = (CommonTree) tableRef.getChild(0);
+    this.processExistsC(joinType);
 
+    // not in
+    super.subQNode = super.buildNotIn4Minus(minuendSelect, topSelect);
+    bottomSelect = topSelect;
+    topSelect = minuendSelect;
 
-    // create closing select
-    closingSelect = super.createClosingSelect(tableRef);
-
-    // minus
-    super.attachChild(tableRef, super.createMinus(topSelect));
-
-    // join
-    CommonTree join = super.createJoin(topSelect);
-    super.buildJoin(joinType, join, bottomSelect);
+    this.processNotInUC();
 
 
-    // delete where
-    FilterBlockUtil.deleteBranch(bottomSelect, PantheraParser_PLSQLParser.SQL92_RESERVED_WHERE);
-
-    // on
-    CommonTree on = super.buildOn(FilterBlockUtil.dupNode(fb.getASTNode()), (CommonTree) fb
-        .getASTNode().getChild(0), (CommonTree) fb.getASTNode().getChild(1));
-    super.attachChild(join, on);
-
-
-    // add alias for all top query select item
-    topAliasList = super.buildSelectListAlias(topAlias, (CommonTree) topSelect
-        .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST));
-
-    this.makeEnd();
   }
 
   void processAnd(CommonTree joinType) {
