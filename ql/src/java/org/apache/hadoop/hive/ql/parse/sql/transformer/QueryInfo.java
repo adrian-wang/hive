@@ -93,8 +93,8 @@ public class QueryInfo {
    */
   private HashMap<CommonTree, Set<String>> selectKeyToSrcTblAlias;
 
-  //alias or column in SELECT_LIST
-  private final List<String> selectList= new ArrayList<String>();
+  // alias or column in SELECT_LIST
+  private final List<String> selectList = new ArrayList<String>();
 
 
 
@@ -273,7 +273,7 @@ public class QueryInfo {
    * @param from
    *          SqlASTNode SQL92_RESERVED_FROM
    */
-  public void setFrom(SqlASTNode from) {
+  public void setFrom(CommonTree from) {
     this.from = from;
   }
 
@@ -357,7 +357,7 @@ public class QueryInfo {
     Set<String> srcTblAlias = selectKeyToSrcTblAlias.get(select);
     if (srcTblAlias == null) {
       srcTblAlias = new HashSet<String>();
-      SqlXlateUtil.getSrcTblAlias((SqlASTNode) select
+      SqlXlateUtil.getSrcTblAlias((CommonTree) select
           .getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_FROM), srcTblAlias);
       selectKeyToSrcTblAlias.put(select, srcTblAlias);
     }

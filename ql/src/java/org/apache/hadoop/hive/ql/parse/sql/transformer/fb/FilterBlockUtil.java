@@ -24,17 +24,29 @@ import java.util.Set;
 
 import org.antlr33.runtime.CommonToken;
 import org.antlr33.runtime.tree.CommonTree;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateUtil;
 import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.QueryBlock.CountAsterisk;
 
 import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
 
 public class FilterBlockUtil {
+  private static final Log LOG = LogFactory.getLog(FilterBlockUtil.class);
   private FilterBlockUtil() {
   }
 
   public static CommonTree dupNode(CommonTree node) {
-    return new CommonTree(new CommonToken(node.getToken().getType(), node.getToken().getText()));
+    if (node == null) {
+      return null;
+    }
+    CommonTree result=null;
+    try {
+      result =  new CommonTree(new CommonToken(node.getToken().getType(), node.getToken().getText()));
+    } catch (Exception e) {
+      LOG.error("ERROR Node:"+node);
+    }
+    return result;
   }
 
 

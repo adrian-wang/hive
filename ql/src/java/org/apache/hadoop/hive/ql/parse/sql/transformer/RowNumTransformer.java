@@ -19,6 +19,7 @@ package org.apache.hadoop.hive.ql.parse.sql.transformer;
 
 import java.util.Stack;
 
+import org.antlr33.runtime.tree.CommonTree;
 import org.apache.hadoop.hive.ql.parse.sql.PantheraExpParser;
 import org.apache.hadoop.hive.ql.parse.sql.SqlASTNode;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
@@ -49,12 +50,12 @@ public class RowNumTransformer  extends BaseSqlASTTransformer  {
   public void transform(SqlASTNode tree, TranslateContext context) throws SqlXlateException {
     tf.transformAST(tree, context);
 
-    Stack<SqlASTNode> stack = new Stack<SqlASTNode>();
+    Stack<CommonTree> stack = new Stack<CommonTree>();
     stack.push (null);
     transformRownum (tree, stack);
   }
 
-  private void transformRownum(SqlASTNode node, Stack<SqlASTNode> stack) {
+  private void transformRownum(CommonTree node, Stack<CommonTree> stack) {
     if (node.getType() == PantheraParser_PLSQLParser.SQL92_RESERVED_SELECT) {
       stack.push (node);
       //
@@ -97,7 +98,7 @@ public class RowNumTransformer  extends BaseSqlASTTransformer  {
     }
 
     for (int i = 0; i < node.getChildCount(); i++) {
-      transformRownum((SqlASTNode) node.getChild(i), stack);
+      transformRownum((CommonTree) node.getChild(i), stack);
     }
 
     if (node.getType() == PantheraParser_PLSQLParser.SQL92_RESERVED_SELECT) {
@@ -113,7 +114,7 @@ public class RowNumTransformer  extends BaseSqlASTTransformer  {
       //
       // Make sure this query is the only child of the parent query.
       //
-      SqlASTNode parentSelect = stack.peek();
+      CommonTree parentSelect = stack.peek();
       if (parentSelect == null || parentSelect.getChildCount() > 3) {
         return;
       }

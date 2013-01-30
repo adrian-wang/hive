@@ -125,7 +125,7 @@ public class MultipleTableSelectTransformer extends BaseSqlASTTransformer {
     // Transform subqueries in this query.
     //
     for (int i = 0; i < node.getChildCount(); i++) {
-      SqlASTNode child = (SqlASTNode) node.getChild(i);
+      CommonTree child = (CommonTree) node.getChild(i);
       if (child.getType() != PantheraParser_PLSQLParser.SQL92_RESERVED_FROM) {
         transformQuery(qf, child);
       }

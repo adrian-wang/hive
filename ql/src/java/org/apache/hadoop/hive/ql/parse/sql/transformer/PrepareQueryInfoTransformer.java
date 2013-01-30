@@ -17,14 +17,18 @@
  */
 package org.apache.hadoop.hive.ql.parse.sql.transformer;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Stack;
 
+import org.antlr33.runtime.tree.CommonTree;
 import org.apache.hadoop.hive.ql.parse.ASTNode;
 import org.apache.hadoop.hive.ql.parse.HiveParser;
 import org.apache.hadoop.hive.ql.parse.sql.SqlASTNode;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateUtil;
 import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
+import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.FilterBlockUtil;
 
 import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
 
@@ -33,7 +37,7 @@ import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
  * PrepareQueryInfoTransformer.
  *
  */
-public class PrepareQueryInfoTransformer extends BaseSqlASTTransformer  {
+public class PrepareQueryInfoTransformer extends BaseSqlASTTransformer {
 
   SqlASTTransformer tf;
   private final SqlXlateUtil.AliasGenerator aliasGen = new SqlXlateUtil.AliasGenerator();
@@ -51,9 +55,10 @@ public class PrepareQueryInfoTransformer extends BaseSqlASTTransformer  {
 
   void prepareQueryInfo(SqlASTNode tree, TranslateContext context) throws SqlXlateException {
     Stack<Integer> stack = new Stack<Integer>();
-    stack.push(-999);//for first peek;
-    prepare(tree, null, stack);
-    context.setQInfoRoot(tree.getQueryInfo());
+    stack.push(-999);// for first peek;
+    List<QueryInfo> qInfoList = new ArrayList<QueryInfo>();
+    prepare(tree, null, stack, qInfoList);
+    context.setQInfoRoot(qInfoList.get(0));
   }
 
   /**
@@ -65,13 +70,14 @@ public class PrepareQueryInfoTransformer extends BaseSqlASTTransformer  {
    *          the current QueryInfo object
    * @throws SqlXlateException
    */
-  protected void prepare(SqlASTNode ast, QueryInfo qInfo, Stack<Integer> stack)
+  protected void prepare(CommonTree ast, QueryInfo qInfo, Stack<Integer> stack,
+      List<QueryInfo> qInfoList)
       throws SqlXlateException {
 
     switch (ast.getType()) {
     case PantheraParser_PLSQLParser.STATEMENTS:
       // Prepare the root QueryInfo at SQL AST root node
-      qInfo = prepareQInfo(ast, qInfo);
+      qInfo = prepareQInfo(ast, qInfo, qInfoList);
       break;
     case PantheraParser_PLSQLParser.SQL92_RESERVED_SELECT: {
       // Prepare a new QueryInfo for each query (including top level queries and subqueries in from
@@ -80,7 +86,7 @@ public class PrepareQueryInfoTransformer extends BaseSqlASTTransformer  {
       // created. FilterBlocks will be created for them.
       int nodeType = stack.peek();
       if (nodeType == PantheraParser_PLSQLParser.SQL92_RESERVED_FROM || qInfo.isQInfoTreeRoot()) {
-        qInfo = prepareQInfo(ast, qInfo);
+        qInfo = prepareQInfo(ast, qInfo, qInfoList);
       }
       // Prepare the top most Filter Blocks
       break;
@@ -108,10 +114,10 @@ public class PrepareQueryInfoTransformer extends BaseSqlASTTransformer  {
     }
 
     // add reference to qInfo ot each Sql AST node
-    ast.setQueryInfo(qInfo);
+    // ast.setQueryInfo(qInfo);
     // if do not skip recursion, iterate all the children
     for (int i = 0; i < ast.getChildCount(); i++) {
-      prepare((SqlASTNode) ast.getChild(i), qInfo, stack);
+      prepare((CommonTree) ast.getChild(i), qInfo, stack, qInfoList);
     }
 
     if (ast.getType() == stack.peek()) {
@@ -126,11 +132,13 @@ public class PrepareQueryInfoTransformer extends BaseSqlASTTransformer  {
    * @param qInfo
    * @return
    */
-  private QueryInfo prepareQInfo(SqlASTNode ast, QueryInfo qInfo) {
+  private QueryInfo prepareQInfo(CommonTree ast, QueryInfo qInfo, List<QueryInfo> qInfoList) {
     QueryInfo nqi = new QueryInfo();
+    qInfoList.add(nqi);
     nqi.setParentQueryInfo(qInfo);
     if (qInfo != null) {
       nqi.setSelectKeyForThisQ(ast);
+      buildSelectListStr(ast, nqi.getSelectList());
       qInfo.addChild(nqi);
     }
     return nqi;
@@ -143,7 +151,7 @@ public class PrepareQueryInfoTransformer extends BaseSqlASTTransformer  {
    * @param qInfo
    * @throws SqlXlateException
    */
-  private void prepareFrom(SqlASTNode src, QueryInfo qInfo) throws SqlXlateException {
+  private void prepareFrom(CommonTree src, QueryInfo qInfo) throws SqlXlateException {
     // set from clause for this query
     qInfo.setFrom(src);
     // get subquery alias in from
@@ -157,7 +165,7 @@ public class PrepareQueryInfoTransformer extends BaseSqlASTTransformer  {
    * @param qInfo
    * @throws SqlXlateException
    */
-  private void prepareSubQAliases(SqlASTNode src, QueryInfo qInfo) throws SqlXlateException {
+  private void prepareSubQAliases(CommonTree src, QueryInfo qInfo) throws SqlXlateException {
     // prepare subq alias for each qInfo
     if (src.getType() == PantheraParser_PLSQLParser.TABLE_REF_ELEMENT) {
       SqlASTNode alias = (SqlASTNode) src.getFirstChildWithType(PantheraParser_PLSQLParser.ALIAS);
@@ -188,7 +196,7 @@ public class PrepareQueryInfoTransformer extends BaseSqlASTTransformer  {
       }
     }
 
-    //TODO it's not necessary to travel all tree, just travel top TABLE_REF_ELEMENT is ok.
+    // TODO it's not necessary to travel all tree, just travel top TABLE_REF_ELEMENT is ok.
     for (int i = 0; i < src.getChildCount(); i++) {
       prepareSubQAliases((SqlASTNode) src.getChild(i), qInfo);
     }
@@ -206,5 +214,32 @@ public class PrepareQueryInfoTransformer extends BaseSqlASTTransformer  {
     ASTNode alias = SqlXlateUtil.newASTNode(HiveParser.Identifier, text);
     // SqlXlateUtil.attachChild(dest, alias);
     return alias;
+  }
+
+  private void buildSelectListStr(CommonTree select, List<String> selectListStr) {
+    CommonTree selectList = (CommonTree) select
+        .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST);
+    // TODO select *
+    if (selectList == null) {
+      return;
+    }
+    for (int i = 0; i < selectList.getChildCount(); i++) {
+      CommonTree selectItem = (CommonTree) selectList.getChild(i);
+      if (selectItem.getChildCount() == 2) {
+        selectListStr.add(selectItem.getChild(1).getChild(0).getText());
+        continue;
+      }
+      List<CommonTree> anyElementList = new ArrayList<CommonTree>();
+      FilterBlockUtil.findNode(selectItem, PantheraParser_PLSQLParser.ANY_ELEMENT, anyElementList);
+      CommonTree anyElement = anyElementList.isEmpty() ? null : anyElementList.get(0);
+      if (anyElement != null) {
+        if (anyElement.getChildCount() == 1) {
+          selectListStr.add(anyElement.getChild(0).getText());
+        }
+        if (anyElement.getChildCount() == 2) {
+          selectListStr.add(anyElement.getChild(1).getText());
+        }
+      }
+    }
   }
 }

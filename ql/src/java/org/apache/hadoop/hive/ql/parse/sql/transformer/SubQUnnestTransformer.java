@@ -17,9 +17,12 @@
  */
 package org.apache.hadoop.hive.ql.parse.sql.transformer;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
+import org.antlr33.runtime.tree.CommonTree;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hive.ql.parse.sql.SqlASTNode;
@@ -27,8 +30,11 @@ import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
 import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
 import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.FilterBlock;
 import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.FilterBlockContext;
+import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.FilterBlockUtil;
 import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.QueryBlock;
 import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.SubQFilterBlock;
+
+import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
 
 /**
  * Transform filter block tree with every QueryInfo.
@@ -47,13 +53,14 @@ public class SubQUnnestTransformer extends BaseSqlASTTransformer {
   @Override
   public void transform(SqlASTNode tree, TranslateContext context) throws SqlXlateException {
     tf.transformAST(tree, context);
-    this.transformQInfo(tree, context);
+    // this.transformQInfo(tree, context);
+    this.transformQInfoDeepFirst(tree, context);
   }
 
   /**
    * Transform SQL AST tree.<br>
    * If the transformation need to be processed with every QueryInfo by multi-threads, overload the
-   * method.
+   * method.(can't support, because qinfo should be travel by deeply first )
    *
    * @param tree
    * @param context
@@ -64,6 +71,31 @@ public class SubQUnnestTransformer extends BaseSqlASTTransformer {
       this.transformFilterBlock(qf, context);
     }
   }
+
+  void transformQInfoDeepFirst(SqlASTNode tree, TranslateContext context) throws SqlXlateException {
+
+    QueryInfo qInfo = context.getQInfoRoot();
+    transformQInfoDeepFirst(qInfo, context);
+
+
+  }
+
+  void transformQInfoDeepFirst(QueryInfo qf, TranslateContext context) throws SqlXlateException {
+    List<List<String>> selectListStrList = new ArrayList<List<String>>();
+    List<CommonTree> selectList = new ArrayList<CommonTree>();
+    for (QueryInfo qinfo : qf.getChildren()) {
+      selectListStrList.add(qinfo.getSelectList());
+      transformQInfoDeepFirst(qinfo, context);
+      selectList.add(qinfo.getSelectKeyForThisQ());
+    }
+    if (!qf.isQInfoTreeRoot()) {
+      this.rebuildSelectList(qf.getSelectKeyForThisQ(), selectListStrList, selectList);
+      this.transformFilterBlock(qf, context);
+    }else{
+
+    }
+  }
+
 
   void transformFilterBlock(QueryInfo qf, TranslateContext context) throws SqlXlateException {
     if (!this.hasSubQuery(qf)) {
@@ -97,6 +129,50 @@ public class SubQUnnestTransformer extends BaseSqlASTTransformer {
     for (FilterBlock child : fb.getChildren()) {
       isSubQFilterBlock(child, result);
     }
+  }
+
+  private void rebuildSelectList(CommonTree select, List<List<String>> selectListStrList,
+      List<CommonTree> selectList) {
+    CommonTree selectListNode = (CommonTree) select
+        .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST);
+    if (selectListNode == null) {
+      return;
+    }
+    for (int i = 0; i < selectListNode.getChildCount(); i++) {
+      List<CommonTree> anyElementList = new ArrayList<CommonTree>();
+      FilterBlockUtil.findNode((CommonTree) selectListNode.getChild(i),
+          PantheraParser_PLSQLParser.ANY_ELEMENT, anyElementList);
+      CommonTree anyElement = anyElementList.isEmpty() ? null : anyElementList.get(0);
+      if (anyElement == null) {
+        continue;
+      }
+      CommonTree column;
+      if (anyElement.getChildCount() == 2) {
+        column = (CommonTree) anyElement.getChild(1);
+
+      } else {
+        column = (CommonTree) anyElement.getChild(0);
+      }
+      String originalColumnName = column.getText();
+      String transformedAlias = findAlias(originalColumnName, selectListStrList, selectList);
+      column.getToken().setText(transformedAlias);
+    }
+  }
+
+  private String findAlias(String originalColumnName, List<List<String>> selectListStrList,
+      List<CommonTree> selectList) {
+    for (int i = 0; i < selectListStrList.size(); i++) {
+      List<String> strList = selectListStrList.get(i);
+      CommonTree select = selectList.get(i);
+      for (int j = 0; j < strList.size(); j++) {
+        String str = strList.get(j);
+        if (str.equals(originalColumnName)) {
+          return select.getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST).getChild(j)
+              .getChild(1).getChild(0).getText();
+        }
+      }
+    }
+    return null;
   }
 
 }
