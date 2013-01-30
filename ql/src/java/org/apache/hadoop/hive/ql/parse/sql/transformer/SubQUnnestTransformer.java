@@ -76,6 +76,7 @@ public class SubQUnnestTransformer extends BaseSqlASTTransformer {
     }
 
     fb.process(new FilterBlockContext(), context);
+    qf.setSelectKeyForThisQ(fb.getTransformedNode());
   }
 
   boolean hasSubQuery(QueryInfo qf) {

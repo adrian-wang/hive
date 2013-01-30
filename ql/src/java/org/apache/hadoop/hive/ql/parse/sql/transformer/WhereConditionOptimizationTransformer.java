@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import org.antlr33.runtime.tree.CommonTree;
 import org.apache.hadoop.hive.ql.parse.sql.SqlASTNode;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateUtil;
@@ -49,7 +50,7 @@ public class WhereConditionOptimizationTransformer extends BaseSqlASTTransformer
     }
   }
 
- private void transformQuery(QueryInfo qf, SqlASTNode node) throws SqlXlateException {
+ private void transformQuery(QueryInfo qf, CommonTree node) throws SqlXlateException {
     if(node.getType() == PantheraParser_PLSQLParser.SQL92_RESERVED_SELECT){
       SqlASTNode where = (SqlASTNode) node.getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_WHERE);
       if (where != null) {

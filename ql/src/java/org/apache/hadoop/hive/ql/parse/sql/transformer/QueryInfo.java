@@ -24,6 +24,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.antlr33.runtime.tree.CommonTree;
 import org.apache.hadoop.hive.ql.parse.ASTNode;
 import org.apache.hadoop.hive.ql.parse.sql.SqlASTNode;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateUtil;
@@ -66,23 +67,23 @@ public class QueryInfo {
    * this is the root node of this subquery.
    * The node is of type SQL92_RESERVED_SELECT
    */
-  private SqlASTNode selectKey;
+  private CommonTree selectKey;
   /**
    * The insert destinations for all children selections
    * Because of the structure of SQL AST tree, insert destinations
    * are located in the parent qInfo of the select queries.
    */
-  private Set<SqlASTNode> insertDestinationsForSubQ;
+  private Set<CommonTree> insertDestinationsForSubQ;
   /**
    * The from clause in this select query
    */
-  private SqlASTNode from;
+  private CommonTree from;
   /**
    * Map from SUBQUERY node to alias node.
    * alias is either randomly generated or extracted from
    * the original SQL AST.
    */
-  private HashMap<SqlASTNode, ASTNode> subqToAlias;
+  private HashMap<CommonTree, ASTNode> subqToAlias;
   /**
    * The root of filter block tree for this query.
    */
@@ -90,7 +91,16 @@ public class QueryInfo {
   /**
    * Map from select key to src table or aliases referred in that select query
    */
-  private HashMap<SqlASTNode, Set<String>> selectKeyToSrcTblAlias;
+  private HashMap<CommonTree, Set<String>> selectKeyToSrcTblAlias;
+
+  //alias or column in SELECT_LIST
+  private final List<String> selectList= new ArrayList<String>();
+
+
+
+  public List<String> getSelectList() {
+    return selectList;
+  }
 
   /**
    *
@@ -200,7 +210,7 @@ public class QueryInfo {
    */
   public void setSubQAlias(SqlASTNode subq, ASTNode alias) {
     if (subqToAlias == null) {
-      subqToAlias = new HashMap<SqlASTNode, ASTNode>();
+      subqToAlias = new HashMap<CommonTree, ASTNode>();
     }
     subqToAlias.put(subq, alias);
   }
@@ -227,7 +237,7 @@ public class QueryInfo {
    */
   public void addInsertDestinationForSubQ(SqlASTNode into) {
     if (insertDestinationsForSubQ == null) {
-      insertDestinationsForSubQ = new HashSet<SqlASTNode>();
+      insertDestinationsForSubQ = new HashSet<CommonTree>();
     }
     insertDestinationsForSubQ.add(into);
   }
@@ -239,7 +249,7 @@ public class QueryInfo {
    *
    * @return the into node set
    */
-  public Set<SqlASTNode> getInsertDestinationsForSubQ() {
+  public Set<CommonTree> getInsertDestinationsForSubQ() {
     return insertDestinationsForSubQ;
   }
 
@@ -249,7 +259,7 @@ public class QueryInfo {
    *
    * @return
    */
-  public Set<SqlASTNode> getInsertDestinationsForThisQuery() {
+  public Set<CommonTree> getInsertDestinationsForThisQuery() {
     // get the destination from parent
     if (hasParentQueryInfo()) {
       return parentQInfo.getInsertDestinationsForSubQ();
@@ -272,7 +282,7 @@ public class QueryInfo {
    *
    * @return SqlASTNode SQL92_RESERVED_FROM
    */
-  public SqlASTNode getFromClauseForThisQuery() {
+  public CommonTree getFromClauseForThisQuery() {
     return from;
   }
 
@@ -321,7 +331,7 @@ public class QueryInfo {
    * @param selectStat
    *          SqlASTNode SQL92_RESERVED_SELECT
    */
-  public void setSelectKeyForThisQ(SqlASTNode selectStat) {
+  public void setSelectKeyForThisQ(CommonTree selectStat) {
     this.selectKey = selectStat;
   }
 
@@ -330,7 +340,7 @@ public class QueryInfo {
    *
    * @return
    */
-  public SqlASTNode getSelectKeyForThisQ() {
+  public CommonTree getSelectKeyForThisQ() {
     return selectKey;
   }
 
@@ -340,9 +350,9 @@ public class QueryInfo {
    *
    * @return the set of table names and aliases
    */
-  public Set<String> getSrcTblAliasForSelectKey(SqlASTNode select) {
+  public Set<String> getSrcTblAliasForSelectKey(CommonTree select) {
     if (selectKeyToSrcTblAlias == null) {
-      selectKeyToSrcTblAlias = new HashMap<SqlASTNode, Set<String>>();
+      selectKeyToSrcTblAlias = new HashMap<CommonTree, Set<String>>();
     }
     Set<String> srcTblAlias = selectKeyToSrcTblAlias.get(select);
     if (srcTblAlias == null) {
@@ -355,7 +365,7 @@ public class QueryInfo {
   }
 
   public Set<String> getSrcTblAlias() {
-    SqlASTNode select = this.getSelectKeyForThisQ();
+    CommonTree select = this.getSelectKeyForThisQ();
     return getSrcTblAliasForSelectKey(select);
   }
 

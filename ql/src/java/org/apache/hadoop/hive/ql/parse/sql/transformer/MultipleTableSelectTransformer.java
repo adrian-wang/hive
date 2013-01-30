@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.antlr33.runtime.tree.CommonTree;
 import org.antlr33.runtime.tree.Tree;
 import org.apache.hadoop.hive.ql.parse.sql.SqlASTNode;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
@@ -96,7 +97,7 @@ public class MultipleTableSelectTransformer extends BaseSqlASTTransformer {
     }
   }
 
- private void transformQuery(QueryInfo qf, SqlASTNode node) throws SqlXlateException {
+ private void transformQuery(QueryInfo qf, CommonTree node) throws SqlXlateException {
     if(node.getType() == PantheraParser_PLSQLParser.SQL92_RESERVED_SELECT){
       //
       // Check if this is a multiple table select.
