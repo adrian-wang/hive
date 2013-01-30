@@ -32,9 +32,8 @@ public class FilterBlockProcessorFactory {
   public static FilterBlockProcessor getUnCorrelatedProcessor(int type) throws SqlXlateException {
     switch (type) {
     case PantheraParser_PLSQLParser.GREATER_THAN_OP:
-      return new GreaterThanProcessor4UC();
     case PantheraParser_PLSQLParser.EQUALS_OP:
-      return new EqualsProcessor4UC();
+      return new CompareProcessor4UC();
     case PantheraParser_PLSQLParser.NOT_IN:
       return new NotInProcessor4UC();
     case PantheraParser_PLSQLParser.SQL92_RESERVED_IN:

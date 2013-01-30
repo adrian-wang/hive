@@ -21,10 +21,10 @@ import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
 
 /**
  * Process uncorrelated filter block node which subQ is GREATER_THAN type.
- * GreaterThanProcessor4UC.
+ * CompareProcessor4UC.
  *
  */
-public class GreaterThanProcessor4UC extends CommonFilterBlockProcessor {
+public class CompareProcessor4UC extends CommonFilterBlockProcessor {
 
   @Override
   public void processFB() {

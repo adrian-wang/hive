@@ -114,7 +114,7 @@ public class FilterBlockUtil {
    * @param type
    * @param nodeList
    */
-  static void findNode(CommonTree node, int type, List<CommonTree> nodeList) {
+  public static void findNode(CommonTree node, int type, List<CommonTree> nodeList) {
     if (node == null) {
       return;
     }

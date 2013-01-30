@@ -132,35 +132,6 @@ public abstract class CommonFilterBlockProcessor extends BaseFilterBlockProcesso
 
   }
 
-  /**
-   * process equals operator with uncorrelated
-   *
-   * @param joinType
-   */
-  void processEqualsUC(CommonTree joinType) {
-    this.makeTop();
-
-    // add compare item
-    CommonTree compareElementAlias = super.addSelectItem((CommonTree) topSelect
-        .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST), super.cloneSubQOpElement());
-
-
-    this.makeJoin(joinType);
-
-    // compare alias from subq
-    CommonTree comparSubqAlias = super.addAlias((CommonTree) ((CommonTree) bottomSelect
-        .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST)).getChild(0));
-
-    // on
-    // FIXME which is first?
-    CommonTree on = super.buildOn(FilterBlockUtil.dupNode(subQNode), super
-        .createCascatedElementWithTableName((CommonTree) topAlias.getChild(0),
-            (CommonTree) compareElementAlias.getChild(0)), super.createCascatedElement(
-        (CommonTree) bottomAlias.getChild(0), (CommonTree) comparSubqAlias.getChild(0)));
-    super.attachChild(join, on);
-
-    this.makeEnd();
-  }
 
   /**
    * process exists with correlated
@@ -277,6 +248,41 @@ public abstract class CommonFilterBlockProcessor extends BaseFilterBlockProcesso
       // where
       super.buildWhereBranch(viewAlias, maxAlias);
     }
+
+    // TODO other situation (<all...)
+
+    // with aggregation function
+    else {
+      this.processAggregationCompareUC();
+    }
+  }
+
+  private void processAggregationCompareUC(){
+
+
+    this.makeTop();
+
+    // add compare item
+    CommonTree compareElement = super.getSubQOpElement();
+    CommonTree cloneCompareElement = FilterBlockUtil.cloneTree(compareElement);
+    CommonTree compareElementAlias = super.addSelectItem((CommonTree) topSelect
+        .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST),cloneCompareElement );
+    super.rebuildSubQOpElement(compareElement, compareElementAlias);
+
+
+
+    this.makeJoin(createSqlASTNode(PantheraParser_PLSQLParser.CROSS_VK, "cross"));
+
+    // compare alias from subq
+    CommonTree comparSubqAlias = super.addAlias((CommonTree) ((CommonTree) bottomSelect
+        .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST)).getChild(0));
+
+    this.makeEnd();
+
+    // where
+    super.buildWhereBranch(bottomAlias, comparSubqAlias);
+
+
   }
 
   /**
@@ -289,6 +295,7 @@ public abstract class CommonFilterBlockProcessor extends BaseFilterBlockProcesso
     this.makeTop();
 
     // add compare item
+    //TODO multi parameter in sub query IN
     CommonTree compareElementAlias = super.addSelectItem((CommonTree) topSelect
         .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST), super.cloneSubQOpElement());
 
