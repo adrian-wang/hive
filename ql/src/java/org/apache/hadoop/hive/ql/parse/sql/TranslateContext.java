@@ -39,6 +39,11 @@ public class TranslateContext {
   private List<QueryInfo> qInfoList;// without QueryInfo root
   SqlXlateUtil.AliasGenerator aliasGen = new SqlXlateUtil.AliasGenerator();
 
+  public TranslateContext(HiveConf conf) throws SqlXlateException {
+    this.conf = conf;
+    meta = new HiveMetadata(conf);
+  }
+
   public List<QueryInfo> getqInfoList() {
     return qInfoList;
   }

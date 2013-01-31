@@ -59,8 +59,7 @@ public class SqlASTTranslator {
     LOG.info("Starting Translation from SQL AST to Hive AST");
     LOG.info("Original SQL AST : " + sqlASTRoot.toStringTree());
 
-    TranslateContext context = new TranslateContext();
-    context.setConf(conf);
+    TranslateContext context = new TranslateContext(conf);
 
     if (transformer == null) {
       transformer = TransformerBuilder.buildTransformer();

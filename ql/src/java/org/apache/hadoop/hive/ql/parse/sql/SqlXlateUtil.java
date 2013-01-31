@@ -21,6 +21,7 @@ package org.apache.hadoop.hive.ql.parse.sql;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -254,35 +255,83 @@ public final class SqlXlateUtil {
   }
 
   /**
-   * Collect all src table names or aliases in from clause.
+   * Collect all src table name and aliase pairs in from clause.
    *
-   * If a table has an alias, then its alias instead of its name is returned.
+   * Note that src table name and aliase within any sub-query won't be included.
+   *
+   * If a table name has an alias, return the <alias, name> pair.
+   * If only table name, then return <name, name> pair.
+   * For a sub-query, return<alias, null> pair.
+   *
+   * Note that when this function is called, QueryInfo must have been prepared so that
+   * sub-quries in from clause have alias node generated if it is not existing.
    *
    * @param n
    *          root of SQL AST subtree
    * @param collection
    *          result set
    */
-  public static void getSrcTblAlias(CommonTree n, Set<String> srcTbls) {
-    boolean skipRecursion = false;
+  public static void getSrcTblAliasNamePair(CommonTree n, Map<String, String> srcTbls) {
+    // We need only process all top TABLE_REF_ELEMENT nodes of the children of the from node.
+    //
     if (n.getType() == PantheraParser_PLSQLParser.TABLE_REF_ELEMENT) {
+      String alias = null;
+      String name = null;
+      int index = 0;
       if (n.getChild(0).getType() == PantheraParser_PLSQLParser.ALIAS) {
-        srcTbls.add(n.getChild(0).getChild(0).getText());
-        skipRecursion = true;
+        alias = n.getChild(0).getChild(0).getText();
+        index = 1;
       }
-    } else if (n.getType() == PantheraParser_PLSQLParser.TABLEVIEW_NAME) {
-      if (n.getChildCount() == 1) {
-        srcTbls.add(n.getChild(0).getText());
-      } else if (n.getChildCount() == 2) {
-        // only record table name ignore schema name
-        srcTbls.add(n.getChild(1).getText());
+      int type = n.getChild(index).getType();
+      if (type == PantheraParser_PLSQLParser.TABLE_EXPRESSION) {
+        type = n.getChild(index).getChild(0).getType();
+        if (type == PantheraParser_PLSQLParser.DIRECT_MODE) {
+          name =  n.getChild(index).getChild(0).getChild(0).getChild(0).getText();
+          if (alias == null) {
+            alias = name;
+          }
+        } else if (type == PantheraParser_PLSQLParser.SELECT_MODE) {
+          if (alias == null) {
+            // Note that when this function is called, QueryInfo must have been prepared so that
+            // sub-quries in from clause have alias node generated if it is not existing.
+            assert(false);
+          }
+        } else {
+          return;
+        }
+
+        if (!srcTbls.containsKey(alias)) {
+          srcTbls.put(alias, name);
+        }
+      } else if (type == PantheraParser_PLSQLParser.TABLE_REF) {
+        // TBD: may need special handling for join operator: (a join b ...) join_alias
       }
+      return;
     }
+
     // recurse for all children
-    if (!skipRecursion) {
-      for (int i = 0; i < n.getChildCount(); i++) {
-        getSrcTblAlias((CommonTree) n.getChild(i), srcTbls);
-      }
+    for (int i = 0; i < n.getChildCount(); i++) {
+      getSrcTblAliasNamePair((CommonTree) n.getChild(i), srcTbls);
+    }
+  }
+
+  /**
+   * Collect all src table names or aliases in from clause.
+   *
+   * If a table has an alias, then its alias instead of its name is returned.
+   *
+   * Note that src table name and aliase within any sub-query won't be included.
+   *
+   * @param n
+   *          root of SQL AST subtree
+   * @param collection
+   *          result set
+   */
+  public static void getSrcTblAlias(CommonTree n, Set<String> srcTblAliases) {
+    Map<String, String> srcTbls = new HashMap<String, String>();
+    getSrcTblAliasNamePair(n, srcTbls);
+    for (String alias : srcTbls.keySet()) {
+      srcTblAliases.add(alias);
     }
   }
 
@@ -291,27 +340,22 @@ public final class SqlXlateUtil {
    *
    * If a table has an alias, then both its alias and name are returned.
    *
+   * Note that src table name and aliase within any sub-query won't be included.
+   *
    * @param n
    *          root of SQL AST subtree
    * @param collection
    *          result set
    */
-  public static void getSrcTblAndAlias(CommonTree n, Set<String> srcTbls) {
-    if (n.getType() == PantheraParser_PLSQLParser.TABLE_REF_ELEMENT) {
-      if (n.getChild(0).getType() == PantheraParser_PLSQLParser.ALIAS) {
-        srcTbls.add(n.getChild(0).getChild(0).getText());
+  public static void getSrcTblAndAlias(CommonTree n, Set<String> srcTblAliases) {
+    Map<String, String> srcTbls = new HashMap<String, String>();
+    getSrcTblAliasNamePair(n, srcTbls);
+    for (String alias : srcTbls.keySet()) {
+      srcTblAliases.add(alias);
+      String name = srcTbls.get(alias);
+      if(name != null && !name.equals(alias)) {
+        srcTblAliases.add(name);
       }
-    } else if (n.getType() == PantheraParser_PLSQLParser.TABLEVIEW_NAME) {
-      if (n.getChildCount() == 1) {
-        srcTbls.add(n.getChild(0).getText());
-      } else if (n.getChildCount() == 2) {
-        // only record table name ignore schema name
-        srcTbls.add(n.getChild(1).getText());
-      }
-    }
-    // recurse for all children
-    for (int i = 0; i < n.getChildCount(); i++) {
-      getSrcTblAndAlias((CommonTree) n.getChild(i), srcTbls);
     }
   }
 

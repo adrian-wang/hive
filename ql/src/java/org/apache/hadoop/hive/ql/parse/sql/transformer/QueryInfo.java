@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.antlr33.runtime.tree.CommonTree;
@@ -79,7 +80,7 @@ public class QueryInfo {
    */
   private CommonTree from;
   /**
-   * Map from SUBQUERY node to alias node.
+   * Map from select node of a subquery to alias node.
    * alias is either randomly generated or extracted from
    * the original SQL AST.
    */
@@ -91,7 +92,15 @@ public class QueryInfo {
   /**
    * Map from select key to src table or aliases referred in that select query
    */
-  private HashMap<CommonTree, Set<String>> selectKeyToSrcTblAlias;
+  private HashMap<CommonTree, Set<String>> selectKeyToSrcTblAlias = new HashMap<CommonTree, Set<String>>();;
+  /**
+   * Map from select key to src table  alias-name pair referred in that select query
+   */
+  private HashMap<CommonTree, Map<String, String>> selectKeyToSrcTblAliasNamePair = new HashMap<CommonTree, Map<String, String>>();
+  /**
+   * Map from select or from key to row info.
+   */
+  private Map<CommonTree, List<Column>> keyToRowInfo = new HashMap<CommonTree, List<Column>>();
 
   // alias or column in SELECT_LIST
   private final List<String> selectList = new ArrayList<String>();
@@ -201,14 +210,14 @@ public class QueryInfo {
   }
 
   /**
-   * Map SubQuery Node to alias node.
+   * Map select node of a subquery to alias node.
    *
    * @param subq
-   *          SUBQUERY node
+   *          select node of a subquery
    * @param alias
    *          ASTNode Identifier
    */
-  public void setSubQAlias(SqlASTNode subq, ASTNode alias) {
+  public void setSubQAlias(CommonTree subq, ASTNode alias) {
     if (subqToAlias == null) {
       subqToAlias = new HashMap<CommonTree, ASTNode>();
     }
@@ -216,10 +225,10 @@ public class QueryInfo {
   }
 
   /**
-   * Get mapped alias of SubQuery node
+   * Get mapped alias of select node of a subquery.
    *
    * @param subq
-   *          SUBQUERY node
+   *          select node of a subquery
    * @return alias ASTNode
    */
   public ASTNode getSubQAlias(SqlASTNode subq) {
@@ -227,6 +236,22 @@ public class QueryInfo {
       return null;
     }
     return subqToAlias.get(subq);
+  }
+
+  /**
+   * Map an alias to its associated subquery.
+   *
+   * @param alias
+   *          table alias
+   * @return select node of the subquery.
+   */
+  public CommonTree GetSuQFromAlias(String tblAlias) {
+    for (Map.Entry<CommonTree, ASTNode> subQAliasMapEntry : subqToAlias.entrySet()) {
+      if (subQAliasMapEntry.getValue().getText().equals(tblAlias)) {
+        return subQAliasMapEntry.getKey();
+      }
+    }
+    return null;
   }
 
   /**
@@ -345,15 +370,34 @@ public class QueryInfo {
   }
 
   /**
+   * Get all the source tables alias-name pairs referred in from clause
+   * in this select query.
+   *
+   * @return the map of table alias-name pair
+   */
+  public Map<String, String> getSrcTblAliasNamePairForSelectKey(CommonTree select) {
+    Map<String, String> srcTbls = selectKeyToSrcTblAliasNamePair.get(select);
+    if (srcTbls == null) {
+      srcTbls = new HashMap<String, String>();
+      SqlXlateUtil.getSrcTblAliasNamePair((CommonTree) select
+          .getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_FROM), srcTbls);
+      selectKeyToSrcTblAliasNamePair.put(select, srcTbls);
+    }
+    return srcTbls;
+  }
+
+  public Map<String, String> getSrcTblAliasNamePair() {
+    CommonTree select = this.getSelectKeyForThisQ();
+    return getSrcTblAliasNamePairForSelectKey(select);
+  }
+
+  /**
    * Get all the source tables and aliases referred in from clause
    * in this select query.
    *
    * @return the set of table names and aliases
    */
   public Set<String> getSrcTblAliasForSelectKey(CommonTree select) {
-    if (selectKeyToSrcTblAlias == null) {
-      selectKeyToSrcTblAlias = new HashMap<CommonTree, Set<String>>();
-    }
     Set<String> srcTblAlias = selectKeyToSrcTblAlias.get(select);
     if (srcTblAlias == null) {
       srcTblAlias = new HashSet<String>();
@@ -369,6 +413,24 @@ public class QueryInfo {
     return getSrcTblAliasForSelectKey(select);
   }
 
+  public List<Column> getRowInfo(CommonTree key) {
+    List<Column> rowInfo = keyToRowInfo.get(key);
+    if(rowInfo == null) {
+      rowInfo = new ArrayList<Column>();
+      keyToRowInfo.put(key, rowInfo);
+    }
+    return rowInfo;
+  }
+
+  public List<Column> getSelectRowInfo() {
+    CommonTree select = this.getSelectKeyForThisQ();
+    return getRowInfo(select);
+  }
+
+  public List<Column> getFromRowInfo() {
+    CommonTree from = this.getFromClauseForThisQuery();
+    return getRowInfo(from);
+  }
 
   public List<QueryInfo> getChildren() {
     return children;
@@ -383,6 +445,15 @@ public class QueryInfo {
       return true;
     }
     return false;
+  }
+
+  public QueryInfo findChildQueryInfo(CommonTree select) {
+    for (QueryInfo qi : children) {
+      if (qi.getSelectKeyForThisQ() == select) {
+        return qi;
+      }
+    }
+    return null;
   }
 
   private void buildTree(QueryInfo qf, StringBuilder sb) {

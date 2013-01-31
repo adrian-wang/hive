@@ -19,16 +19,19 @@ package org.apache.hadoop.hive.ql.parse.sql.transformer;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Stack;
 
 import org.antlr33.runtime.tree.CommonTree;
+import org.apache.hadoop.hive.ql.exec.ColumnInfo;
 import org.apache.hadoop.hive.ql.parse.ASTNode;
 import org.apache.hadoop.hive.ql.parse.HiveParser;
+import org.apache.hadoop.hive.ql.parse.RowResolver;
 import org.apache.hadoop.hive.ql.parse.sql.SqlASTNode;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateUtil;
 import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
-import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.FilterBlockUtil;
+import org.apache.hadoop.hive.ql.parse.sql.transformer.QueryInfo.Column;
 
 import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
 
@@ -57,7 +60,7 @@ public class PrepareQueryInfoTransformer extends BaseSqlASTTransformer {
     Stack<Integer> stack = new Stack<Integer>();
     stack.push(-999);// for first peek;
     List<QueryInfo> qInfoList = new ArrayList<QueryInfo>();
-    prepare(tree, null, stack, qInfoList);
+    prepare(tree, null, stack, qInfoList, context);
     context.setQInfoRoot(qInfoList.get(0));
   }
 
@@ -71,10 +74,11 @@ public class PrepareQueryInfoTransformer extends BaseSqlASTTransformer {
    * @throws SqlXlateException
    */
   protected void prepare(CommonTree ast, QueryInfo qInfo, Stack<Integer> stack,
-      List<QueryInfo> qInfoList)
+      List<QueryInfo> qInfoList, TranslateContext context)
       throws SqlXlateException {
 
-    switch (ast.getType()) {
+    int astType = ast.getType();
+    switch (astType) {
     case PantheraParser_PLSQLParser.STATEMENTS:
       // Prepare the root QueryInfo at SQL AST root node
       qInfo = prepareQInfo(ast, qInfo, qInfoList);
@@ -117,11 +121,57 @@ public class PrepareQueryInfoTransformer extends BaseSqlASTTransformer {
     // ast.setQueryInfo(qInfo);
     // if do not skip recursion, iterate all the children
     for (int i = 0; i < ast.getChildCount(); i++) {
-      prepare((CommonTree) ast.getChild(i), qInfo, stack, qInfoList);
+      prepare((CommonTree) ast.getChild(i), qInfo, stack, qInfoList, context);
     }
 
-    if (ast.getType() == stack.peek()) {
+    if (astType == stack.peek()) {
       stack.pop();
+    }
+
+    if (astType == PantheraParser_PLSQLParser.SQL92_RESERVED_FROM) {
+      // Build row info for src tables under the from clause.
+      List<Column> fromRowInfo = qInfo.getRowInfo(ast);
+      Map<String, String> tblAliasNamePairs = qInfo.getSrcTblAliasNamePair();
+
+      for (String tblAlias : tblAliasNamePairs.keySet()) {
+        String tblName = tblAliasNamePairs.get(tblAlias);
+        if (tblName != null) {
+          // Get RowResolver for this table.
+          RowResolver tblRR = context.getMeta().getRRForTbl(tblName);
+          // Dump columns into the fromRR.
+          for (ColumnInfo col : tblRR.getColumnInfos()) {
+            Column newCol = new Column(tblAlias, col.getInternalName());
+            fromRowInfo.add(newCol);
+          }
+        } else {
+          // Propogate the columns from sub-query.
+          CommonTree subQSelect = qInfo.GetSuQFromAlias(tblAlias);
+          assert(subQSelect != null);
+          List<Column> subQRowInfo = qInfo.findChildQueryInfo(subQSelect).getSelectRowInfo();
+
+          for (Column col : subQRowInfo) {
+            Column newCol = new Column(tblAlias, col.getColAlias());
+            fromRowInfo.add(newCol);
+          }
+        }
+      }
+    } else if (astType == PantheraParser_PLSQLParser.SQL92_RESERVED_SELECT) {
+      // Build row info for select result.
+      List<Column> selectRowInfo = qInfo.getRowInfo(ast);
+
+      List<String> selectList = qInfo.getSelectList();
+      for (String selectListItem : selectList) {
+        if (selectListItem.equals("*")) {
+          List<Column> fromRowInfo = qInfo.getRowInfo((CommonTree)
+            ast.getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_FROM));
+          for (Column col : fromRowInfo) {
+            selectRowInfo.add(col);
+          }
+        } else {
+          Column newCol = new Column(null, selectListItem);
+          selectRowInfo.add(newCol);
+        }
+      }
     }
   }
 
@@ -189,14 +239,22 @@ public class PrepareQueryInfoTransformer extends BaseSqlASTTransformer {
         if (alias == null) {
           aliasNode = SqlXlateUtil.newASTNode(HiveParser.Identifier, aliasGen
               .generateAliasName());
+          // Create a new SqlASTNode for alias for convinient processing later.
+          SqlASTNode sqlAliasNode = SqlXlateUtil.newSqlASTNode(PantheraParser_PLSQLParser.ALIAS, "ALIAS");
+          sqlAliasNode.addChild(SqlXlateUtil.newSqlASTNode(PantheraParser_PLSQLParser.ID, aliasNode.getText()));
+          // Attach it to the TABLE_REF_ELEMENT node as the first child.
+          assert(src.getChildCount() == 1);
+          SqlASTNode tmpNode = (SqlASTNode) src.getChild(0);
+          src.setChild(0, sqlAliasNode);
+          src.addChild(tmpNode);
         } else {
           aliasNode = genForAlias(alias);
         }
-        qInfo.setSubQAlias(subquery, aliasNode);
+        qInfo.setSubQAlias((CommonTree) subquery.getChild(0), aliasNode);
       }
+      return;
     }
 
-    // TODO it's not necessary to travel all tree, just travel top TABLE_REF_ELEMENT is ok.
     for (int i = 0; i < src.getChildCount(); i++) {
       prepareSubQAliases((SqlASTNode) src.getChild(i), qInfo);
     }
@@ -219,26 +277,29 @@ public class PrepareQueryInfoTransformer extends BaseSqlASTTransformer {
   private void buildSelectListStr(CommonTree select, List<String> selectListStr) {
     CommonTree selectList = (CommonTree) select
         .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST);
-    // TODO select *
     if (selectList == null) {
+      // select *
+      selectListStr.add("*");
       return;
     }
     for (int i = 0; i < selectList.getChildCount(); i++) {
       CommonTree selectItem = (CommonTree) selectList.getChild(i);
       if (selectItem.getChildCount() == 2) {
+        // The select item has alias.
         selectListStr.add(selectItem.getChild(1).getChild(0).getText());
         continue;
       }
-      List<CommonTree> anyElementList = new ArrayList<CommonTree>();
-      FilterBlockUtil.findNode(selectItem, PantheraParser_PLSQLParser.ANY_ELEMENT, anyElementList);
-      CommonTree anyElement = anyElementList.isEmpty() ? null : anyElementList.get(0);
-      if (anyElement != null) {
+      if (selectItem.getChild(0).getChild(0).getType() == PantheraParser_PLSQLParser.CASCATED_ELEMENT) {
+        // Direct table column reference.
+        CommonTree anyElement = (CommonTree) selectItem.getChild(0).getChild(0).getChild(0);
         if (anyElement.getChildCount() == 1) {
           selectListStr.add(anyElement.getChild(0).getText());
-        }
-        if (anyElement.getChildCount() == 2) {
+        } else {
           selectListStr.add(anyElement.getChild(1).getText());
         }
+      } else {
+        // Function. since it has no alias, use toStringTree() as its alias.
+        selectListStr.add(selectItem.getChild(0).getChild(0).toStringTree());
       }
     }
   }

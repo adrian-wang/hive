@@ -31,6 +31,7 @@ import org.apache.hadoop.hive.ql.parse.sql.SqlASTNode;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateUtil;
 import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
+import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.FilterBlockUtil;
 import org.apache.hadoop.hive.ql.parse.sql.transformer.QueryInfo.Column;
 
 import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
@@ -105,19 +106,25 @@ public class MultipleTableSelectTransformer extends BaseSqlASTTransformer {
       SqlASTNode from = (SqlASTNode) node.getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_FROM);
       if (from.getChildCount() > 1) {
         JoinInfo joinInfo = new JoinInfo();
-        Set<String> srcTables = qf.getSrcTblAliasForSelectKey(node);
 
         //
         // Transform the where condition and generate the join operation info.
         //
         SqlASTNode where = (SqlASTNode) node.getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_WHERE);
         if (where != null) {
-          transformWhereCondition((SqlASTNode) where.getChild(0).getChild(0), srcTables, joinInfo);
+          transformWhereCondition(qf, (SqlASTNode) where.getChild(0).getChild(0), joinInfo);
         }
         //
         // Transform the from clause tree using the generated join operation info.
         //
-        transformFromClause(from, srcTables, joinInfo);
+        transformFromClause(from, qf.getSrcTblAliasForSelectKey(node), joinInfo);
+      } else {
+        // if any column is referenced in join conditions, add missing table name for HIVE.
+        List<CommonTree> anyElementList = new ArrayList<CommonTree>();
+        FilterBlockUtil.findNode(from, PantheraParser_PLSQLParser.ANY_ELEMENT, anyElementList);
+        for (CommonTree anyElement : anyElementList) {
+          getTableName(qf, (SqlASTNode) anyElement);
+        }
       }
     }
 
@@ -132,14 +139,14 @@ public class MultipleTableSelectTransformer extends BaseSqlASTTransformer {
     }
   }
 
-  private void transformWhereCondition(SqlASTNode node, Set<String> srcTables, JoinInfo joinInfo) throws SqlXlateException {
+  private void transformWhereCondition(QueryInfo qf, SqlASTNode node, JoinInfo joinInfo) throws SqlXlateException {
     //
     // We can only transform equality expression between two columns whose ancesotors are all AND operators
     // into JOIN on ...
     //
     if (node.getType() == PantheraParser_PLSQLParser.SQL92_RESERVED_AND) {
-      transformWhereCondition((SqlASTNode) node.getChild(0), srcTables, joinInfo);  // Transform the left child.
-      transformWhereCondition((SqlASTNode) node.getChild(1), srcTables, joinInfo);  // Transform the right child.
+      transformWhereCondition(qf, (SqlASTNode) node.getChild(0), joinInfo);  // Transform the left child.
+      transformWhereCondition(qf, (SqlASTNode) node.getChild(1), joinInfo);  // Transform the right child.
 
       SqlASTNode leftChild = (SqlASTNode) node.getChild(0);
       SqlASTNode rightChild = (SqlASTNode) node.getChild(1);
@@ -161,19 +168,18 @@ public class MultipleTableSelectTransformer extends BaseSqlASTTransformer {
         // Check if this is a equality expression between two columns
         //
         if (IsColumnRef(node.getChild(0)) && IsColumnRef(node.getChild(1))) {
-          Column column1 = getColumn((SqlASTNode) node.getChild(0).getChild(0), srcTables);
-          Column column2 = getColumn((SqlASTNode) node.getChild(1).getChild(0), srcTables);
-
+          String table1 = getTableName(qf, (SqlASTNode) node.getChild(0).getChild(0));
+          String table2 = getTableName(qf, (SqlASTNode) node.getChild(1).getChild(0));
           //
           // Skip columns not in a src table.
           //
-          if (column1.getTblAlias() == null || column2.getTblAlias() == null) {
+          if (table1 == null || table2 == null) {
             return;
           }
           //
           // Update join info.
           //
-          JoinPair<String> tableJoinPair = new JoinPair<String>(column1.getTblAlias(), column2.getTblAlias());
+          JoinPair<String> tableJoinPair = new JoinPair<String>(table1, table2);
           List<SqlASTNode> joinEqualityNodes = joinInfo.joinPairInfo.get(tableJoinPair);
           if (joinEqualityNodes == null) {
             joinEqualityNodes = new ArrayList<SqlASTNode>();
@@ -202,8 +208,7 @@ public class MultipleTableSelectTransformer extends BaseSqlASTTransformer {
         }
       }
       if (columnRefCount == 1 && !SqlXlateUtil.hasNodeTypeInTree(node, PantheraParser_PLSQLParser.SQL92_RESERVED_SELECT)) {
-        Column column = getColumn((SqlASTNode) node.getChild(childIndex).getChild(0), srcTables);
-        String srcTable = column.getTblAlias();
+        String srcTable = getTableName(qf, (SqlASTNode) node.getChild(childIndex).getChild(0));
         //
         // Skip if the column is not in any of the src tables.
         //
@@ -237,32 +242,36 @@ public class MultipleTableSelectTransformer extends BaseSqlASTTransformer {
     }
   }
 
-  private Column getColumn(SqlASTNode anyElement, Set<String> srcTables) throws SqlXlateException {
-    String columnName;
-    String table;
+  private String getTableName(QueryInfo qf, SqlASTNode anyElement) throws SqlXlateException {
+    String table = null;
 
-    Column column = new Column();
+    SqlASTNode currentSelect = (SqlASTNode) anyElement.getAncestor(PantheraParser_PLSQLParser.SQL92_RESERVED_SELECT);
+
     if (anyElement.getChildCount() > 1) {
       table = anyElement.getChild(0).getText();
       //
       // Return null table name if it is not a src table.
       //
-      if (srcTables.contains(table)) {
-        column.setTblAlias(table);
+      if (!qf.getSrcTblAliasForSelectKey(currentSelect).contains(table)) {
+        table = null;
       }
-      column.setColAlias(anyElement.getChild(1).getText());
     } else {
-      columnName = anyElement.getChild(0).getText();
-      column.setTblAlias(getTableForColInThisQ(columnName));
-      column.setColAlias(columnName);
+      String columnName = anyElement.getChild(0).getText();
+      List<Column> fromRowInfo = qf.getRowInfo((CommonTree) currentSelect.getFirstChildWithType(
+                                               PantheraParser_PLSQLParser.SQL92_RESERVED_FROM));
+      for (Column col : fromRowInfo) {
+        if (col.getColAlias().equals(columnName)) {
+          table = col.getTblAlias();
+          // Add table leaf node because HIVE needs table name for join operation.
+          SqlASTNode tableNameNode = SqlXlateUtil.newSqlASTNode(PantheraParser_PLSQLParser.ID, table);
+          SqlASTNode columnNode = (SqlASTNode) anyElement.getChild(0);
+          anyElement.setChild(0, tableNameNode);
+          anyElement.addChild(columnNode);
+          break;
+        }
+      }
     }
-
-    return column;
-  }
-
-  private String getTableForColInThisQ(String columeName) throws SqlXlateException {
-    // FIXME!
-    throw new SqlXlateException("Multi-table selection transformer: table name must be explicitly specified for a column!");
+    return table;
   }
 
   private void transformFromClause(SqlASTNode oldFrom, Set<String> srcTables, JoinInfo joinInfo) throws SqlXlateException {
