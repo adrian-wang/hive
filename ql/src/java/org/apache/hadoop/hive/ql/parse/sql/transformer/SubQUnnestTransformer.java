@@ -60,12 +60,16 @@ public class SubQUnnestTransformer extends BaseSqlASTTransformer {
   /**
    * Transform SQL AST tree.<br>
    * If the transformation need to be processed with every QueryInfo by multi-threads, overload the
-   * method.(can't support, because qinfo should be travel by deeply first )
+   * method.(TODO can't support, because qinfo should be travel by depth-first for subquery
+   * inlineview)
    *
+   * @deprecated
    * @param tree
    * @param context
    * @throws SqlXlateException
+   *
    */
+  @Deprecated
   void transformQInfo(SqlASTNode tree, TranslateContext context) throws SqlXlateException {
     for (QueryInfo qf : context.getqInfoList()) {
       this.transformFilterBlock(qf, context);
@@ -89,9 +93,9 @@ public class SubQUnnestTransformer extends BaseSqlASTTransformer {
       selectList.add(qinfo.getSelectKeyForThisQ());
     }
     if (!qf.isQInfoTreeRoot()) {
-      this.rebuildSelectList(qf.getSelectKeyForThisQ(), selectListStrList, selectList);
+      this.rebuildSelect(qf.getSelectKeyForThisQ(), selectListStrList, selectList);
       this.transformFilterBlock(qf, context);
-    }else{
+    } else {
 
     }
   }
@@ -131,32 +135,66 @@ public class SubQUnnestTransformer extends BaseSqlASTTransformer {
     }
   }
 
-  private void rebuildSelectList(CommonTree select, List<List<String>> selectListStrList,
+  /**
+   * rebuild SELECT_LIST, GROUP, ORDER_BY with column alias of unnested inlineview
+   * TODO WHERE
+   * @param select
+   * @param selectListStrList
+   * @param selectList
+   */
+  private void rebuildSelect(CommonTree select, List<List<String>> selectListStrList,
       List<CommonTree> selectList) {
+
+    // SELECT_LIST
     CommonTree selectListNode = (CommonTree) select
         .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST);
     if (selectListNode == null) {
       return;
     }
     for (int i = 0; i < selectListNode.getChildCount(); i++) {
-      List<CommonTree> anyElementList = new ArrayList<CommonTree>();
-      FilterBlockUtil.findNode((CommonTree) selectListNode.getChild(i),
-          PantheraParser_PLSQLParser.ANY_ELEMENT, anyElementList);
-      CommonTree anyElement = anyElementList.isEmpty() ? null : anyElementList.get(0);
-      if (anyElement == null) {
-        continue;
-      }
-      CommonTree column;
-      if (anyElement.getChildCount() == 2) {
-        column = (CommonTree) anyElement.getChild(1);
-
-      } else {
-        column = (CommonTree) anyElement.getChild(0);
-      }
-      String originalColumnName = column.getText();
-      String transformedAlias = findAlias(originalColumnName, selectListStrList, selectList);
-      column.getToken().setText(transformedAlias);
+      this
+          .rebuildAnyElement((CommonTree) selectListNode.getChild(i), selectListStrList, selectList);
     }
+
+    // GROUP_BY
+    this.rebuildAnyElement((CommonTree) select
+        .getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_GROUP), selectListStrList,
+        selectList);
+
+    // ORDER_BY
+    CommonTree subQuery = (CommonTree) select.getParent();
+    if (subQuery != null) {
+      CommonTree selectStatement = (CommonTree) subQuery.getParent();
+      if (selectStatement != null
+          && selectStatement.getType() == PantheraParser_PLSQLParser.SELECT_STATEMENT) {
+        CommonTree order = (CommonTree) selectStatement
+            .getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_ORDER);
+        this.rebuildAnyElement(order, selectListStrList, selectList);
+      }
+    }
+  }
+
+  private void rebuildAnyElement(CommonTree targetNode, List<List<String>> selectListStrList,
+      List<CommonTree> selectList) {
+    if (targetNode == null) {
+      return;
+    }
+    List<CommonTree> anyElementList = new ArrayList<CommonTree>();
+    FilterBlockUtil.findNode(targetNode, PantheraParser_PLSQLParser.ANY_ELEMENT, anyElementList);
+    CommonTree anyElement = anyElementList.isEmpty() ? null : anyElementList.get(0);
+    if (anyElement == null) {
+      return;
+    }
+    CommonTree column;
+    if (anyElement.getChildCount() == 2) {
+      column = (CommonTree) anyElement.getChild(1);
+
+    } else {
+      column = (CommonTree) anyElement.getChild(0);
+    }
+    String originalColumnName = column.getText();
+    String transformedAlias = findAlias(originalColumnName, selectListStrList, selectList);
+    column.getToken().setText(transformedAlias);
   }
 
   private String findAlias(String originalColumnName, List<List<String>> selectListStrList,
