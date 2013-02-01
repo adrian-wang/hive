@@ -131,7 +131,7 @@ public class PrepareQueryInfoTransformer extends BaseSqlASTTransformer {
     if (astType == PantheraParser_PLSQLParser.SQL92_RESERVED_FROM) {
       // Build row info for src tables under the from clause.
       List<Column> fromRowInfo = qInfo.getRowInfo(ast);
-      Map<String, String> tblAliasNamePairs = qInfo.getSrcTblAliasNamePair();
+      Map<String, String> tblAliasNamePairs = qInfo.getSrcTblAliasNamePairForSelectKey((CommonTree) ast.getParent());
 
       for (String tblAlias : tblAliasNamePairs.keySet()) {
         String tblName = tblAliasNamePairs.get(tblAlias);
