@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -80,7 +81,8 @@ public class MultipleTableSelectTransformer extends BaseSqlASTTransformer {
   }
 
   private class JoinInfo {
-    public Map<JoinPair<String>, List<SqlASTNode>> joinPairInfo = new HashMap<JoinPair<String>, List<SqlASTNode>>();
+    // we use insertion-ordered LinkedHashMap so that table join order honors the order in the where clause.
+    public Map<JoinPair<String>, List<SqlASTNode>> joinPairInfo = new LinkedHashMap<JoinPair<String>, List<SqlASTNode>>();
     public Map<String, List<SqlASTNode>> joinFilterInfo = new HashMap<String, List<SqlASTNode>>();
   }
 
