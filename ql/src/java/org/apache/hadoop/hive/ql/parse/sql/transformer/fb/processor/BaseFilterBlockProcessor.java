@@ -44,8 +44,15 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
   QueryBlock bottomQuery;
   QueryBlock topQuery;
   SubQFilterBlock subQ;
+
+  // original node reference
+  CommonTree originalTopSelect;
+  CommonTree originalBottomSelect;
+
+  // clone node reference
   CommonTree topSelect;
   CommonTree bottomSelect;
+
   CommonTree subQNode;
   FilterBlockContext fbContext;
   FilterBlock fb;// current normalFilterBlock
@@ -63,6 +70,8 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
     bottomQuery = fbContext.getQueryStack().pop();
     bottomQuery.setAggregationList(null);// TODO naive
     topQuery = fbContext.getQueryStack().peek();
+    originalBottomSelect = bottomQuery.getASTNode();
+    originalTopSelect = topQuery.getASTNode();
     fbContext.getQueryStack().push(bottomQuery);
     subQ = fbContext.getSubQStack().peek();
     topSelect = topQuery.cloneSimpleQuery();
@@ -230,8 +239,8 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
   Map<Boolean, List<CommonTree>> getFilterKey(CommonTree filterOp) throws SqlXlateException {
     Map<Boolean, List<CommonTree>> result = new HashMap<Boolean, List<CommonTree>>();
     Stack<CommonTree> selectStack = new Stack<CommonTree>();
-    selectStack.push(topSelect);
-    selectStack.push(bottomSelect);
+    selectStack.push(originalTopSelect);
+    selectStack.push(originalBottomSelect);
     for (int i = 0; i < filterOp.getChildCount(); i++) {
       CommonTree child = (CommonTree) filterOp.getChild(i);
       if (!PLSQLFilterBlockFactory.getInstance().isCorrelated(this.fbContext.getqInfo(),
@@ -718,8 +727,8 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
         for (CommonTree bottomKey : bottomKeys) {
           String selectKey;
           assert (bottomKey.getChildCount() == 2);
-          selectKey = bottomKey.getChild(0).getChild(0).getText()
-              + bottomKey.getChild(0).getChild(1).getText();// tableName+columnName
+          selectKey = bottomKey.getChild(0).getChildCount() == 2 ? bottomKey.getChild(0)
+              .getChild(1).getText() : bottomKey.getChild(0).getChild(0).getText();
           if (needGroup && !selectKeySet.contains(selectKey)) {
             selectKeySet.add(selectKey);
             // group
@@ -736,6 +745,9 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
                   joinSubAlias.getChild(0).getText());
             ((CommonTree) anyElement.getChild(1)).getToken().setText(
                   joinKeyAlias.getChild(0).getText());
+          }else{
+            ((CommonTree) anyElement.getChild(0)).getToken().setText(
+                joinKeyAlias.getChild(0).getText());
           }
 
         }
@@ -755,6 +767,9 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
                 topAlias.getChild(0).getText());
           ((CommonTree) anyElement.getChild(1)).getToken().setText(
                 joinKeyAlias.getChild(0).getText());
+        }else{
+          ((CommonTree) anyElement.getChild(0)).getToken().setText(
+              joinKeyAlias.getChild(0).getText());
         }
 
         // ((CommonTree) anyElement.getChild(0)).getToken().setText(

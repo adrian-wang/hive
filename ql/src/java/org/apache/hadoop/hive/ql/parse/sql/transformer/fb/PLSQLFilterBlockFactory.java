@@ -77,10 +77,11 @@ public class PLSQLFilterBlockFactory extends FilterBlockFactory {
     if (branch.getType() == PantheraParser_PLSQLParser.CASCATED_ELEMENT) {
       SqlASTNode child = (SqlASTNode) branch.getChild(0);
       if (child.getType() == PantheraParser_PLSQLParser.ANY_ELEMENT) {
+        if (selectStack.size() <= 1) {
+          return false;
+        }
         if (child.getChildCount() == 2) {// tableName.columnName
-          if (selectStack.size() <= 1) {
-            return false;
-          }
+
           if (SqlXlateUtil.containTableName(child.getChild(0).getText(), selectStack.peek()
               .getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_FROM))) {
             return false;
@@ -110,7 +111,7 @@ public class PLSQLFilterBlockFactory extends FilterBlockFactory {
             }
           }
           List<Column> topColumnList = qInfo.getRowInfo(topFrom);
-          for (Column column : bottomColumnList) {
+          for (Column column : topColumnList) {
             if (columnName.equals(column.getColAlias())) {
               return true;
             }
@@ -119,8 +120,7 @@ public class PLSQLFilterBlockFactory extends FilterBlockFactory {
         }
       }
     }
-    throw new SqlXlateException("unknow whether correlated for unsupported node type:"
-        + branch.getText());
+    return false;
   }
 
 
