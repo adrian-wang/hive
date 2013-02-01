@@ -234,7 +234,8 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
     selectStack.push(bottomSelect);
     for (int i = 0; i < filterOp.getChildCount(); i++) {
       CommonTree child = (CommonTree) filterOp.getChild(i);
-      if (!PLSQLFilterBlockFactory.getInstance().isCorrelated(selectStack, child)) {
+      if (!PLSQLFilterBlockFactory.getInstance().isCorrelated(this.fbContext.getqInfo(),
+          selectStack, child)) {
         if (child.getType() == PantheraParser_PLSQLParser.CASCATED_ELEMENT) {
           List<CommonTree> uncorrelatedList = result.get(false);
           if (uncorrelatedList == null) {
@@ -245,7 +246,8 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
         }
       }
 
-      if (PLSQLFilterBlockFactory.getInstance().isCorrelated(selectStack, child)) {
+      if (PLSQLFilterBlockFactory.getInstance().isCorrelated(this.fbContext.getqInfo(),
+          selectStack, child)) {
         List<CommonTree> correlatedList = result.get(true);
         if (correlatedList == null) {
           correlatedList = new ArrayList<CommonTree>();

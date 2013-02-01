@@ -17,13 +17,15 @@
  */
 package org.apache.hadoop.hive.ql.parse.sql.transformer.fb;
 
+import java.util.List;
 import java.util.Stack;
 
 import org.antlr33.runtime.tree.CommonTree;
-import org.antlr33.runtime.tree.Tree;
 import org.apache.hadoop.hive.ql.parse.sql.SqlASTNode;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateUtil;
+import org.apache.hadoop.hive.ql.parse.sql.transformer.QueryInfo;
+import org.apache.hadoop.hive.ql.parse.sql.transformer.QueryInfo.Column;
 
 import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
 
@@ -54,7 +56,7 @@ public class PLSQLFilterBlockFactory extends FilterBlockFactory {
     typeMap.put(PantheraParser_PLSQLParser.SQL92_RESERVED_LIKE, LIKE);
     typeMap.put(PantheraParser_PLSQLParser.SQL92_RESERVED_AND, AND);
     typeMap.put(PantheraParser_PLSQLParser.SQL92_RESERVED_OR, OR);
-//    typeMap.put(PantheraParser_PLSQLParser.SQL92_RESERVED_NOT, NOT);//FIXME not exists
+    // typeMap.put(PantheraParser_PLSQLParser.SQL92_RESERVED_NOT, NOT);//FIXME not exists
     typeMap.put(PantheraParser_PLSQLParser.SQL92_RESERVED_SELECT, SELECT);
     typeMap.put(PantheraParser_PLSQLParser.SQL92_RESERVED_EXISTS, EXISTS);
     typeMap.put(PantheraParser_PLSQLParser.SELECT_LIST, SELECT_LIST);
@@ -67,10 +69,11 @@ public class PLSQLFilterBlockFactory extends FilterBlockFactory {
   }
 
   /**
-   * FIXME process the case without table name but correlated.
+   *
    */
   @Override
-  public boolean isCorrelated(Stack<CommonTree> selectStack, CommonTree branch) throws SqlXlateException {
+  public boolean isCorrelated(QueryInfo qInfo, Stack<CommonTree> selectStack, CommonTree branch)
+      throws SqlXlateException {
     if (branch.getType() == PantheraParser_PLSQLParser.CASCATED_ELEMENT) {
       SqlASTNode child = (SqlASTNode) branch.getChild(0);
       if (child.getType() == PantheraParser_PLSQLParser.ANY_ELEMENT) {
@@ -83,8 +86,67 @@ public class PLSQLFilterBlockFactory extends FilterBlockFactory {
             return false;
           }
           CommonTree temp = selectStack.pop();
-          boolean correlated = SqlXlateUtil.containTableName(child.getChild(0).getText(), selectStack.peek()
-              .getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_FROM));
+          boolean correlated = SqlXlateUtil.containTableName(child.getChild(0).getText(),
+              selectStack.peek()
+                  .getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_FROM));
+          selectStack.push(temp);
+          if (correlated) {
+            return true;
+          }
+          throw new SqlXlateException("Correlated level is more than 2");
+        } else {// only columnName
+          String columnName = child.getChild(0).getText();
+          CommonTree bottomSelect = selectStack.pop();
+          CommonTree topSelect = selectStack.peek();
+          selectStack.push(bottomSelect);
+          CommonTree bottomFrom = (CommonTree) bottomSelect
+              .getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_FROM);
+          CommonTree topFrom = (CommonTree) topSelect
+              .getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_FROM);
+          List<Column> bottomColumnList = qInfo.getRowInfo(bottomFrom);
+          for (Column column : bottomColumnList) {
+            if (columnName.equals(column.getColAlias())) {
+              return false;
+            }
+          }
+          List<Column> topColumnList = qInfo.getRowInfo(topFrom);
+          for (Column column : bottomColumnList) {
+            if (columnName.equals(column.getColAlias())) {
+              return true;
+            }
+          }
+          throw new SqlXlateException("Correlated level is more than 2");
+        }
+      }
+    }
+    throw new SqlXlateException("unknow whether correlated for unsupported node type:"
+        + branch.getText());
+  }
+
+
+  /**
+   * FIXME process the case without table name but correlated.
+   *
+   * @deprecated
+   */
+  @Deprecated
+  public boolean isCorrelated_TBD(Stack<CommonTree> selectStack, CommonTree branch)
+      throws SqlXlateException {
+    if (branch.getType() == PantheraParser_PLSQLParser.CASCATED_ELEMENT) {
+      SqlASTNode child = (SqlASTNode) branch.getChild(0);
+      if (child.getType() == PantheraParser_PLSQLParser.ANY_ELEMENT) {
+        if (child.getChildCount() == 2) {// tableName.columnName
+          if (selectStack.size() <= 1) {
+            return false;
+          }
+          if (SqlXlateUtil.containTableName(child.getChild(0).getText(), selectStack.peek()
+              .getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_FROM))) {
+            return false;
+          }
+          CommonTree temp = selectStack.pop();
+          boolean correlated = SqlXlateUtil.containTableName(child.getChild(0).getText(),
+              selectStack.peek()
+                  .getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_FROM));
           selectStack.push(temp);
           if (correlated) {
             return true;

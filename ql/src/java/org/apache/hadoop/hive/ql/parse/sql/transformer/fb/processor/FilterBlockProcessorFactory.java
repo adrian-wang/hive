@@ -20,6 +20,7 @@ package org.apache.hadoop.hive.ql.parse.sql.transformer.fb.processor;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
 
 import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
+
 /**
  *
  * FilterBlockProcessorFactory.
@@ -49,6 +50,8 @@ public class FilterBlockProcessorFactory {
     case PantheraParser_PLSQLParser.EQUALS_OP:
     case PantheraParser_PLSQLParser.GREATER_THAN_OP:
     case PantheraParser_PLSQLParser.LESS_THAN_OP:
+    case PantheraParser_PLSQLParser.LESS_THAN_OR_EQUALS_OP:
+    case PantheraParser_PLSQLParser.GREATER_THAN_OR_EQUALS_OP:
       return new CompareOpProcessor4C();
     case PantheraParser_PLSQLParser.SQL92_RESERVED_EXISTS:
       return new ExistsProcessor4C();
@@ -74,7 +77,7 @@ public class FilterBlockProcessorFactory {
   private FilterBlockProcessorFactory() {
   }
 
-  public static FilterBlockProcessor getAndProcessor(){
+  public static FilterBlockProcessor getAndProcessor() {
     return new AndProcessor();
   }
 }

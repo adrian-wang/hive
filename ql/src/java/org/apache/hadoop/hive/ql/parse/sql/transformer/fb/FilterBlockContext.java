@@ -18,6 +18,9 @@
 package org.apache.hadoop.hive.ql.parse.sql.transformer.fb;
 
 import java.util.Stack;
+
+import org.apache.hadoop.hive.ql.parse.sql.transformer.QueryInfo;
+
 /**
  * Store some stack for transforming filter block tree.
  * FilterBlockContext.
@@ -27,7 +30,11 @@ public class FilterBlockContext {
   Stack<QueryBlock> queryStack = new Stack<QueryBlock>();
   Stack<SubQFilterBlock> subQStack = new Stack<SubQFilterBlock>();
   Stack<TypeFilterBlock> typeStack = new Stack<TypeFilterBlock>();
+  QueryInfo qInfo;
 
+  public FilterBlockContext(QueryInfo qInfo) {
+    this.qInfo = qInfo;
+  }
 
   public Stack<QueryBlock> getQueryStack() {
     return queryStack;
@@ -39,6 +46,14 @@ public class FilterBlockContext {
 
   public Stack<TypeFilterBlock> getTypeStack() {
     return typeStack;
+  }
+
+  public QueryInfo getqInfo() {
+    return qInfo;
+  }
+
+  public void setqInfo(QueryInfo qInfo) {
+    this.qInfo = qInfo;
   }
 
 

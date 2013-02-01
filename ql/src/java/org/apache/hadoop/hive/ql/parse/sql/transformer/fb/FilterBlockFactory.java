@@ -24,6 +24,7 @@ import java.util.Stack;
 import org.antlr33.runtime.tree.CommonTree;
 import org.apache.hadoop.hive.ql.parse.sql.PantheraMap;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
+import org.apache.hadoop.hive.ql.parse.sql.transformer.QueryInfo;
 
 /**
  * Create filter block by built-in builder.<br>
@@ -105,10 +106,18 @@ public abstract class FilterBlockFactory {
     fbMap.put(HAVING, new HavingFilterBlockBuilder());
   }
 
-  abstract boolean isCorrelated(Stack<CommonTree> selectStack, CommonTree branch)
+  /**
+   *
+   * @param qFNode
+   * @param selectStack
+   * @param branch
+   * @return true: correlated, false: uncorrelated
+   * @throws SqlXlateException
+   */
+  abstract boolean isCorrelated(QueryInfo qFNode,Stack<CommonTree> selectStack, CommonTree branch)
       throws SqlXlateException;
 
-  public FilterBlock getFilterBlock(Stack<CommonTree> selectStack, CommonTree node,
+  public FilterBlock getFilterBlock(QueryInfo qFNode,Stack<CommonTree> selectStack, CommonTree node,
       List<FilterBlock> fbl) throws SqlXlateException {
     if (typeMap.get(node.getType()) == null) {
       if (fbl.size() == 1) {
@@ -120,7 +129,7 @@ public abstract class FilterBlockFactory {
       }
       return null;
     }
-    return fbMap.get(typeMap.get(node.getType())).build(selectStack, node, fbl);
+    return fbMap.get(typeMap.get(node.getType())).build(qFNode,selectStack, node, fbl);
   }
 
   FilterBlock buildLogicOp(CommonTree node, List<FilterBlock> fbl, int type)
@@ -170,14 +179,14 @@ public abstract class FilterBlockFactory {
   }
 
   public interface FilterBlockBuilder {
-    FilterBlock build(Stack<CommonTree> selectStack, CommonTree node, List<FilterBlock> fbl)
+    FilterBlock build(QueryInfo qFNode,Stack<CommonTree> selectStack, CommonTree node, List<FilterBlock> fbl)
         throws SqlXlateException;
   }
 
   public class OpBuilder implements FilterBlockBuilder {
 
     @Override
-    public FilterBlock build(Stack<CommonTree> selectStack, CommonTree node, List<FilterBlock> fbl)
+    public FilterBlock build(QueryInfo qFNode,Stack<CommonTree> selectStack, CommonTree node, List<FilterBlock> fbl)
         throws SqlXlateException {
       FilterBlock fb;
       if (fbl.size() == 1 && fbl.get(0) instanceof QueryBlock) {
@@ -192,7 +201,7 @@ public abstract class FilterBlockFactory {
       }
       boolean correlated = false;
       for (int i = 0; i < node.getChildCount(); i++) {
-        correlated = isCorrelated(selectStack, (CommonTree) node.getChild(i));
+        correlated = isCorrelated(qFNode,selectStack, (CommonTree) node.getChild(i));
         if (correlated) {
           break;
         }
@@ -212,7 +221,7 @@ public abstract class FilterBlockFactory {
   public class AndBuilder implements FilterBlockBuilder {
 
     @Override
-    public FilterBlock build(Stack<CommonTree> selectStack, CommonTree node, List<FilterBlock> fbl)
+    public FilterBlock build(QueryInfo qFNode,Stack<CommonTree> selectStack, CommonTree node, List<FilterBlock> fbl)
         throws SqlXlateException {
       return buildLogicOp(node, fbl, AND);
     }
@@ -221,7 +230,7 @@ public abstract class FilterBlockFactory {
   public class OrBuilder implements FilterBlockBuilder {
 
     @Override
-    public FilterBlock build(Stack<CommonTree> selectStack, CommonTree node, List<FilterBlock> fbl)
+    public FilterBlock build(QueryInfo qFNode,Stack<CommonTree> selectStack, CommonTree node, List<FilterBlock> fbl)
         throws SqlXlateException {
       return buildLogicOp(node, fbl, OR);
     }
@@ -231,7 +240,7 @@ public abstract class FilterBlockFactory {
   public class QueryBlockBuilder implements FilterBlockBuilder {
 
     @Override
-    public FilterBlock build(Stack<CommonTree> selectStack, CommonTree node, List<FilterBlock> fbl)
+    public FilterBlock build(QueryInfo qFNode,Stack<CommonTree> selectStack, CommonTree node, List<FilterBlock> fbl)
         throws SqlXlateException {
       QueryBlock fb = new QueryBlock();
       processFilterBlock(selectStack, node, fbl, fb);
@@ -244,7 +253,7 @@ public abstract class FilterBlockFactory {
   public class SelectExprFilterBlockBuilder implements FilterBlockBuilder {
 
     @Override
-    public FilterBlock build(Stack<CommonTree> selectStack, CommonTree node, List<FilterBlock> fbl)
+    public FilterBlock build(QueryInfo qFNode,Stack<CommonTree> selectStack, CommonTree node, List<FilterBlock> fbl)
         throws SqlXlateException {
       FilterBlock fb = new SelectExprFilterBlock();
       return processFilterBlock(selectStack, node, fbl, fb);
@@ -254,7 +263,7 @@ public abstract class FilterBlockFactory {
   public class WhereFilterBlockBuilder implements FilterBlockBuilder {
 
     @Override
-    public FilterBlock build(Stack<CommonTree> selectStack, CommonTree node, List<FilterBlock> fbl)
+    public FilterBlock build(QueryInfo qFNode,Stack<CommonTree> selectStack, CommonTree node, List<FilterBlock> fbl)
         throws SqlXlateException {
       FilterBlock fb = new WhereFilterBlock();
       return processFilterBlock(selectStack, node, fbl, fb);
@@ -265,7 +274,7 @@ public abstract class FilterBlockFactory {
   public class HavingFilterBlockBuilder implements FilterBlockBuilder {
 
     @Override
-    public FilterBlock build(Stack<CommonTree> selectStack, CommonTree node, List<FilterBlock> fbl)
+    public FilterBlock build(QueryInfo qFNode,Stack<CommonTree> selectStack, CommonTree node, List<FilterBlock> fbl)
         throws SqlXlateException {
       FilterBlock fb = new HavingFilterBlock();
       return processFilterBlock(selectStack, node, fbl, fb);

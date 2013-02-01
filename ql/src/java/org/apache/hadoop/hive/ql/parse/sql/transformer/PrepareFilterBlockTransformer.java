@@ -55,11 +55,11 @@ public class PrepareFilterBlockTransformer extends BaseSqlASTTransformer {
   void buildFilterBlockTree(QueryInfo qFNode, TranslateContext context) throws SqlXlateException {
     CommonTree subRoot = qFNode.getSelectKeyForThisQ();
     Stack<CommonTree> selectStack = new Stack<CommonTree>();
-    FilterBlock fbRoot = buildFilterBlock(selectStack, subRoot);
+    FilterBlock fbRoot = buildFilterBlock(qFNode,selectStack, subRoot);
     qFNode.setFilterBlockTreeRoot(fbRoot);
   }
 
-  FilterBlock buildFilterBlock(Stack<CommonTree> selectStack, CommonTree node)
+  FilterBlock buildFilterBlock(QueryInfo qFNode,Stack<CommonTree> selectStack, CommonTree node)
       throws SqlXlateException {
     if (needSkip(node)) {
       return null;
@@ -70,7 +70,7 @@ public class PrepareFilterBlockTransformer extends BaseSqlASTTransformer {
     List<FilterBlock> fbl = new ArrayList<FilterBlock>();
     for (int i = 0; i < node.getChildCount(); i++) {
       CommonTree t = (CommonTree) node.getChild(i);
-      FilterBlock fb = buildFilterBlock(selectStack, t);
+      FilterBlock fb = buildFilterBlock(qFNode,selectStack, t);
       if (fb != null) {
         fbl.add(fb);
       }
@@ -78,7 +78,7 @@ public class PrepareFilterBlockTransformer extends BaseSqlASTTransformer {
     if (node.getType() == PantheraParser_PLSQLParser.SQL92_RESERVED_SELECT) {
       selectStack.pop();
     }
-    return PLSQLFilterBlockFactory.getInstance().getFilterBlock(selectStack, node, fbl);
+    return PLSQLFilterBlockFactory.getInstance().getFilterBlock(qFNode,selectStack, node, fbl);
   }
 
   boolean needSkip(Tree node) {

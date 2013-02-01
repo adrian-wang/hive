@@ -111,7 +111,7 @@ public class SubQUnnestTransformer extends BaseSqlASTTransformer {
       throw new SqlXlateException("Error FilterBlock tree" + fb.toStringTree());
     }
 
-    fb.process(new FilterBlockContext(), context);
+    fb.process(new FilterBlockContext(qf), context);
     qf.setSelectKeyForThisQ(fb.getTransformedNode());
   }
 

@@ -24,10 +24,10 @@ import org.antlr33.runtime.TokenRewriteStream;
 import org.apache.hadoop.hive.ql.parse.ASTNode;
 import org.apache.hadoop.hive.ql.parse.sql.SqlParseDriver.SqlLexer;
 import org.apache.hadoop.hive.ql.parse.sql.SqlParseDriver.SqlParser;
-import org.apache.hadoop.hive.ql.parse.sql.transformer.SubQUnnestTransformer;
 import org.apache.hadoop.hive.ql.parse.sql.transformer.NothingTransformer;
 import org.apache.hadoop.hive.ql.parse.sql.transformer.PrepareFilterBlockTransformer;
 import org.apache.hadoop.hive.ql.parse.sql.transformer.PrepareQueryInfoTransformer;
+import org.apache.hadoop.hive.ql.parse.sql.transformer.SubQUnnestTransformer;
 
 import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
 
@@ -92,8 +92,8 @@ public abstract class BaseSQLTest extends TestCase {
 
   }
 
-  void testQInfo(String sql, String qTree) {
-    TranslateContext context = new TranslateContext();
+  void testQInfo(String sql, String qTree) throws SqlXlateException {
+    TranslateContext context = new TranslateContext(null);
     SqlASTNode sqlAST = buildAST(sql);
     try {
       qt.transform(sqlAST, context);
@@ -108,8 +108,8 @@ public abstract class BaseSQLTest extends TestCase {
 
   }
 
-  void testPrepareFilterBlock(String sql, String fbTree) {
-    TranslateContext context = new TranslateContext();
+  void testPrepareFilterBlock(String sql, String fbTree) throws SqlXlateException {
+    TranslateContext context = new TranslateContext(null);
     SqlASTNode sqlAST = buildAST(sql);
     try {
       fbpt.transform(sqlAST, context);
@@ -123,8 +123,8 @@ public abstract class BaseSQLTest extends TestCase {
     }
   }
 
-  void testFilterBlockTransformer(String sql, String fbTree) {
-    TranslateContext context = new TranslateContext();
+  void testFilterBlockTransformer(String sql, String fbTree) throws SqlXlateException {
+    TranslateContext context = new TranslateContext(null);
     SqlASTNode sqlAST = buildAST(sql);
     try {
       fbt.transform(sqlAST, context);
