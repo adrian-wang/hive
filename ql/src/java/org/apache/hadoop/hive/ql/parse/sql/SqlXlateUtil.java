@@ -818,6 +818,19 @@ public final class SqlXlateUtil {
       String alias = getFullTblName(tab.getDbName(), tab.getTableName());
       RowResolver rr = new RowResolver();
       try {
+        if (tab.isView()) {
+          List<FieldSchema> fields = tab.getAllCols();
+          for (int i = 0; i < fields.size(); i++) {
+            // add fields into row resolver
+            // TODO in colInfo we now only add table name as tab alias,
+            // fix it later
+            rr.put(alias, fields.get(i).getName(), new ColumnInfo(fields
+                .get(i).getName(), TypeInfoUtils.getTypeInfoFromTypeString(fields.get(i)
+                .getType()), tab.getTableName(), false));
+          }
+          return rr;
+        }
+
         if (tab.getDeserializer() == null) {
           return null;
         }
