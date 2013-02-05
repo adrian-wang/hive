@@ -218,16 +218,16 @@ public class PrepareQueryInfoTransformer extends BaseSqlASTTransformer {
   private void prepareSubQAliases(CommonTree src, QueryInfo qInfo) throws SqlXlateException {
     // prepare subq alias for each qInfo
     if (src.getType() == PantheraParser_PLSQLParser.TABLE_REF_ELEMENT) {
-      SqlASTNode alias = (SqlASTNode) src.getFirstChildWithType(PantheraParser_PLSQLParser.ALIAS);
-      SqlASTNode child2 = null;
-      SqlASTNode subquery = null;
-      if ((child2 = (SqlASTNode) src
+      CommonTree alias = (CommonTree) src.getFirstChildWithType(PantheraParser_PLSQLParser.ALIAS);
+      CommonTree child2 = null;
+      CommonTree subquery = null;
+      if ((child2 = (CommonTree) src
           .getFirstChildWithType(PantheraParser_PLSQLParser.TABLE_EXPRESSION)) != null) {
-        if ((child2 = (SqlASTNode) child2
+        if ((child2 = (CommonTree) child2
             .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_MODE)) != null) {
-          if ((child2 = (SqlASTNode) child2
+          if ((child2 = (CommonTree) child2
               .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_STATEMENT)) != null) {
-            if ((child2 = (SqlASTNode) child2
+            if ((child2 = (CommonTree) child2
                 .getFirstChildWithType(PantheraParser_PLSQLParser.SUBQUERY)) != null) {
               subquery = child2;
             }
@@ -244,7 +244,7 @@ public class PrepareQueryInfoTransformer extends BaseSqlASTTransformer {
           sqlAliasNode.addChild(SqlXlateUtil.newSqlASTNode(PantheraParser_PLSQLParser.ID, aliasNode.getText()));
           // Attach it to the TABLE_REF_ELEMENT node as the first child.
           assert(src.getChildCount() == 1);
-          SqlASTNode tmpNode = (SqlASTNode) src.getChild(0);
+          CommonTree tmpNode = (CommonTree) src.getChild(0);
           src.setChild(0, sqlAliasNode);
           src.addChild(tmpNode);
         } else {
@@ -256,7 +256,7 @@ public class PrepareQueryInfoTransformer extends BaseSqlASTTransformer {
     }
 
     for (int i = 0; i < src.getChildCount(); i++) {
-      prepareSubQAliases((SqlASTNode) src.getChild(i), qInfo);
+      prepareSubQAliases((CommonTree) src.getChild(i), qInfo);
     }
   }
 
@@ -267,7 +267,7 @@ public class PrepareQueryInfoTransformer extends BaseSqlASTTransformer {
    * @return
    * @throws SqlXlateException
    */
-  private ASTNode genForAlias(SqlASTNode src) throws SqlXlateException {
+  private ASTNode genForAlias(CommonTree src) throws SqlXlateException {
     String text = src.getChild(0).getText();
     ASTNode alias = SqlXlateUtil.newASTNode(HiveParser.Identifier, text);
     // SqlXlateUtil.attachChild(dest, alias);
