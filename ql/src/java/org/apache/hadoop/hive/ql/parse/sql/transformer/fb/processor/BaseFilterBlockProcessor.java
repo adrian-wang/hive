@@ -157,7 +157,7 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
     CommonTree subQ = FilterBlockUtil.cloneTree(subQNode);
     for (int i = 0; i < subQ.getChildCount(); i++) {
       if (subQ.getChild(i).getType() == PantheraParser_PLSQLParser.SUBQUERY) {
-        subQ.getChildren().set(
+        subQ.setChild(
             i,
             this.createCascatedElement((CommonTree) viewAlias.getChild(0), (CommonTree) colAlias
                 .getChild(0)));
