@@ -286,7 +286,7 @@ public final class SqlXlateUtil {
       if (type == PantheraParser_PLSQLParser.TABLE_EXPRESSION) {
         type = n.getChild(index).getChild(0).getType();
         if (type == PantheraParser_PLSQLParser.DIRECT_MODE) {
-          name =  n.getChild(index).getChild(0).getChild(0).getChild(0).getText();
+          name = n.getChild(index).getChild(0).getChild(0).getChild(0).getText();
           if (alias == null) {
             alias = name;
           }
@@ -294,7 +294,7 @@ public final class SqlXlateUtil {
           if (alias == null) {
             // Note that when this function is called, QueryInfo must have been prepared so that
             // sub-quries in from clause have alias node generated if it is not existing.
-            assert(false);
+            assert (false);
           }
         } else {
           return;
@@ -353,7 +353,7 @@ public final class SqlXlateUtil {
     for (String alias : srcTbls.keySet()) {
       srcTblAliases.add(alias);
       String name = srcTbls.get(alias);
-      if(name != null && !name.equals(alias)) {
+      if (name != null && !name.equals(alias)) {
         srcTblAliases.add(name);
       }
     }
@@ -943,5 +943,17 @@ public final class SqlXlateUtil {
       sb.append("]");
     }
 
+  }
+
+  public static void addCommonTreeChild(CommonTree parent, int index, CommonTree child) {
+    if (parent == null || child == null) {
+      return;
+    }
+    if (parent.getChildren() == null && index == 0) {
+      parent.addChild(child);
+    }
+    parent.getChildren().add(index, child);
+    child.setParent(parent);
+    child.setChildIndex(index);
   }
 }

@@ -28,6 +28,7 @@ import java.util.Stack;
 import org.antlr33.runtime.CommonToken;
 import org.antlr33.runtime.tree.CommonTree;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
+import org.apache.hadoop.hive.ql.parse.sql.SqlXlateUtil;
 import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
 import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.FilterBlock;
 import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.FilterBlockContext;
@@ -223,7 +224,7 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
       return (CommonTree) tableRefElement.getChild(0);
     }
     CommonTree alias = this.createAlias();
-    tableRefElement.getChildren().add(0, alias);
+    SqlXlateUtil.addCommonTreeChild(tableRefElement, 0, alias);
     return alias;
 
   }
@@ -630,7 +631,7 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
         case PantheraParser_PLSQLParser.NOT_IN:
           newOp = this.createSqlASTNode(PantheraParser_PLSQLParser.SQL92_RESERVED_NOT, "not");
           // this.attachChild(logicExpr, newOp);
-          logicExpr.getChildren().add(k, newOp);
+          SqlXlateUtil.addCommonTreeChild(logicExpr, k, newOp);
           break;
         default:
           throw new SqlXlateException("UnProcess logic operator." + op.getText());

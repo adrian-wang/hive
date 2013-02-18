@@ -26,6 +26,7 @@ import org.antlr33.runtime.tree.CommonTree;
 import org.antlr33.runtime.tree.Tree;
 import org.apache.hadoop.hive.ql.parse.sql.PantheraExpParser;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
+import org.apache.hadoop.hive.ql.parse.sql.SqlXlateUtil;
 import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
 import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.processor.FilterBlockProcessorFactory;
 
@@ -81,7 +82,7 @@ public class QueryBlock extends BaseFilterBlock {
         }
       }
       if (countAsterisk.getSelectItem() != null) {
-        selectList.getChildren().add(countAsterisk.getPosition(), countAsterisk.getSelectItem());
+        SqlXlateUtil.addCommonTreeChild(selectList, countAsterisk.getPosition(), countAsterisk.getSelectItem());
       }
       this.setTransformedNode(select);
     }
