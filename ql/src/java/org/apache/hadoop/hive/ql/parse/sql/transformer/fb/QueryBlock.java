@@ -24,6 +24,7 @@ import java.util.Set;
 
 import org.antlr33.runtime.tree.CommonTree;
 import org.antlr33.runtime.tree.Tree;
+import org.apache.hadoop.hive.ql.parse.sql.PantheraExpParser;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
 import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
 import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.processor.FilterBlockProcessorFactory;
@@ -38,6 +39,7 @@ public class QueryBlock extends BaseFilterBlock {
   private List<CommonTree> aggregationList;
   private CommonTree group;
   private CommonTree order;
+  private CommonTree limit;
   private final CountAsterisk countAsterisk = new CountAsterisk();
 
 
@@ -109,6 +111,11 @@ public class QueryBlock extends BaseFilterBlock {
         }
       }
     }
+
+    //limit
+    if(limit!=null&&this.getTransformedNode()!=null){
+      this.getTransformedNode().addChild(limit);
+    }
     fbContext.getQueryStack().pop();
 
 
@@ -125,6 +132,7 @@ public class QueryBlock extends BaseFilterBlock {
         PantheraParser_PLSQLParser.SQL92_RESERVED_GROUP);
     order = (CommonTree) ((CommonTree) this.getASTNode().getParent().getParent())
         .getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_ORDER);
+    limit = (CommonTree) this.getASTNode().getFirstChildWithType(PantheraExpParser.LIMIT_VK);
   }
 
   void buildTableNameSet() {
