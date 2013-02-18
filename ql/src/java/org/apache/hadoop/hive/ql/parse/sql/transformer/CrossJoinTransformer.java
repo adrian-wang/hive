@@ -28,6 +28,7 @@ import java.util.Set;
 
 import org.antlr33.runtime.tree.CommonTree;
 import org.antlr33.runtime.tree.Tree;
+import org.apache.hadoop.hive.ql.parse.sql.PantheraExpParser;
 import org.apache.hadoop.hive.ql.parse.sql.SqlASTNode;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateUtil;
@@ -262,20 +263,28 @@ public class CrossJoinTransformer extends BaseSqlASTTransformer {
   }
 
   private void generateJoin(CommonTree joinNode, List<CommonTree> joinEqualityNodes) {
+    CommonTree OnNode;
     CommonTree logicExprNode;
-    if (joinNode.getChild(0).getType() == PantheraParser_PLSQLParser.CROSS_VK) {
-      // Remove the CROSS node
-      joinNode.setChild(0, joinNode.getChild(1));
+
+    OnNode = (CommonTree) joinNode.getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_ON);
+    if (OnNode == null) {
       //
       // Generate the join condition sub-tree.
       //
-      SqlASTNode onNode = SqlXlateUtil.newSqlASTNode(PantheraParser_PLSQLParser.SQL92_RESERVED_ON, "on");
-      joinNode.setChild(1, onNode);
-
+      SqlASTNode newOnNode = SqlXlateUtil.newSqlASTNode(PantheraParser_PLSQLParser.SQL92_RESERVED_ON, "on");
       logicExprNode = SqlXlateUtil.newSqlASTNode(PantheraParser_PLSQLParser.LOGIC_EXPR, "LOGIC_EXPR");
-      onNode.addChild(logicExprNode);
+      newOnNode.addChild(logicExprNode);
+
+      if (joinNode.getChild(0).getText().equals("leftsemi")) {
+        ((CommonTree) joinNode.getChild(0)).getToken().setType(PantheraExpParser.LEFTSEMI_VK);
+        joinNode.addChild(newOnNode);
+      } else {
+        // Remove the CROSS node
+        joinNode.setChild(0, joinNode.getChild(1));
+        joinNode.setChild(1, newOnNode);
+      }
     } else {
-      logicExprNode = (CommonTree) joinNode.getChild(2).getChild(0);
+      logicExprNode = (CommonTree) OnNode.getChild(0);
     }
 
     addJoinCondition(joinEqualityNodes, logicExprNode);
