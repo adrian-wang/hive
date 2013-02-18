@@ -82,7 +82,10 @@ public class FilterBlockUtil {
       List<CommonTree> standardFunctionList = new ArrayList<CommonTree>();
       findNode(expr, PantheraParser_PLSQLParser.STANDARD_FUNCTION, standardFunctionList);
       // TODO only one function supported now, hard to more than one.
+      //FIXME support complex expression without function(such as (col*3)/2)
+      //TODO these code(and QueryBlock's) need clear
       if (standardFunctionList.size() == 1) {
+
         CommonTree standardFunction = standardFunctionList.get(0);
         // TODO only support a,count(*) style ,NOT support select count(*) from...
         if (standardFunction.getChild(0).getType() == PantheraParser_PLSQLParser.COUNT_VK
@@ -95,6 +98,7 @@ public class FilterBlockUtil {
         findNode(standardFunction, PantheraParser_PLSQLParser.EXPR, exprList);
         CommonTree expr2 = exprList.get(0);
         CommonTree cascatedElement = (CommonTree) expr2.deleteChild(0);
+        CommonTree func = cloneTree((CommonTree)expr.getChild(0));
         CommonTree parent = (CommonTree) standardFunction.getParent();
         for (int j = 0; j < parent.getChildCount(); j++) {
           if (parent.getChild(j) == standardFunction) {
@@ -106,7 +110,7 @@ public class FilterBlockUtil {
             }
           }
         }
-        aggregationList.add(cloneTree(standardFunction));
+        aggregationList.add(func);
         expr.deleteChild(0);
         expr.addChild(cascatedElement);
       } else {
