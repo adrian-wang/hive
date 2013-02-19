@@ -286,7 +286,12 @@ public final class SqlXlateUtil {
       if (type == PantheraParser_PLSQLParser.TABLE_EXPRESSION) {
         type = n.getChild(index).getChild(0).getType();
         if (type == PantheraParser_PLSQLParser.DIRECT_MODE) {
-          name = n.getChild(index).getChild(0).getChild(0).getChild(0).getText();
+          CommonTree tableViewName = (CommonTree) n.getChild(index).getChild(0).getChild(0);
+          name = tableViewName.getChild(0).getText();
+          if (tableViewName.getChildCount() > 1) {
+            // schema.table
+            name += ("." + tableViewName.getChild(1).getText());
+          }
           if (alias == null) {
             alias = name;
           }
