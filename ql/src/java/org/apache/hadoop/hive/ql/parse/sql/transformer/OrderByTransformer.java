@@ -40,6 +40,7 @@ public class OrderByTransformer extends BaseSqlASTTransformer {
 
   @Override
   public void transform(SqlASTNode tree, TranslateContext context) throws SqlXlateException {
+    tf.transformAST(tree, context);
     CommonTree selectStatement = (CommonTree) tree
         .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_STATEMENT);
     if (selectStatement != null) {
