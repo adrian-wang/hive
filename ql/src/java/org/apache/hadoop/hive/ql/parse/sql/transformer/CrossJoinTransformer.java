@@ -106,20 +106,23 @@ public class CrossJoinTransformer extends BaseSqlASTTransformer {
       CommonTree from = (CommonTree) node.getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_FROM);
       assert (from.getChildCount() == 1);
 
-      JoinInfo joinInfo = new JoinInfo();
+      // Skip if there is no join operation in the from clause.
+      if (((CommonTree) from.getChild(0)).getFirstChildWithType(PantheraParser_PLSQLParser.JOIN_DEF) != null) {
+        JoinInfo joinInfo = new JoinInfo();
 
-      //
-      // Transform the where condition and generate the join operation info.
-      //
-      CommonTree where = (CommonTree) node.getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_WHERE);
-      if (where != null) {
-        transformWhereCondition(qf, (CommonTree) where.getChild(0).getChild(0), joinInfo);
+        //
+        // Transform the where condition and generate the join operation info.
+        //
+        CommonTree where = (CommonTree) node.getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_WHERE);
+        if (where != null) {
+          transformWhereCondition(qf, (CommonTree) where.getChild(0).getChild(0), joinInfo);
+        }
+        assert(joinInfo.joinFilterInfo.isEmpty());
+        //
+        // Transform the from clause tree using the generated join operation info.
+        //
+        transformFromClause(from, joinInfo);
       }
-      assert(joinInfo.joinFilterInfo.isEmpty());
-      //
-      // Transform the from clause tree using the generated join operation info.
-      //
-      transformFromClause(from, joinInfo);
     }
 
     //
