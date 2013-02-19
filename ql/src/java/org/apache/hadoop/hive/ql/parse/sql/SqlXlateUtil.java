@@ -951,9 +951,10 @@ public final class SqlXlateUtil {
     }
     if (parent.getChildren() == null && index == 0) {
       parent.addChild(child);
+    } else {
+      parent.getChildren().add(index, child);
+      child.setParent(parent);
+      child.setChildIndex(index);
     }
-    parent.getChildren().add(index, child);
-    child.setParent(parent);
-    child.setChildIndex(index);
   }
 }
