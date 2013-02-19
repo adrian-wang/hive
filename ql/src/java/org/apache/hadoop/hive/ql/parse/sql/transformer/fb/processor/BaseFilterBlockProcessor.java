@@ -746,7 +746,7 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
                   joinSubAlias.getChild(0).getText());
             ((CommonTree) anyElement.getChild(1)).getToken().setText(
                   joinKeyAlias.getChild(0).getText());
-          }else{
+          } else {
             ((CommonTree) anyElement.getChild(0)).getToken().setText(
                 joinKeyAlias.getChild(0).getText());
           }
@@ -768,7 +768,7 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
                 topAlias.getChild(0).getText());
           ((CommonTree) anyElement.getChild(1)).getToken().setText(
                 joinKeyAlias.getChild(0).getText());
-        }else{
+        } else {
           ((CommonTree) anyElement.getChild(0)).getToken().setText(
               joinKeyAlias.getChild(0).getText());
         }
@@ -826,9 +826,11 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
     if (order != null) {
       CommonTree orderByElements = (CommonTree) order.getChild(0);
       for (int i = 0; i < orderByElements.getChildCount(); i++) {
-        CommonTree orderByElement = (CommonTree) orderByElements.getChild(i);
-        CommonTree anyElement = (CommonTree) orderByElement.getChild(0).getChild(0).getChild(0);
-        this.rebuildAnyElementAlias(topAlias, anyElement);
+        CommonTree ct = (CommonTree) orderByElements.getChild(i).getChild(0).getChild(0);
+        if (ct.getType() == PantheraParser_PLSQLParser.CASCATED_ELEMENT) {//NOT order by 1,2
+          CommonTree anyElement = (CommonTree) ct.getChild(0);
+          this.rebuildAnyElementAlias(topAlias, anyElement);
+        }
       }
     }
   }
