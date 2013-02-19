@@ -33,6 +33,7 @@ import org.apache.hadoop.hive.ql.parse.sql.SqlASTNode;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateUtil;
 import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
+import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.FilterBlockUtil;
 import org.apache.hadoop.hive.ql.parse.sql.transformer.QueryInfo.Column;
 
 import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
@@ -188,6 +189,40 @@ public class CrossJoinTransformer extends BaseSqlASTTransformer {
           return;
         }
       }
+
+      //
+      // For a where condition that refers any columns from a single table and no subquery, then it can be a join filter.
+      //
+      List<CommonTree> anyElementList = new ArrayList<CommonTree>();
+      FilterBlockUtil.findNode(node, PantheraParser_PLSQLParser.ANY_ELEMENT, anyElementList);
+
+      Set<String> referencedTables = new HashSet<String>();
+      String srcTable;
+      for (CommonTree anyElement : anyElementList) {
+        srcTable = getTableName(qf, (CommonTree) anyElement);
+        if (srcTable != null) {
+          referencedTables.add(srcTable);
+        }
+      }
+
+      if (referencedTables.size() == 1 && !SqlXlateUtil.hasNodeTypeInTree(node, PantheraParser_PLSQLParser.SQL92_RESERVED_SELECT)) {
+        srcTable = (String) referencedTables.toArray()[0];
+
+        //
+        // Update join info.
+        //
+        List<CommonTree> joinFilterNodes = joinInfo.joinFilterInfo.get(srcTable);
+        if (joinFilterNodes == null) {
+          joinFilterNodes = new ArrayList<CommonTree>();
+        }
+        joinFilterNodes.add(node);
+        joinInfo.joinFilterInfo.put(srcTable, joinFilterNodes);
+        //
+        // Create a new TRUE node and replace the current node with this new node.
+        //
+        SqlASTNode trueNode = SqlXlateUtil.newSqlASTNode(PantheraParser_PLSQLParser.SQL92_RESERVED_TRUE, "true");
+        node.getParent().setChild(node.getChildIndex(), trueNode);
+      }
     }
   }
 
@@ -254,6 +289,8 @@ public class CrossJoinTransformer extends BaseSqlASTTransformer {
           }
           joinInfo.joinPairInfo.remove(tableJoinPair);
         }
+
+        addJoinCondition(joinInfo.joinFilterInfo.get(srcTable), (CommonTree) joinNode.getChild(joinNode.getChildCount() - 1).getChild(0));
       }
     }
 
