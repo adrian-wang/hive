@@ -27,12 +27,14 @@ import org.antlr33.runtime.tree.CommonTree;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateUtil;
+import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
 import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.QueryBlock.CountAsterisk;
 
 import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
 
 public class FilterBlockUtil {
   private static final Log LOG = LogFactory.getLog(FilterBlockUtil.class);
+
   private FilterBlockUtil() {
   }
 
@@ -40,11 +42,11 @@ public class FilterBlockUtil {
     if (node == null) {
       return null;
     }
-    CommonTree result=null;
+    CommonTree result = null;
     try {
-      result =  new CommonTree(new CommonToken(node.getToken().getType(), node.getToken().getText()));
+      result = new CommonTree(new CommonToken(node.getToken().getType(), node.getToken().getText()));
     } catch (Exception e) {
-      LOG.error("ERROR Node:"+node);
+      LOG.error("ERROR Node:" + node);
     }
     return result;
   }
@@ -82,8 +84,8 @@ public class FilterBlockUtil {
       List<CommonTree> standardFunctionList = new ArrayList<CommonTree>();
       findNode(expr, PantheraParser_PLSQLParser.STANDARD_FUNCTION, standardFunctionList);
       // TODO only one function supported now, hard to more than one.
-      //FIXME support complex expression without function(such as (col*3)/2)
-      //TODO these code(and QueryBlock's) need clear
+      // FIXME support complex expression without function(such as (col*3)/2)
+      // TODO these code(and QueryBlock's) need clear
       if (standardFunctionList.size() == 1) {
 
         CommonTree standardFunction = standardFunctionList.get(0);
@@ -98,7 +100,7 @@ public class FilterBlockUtil {
         findNode(standardFunction, PantheraParser_PLSQLParser.EXPR, exprList);
         CommonTree expr2 = exprList.get(0);
         CommonTree cascatedElement = (CommonTree) expr2.deleteChild(0);
-        CommonTree func = cloneTree((CommonTree)expr.getChild(0));
+        CommonTree func = cloneTree((CommonTree) expr.getChild(0));
         CommonTree parent = (CommonTree) standardFunction.getParent();
         for (int j = 0; j < parent.getChildCount(); j++) {
           if (parent.getChild(j) == standardFunction) {
@@ -182,5 +184,26 @@ public class FilterBlockUtil {
       }
     }
     return null;
+  }
+
+  public static CommonTree createSqlASTNode(int type, String text) {
+    return new CommonTree(new CommonToken(type, text));
+  }
+
+  public static void attachChild(CommonTree parent, CommonTree child) {
+    if (parent != null) {
+      parent.addChild(child);
+      if (child != null) {
+        child.setParent(parent);
+      }
+    }
+  }
+
+  public static CommonTree createAlias(TranslateContext context) {
+    CommonTree alias = createSqlASTNode(PantheraParser_PLSQLParser.ALIAS, "ALIAS");
+    CommonTree aliasName = createSqlASTNode(PantheraParser_PLSQLParser.ID, context.getAliasGen()
+        .generateAliasName());
+    attachChild(alias, aliasName);
+    return alias;
   }
 }

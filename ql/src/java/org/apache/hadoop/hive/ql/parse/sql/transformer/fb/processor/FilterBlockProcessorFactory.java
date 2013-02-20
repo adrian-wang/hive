@@ -40,7 +40,7 @@ public class FilterBlockProcessorFactory {
     case PantheraParser_PLSQLParser.SQL92_RESERVED_IN:
       return new InProcessor4UC();
     default:
-      throw new SqlXlateException("Unimplement sub query type:" + type);
+      throw new SqlXlateException("Unimplement uncorrelated sub query type:" + type);
     }
 
   }
@@ -56,7 +56,7 @@ public class FilterBlockProcessorFactory {
     case PantheraParser_PLSQLParser.SQL92_RESERVED_EXISTS:
       return new ExistsProcessor4C();
     default:
-      throw new SqlXlateException("Unimplement sub query type:" + type);
+      throw new SqlXlateException("Unimplement correlated sub query type:" + type);
     }
   }
 
