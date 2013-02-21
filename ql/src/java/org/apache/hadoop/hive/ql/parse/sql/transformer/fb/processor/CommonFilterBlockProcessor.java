@@ -231,33 +231,11 @@ public abstract class CommonFilterBlockProcessor extends BaseFilterBlockProcesso
    */
   void processCompareUC(CommonTree joinType) {
 
-    if (subQNode.getChild(1).getType() == PantheraParser_PLSQLParser.SQL92_RESERVED_ALL) {// >all
-
-      // join
-      CommonTree join = this.createJoin(topSelect);
-      CommonTree viewAlias = super.buildJoin(joinType, join, bottomSelect);
-
-      // max
-      CommonTree selectItem = (CommonTree) bottomSelect
-          .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST).getChild(0);
-      CommonTree expr = (CommonTree) selectItem.getChild(0);
-      CommonTree function = super.createFunction("max", (CommonTree) expr.deleteChild(0));
-      super.attachChild(expr, function);
-      CommonTree maxAlias = super.addAlias(selectItem);
-
-      // where
-      super.buildWhereBranch(viewAlias, maxAlias);
-    }
-
-    // TODO other situation (<all...)
-
-    // with aggregation function
-    else {
-      this.processAggregationCompareUC();
-    }
+    // must have aggregation function in sub query
+    this.processAggregationCompareUC();
   }
 
-  private void processAggregationCompareUC(){
+  private void processAggregationCompareUC() {
 
 
     this.makeTop();
@@ -266,7 +244,7 @@ public abstract class CommonFilterBlockProcessor extends BaseFilterBlockProcesso
     CommonTree compareElement = super.getSubQOpElement();
     CommonTree cloneCompareElement = FilterBlockUtil.cloneTree(compareElement);
     CommonTree compareElementAlias = super.addSelectItem((CommonTree) topSelect
-        .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST),cloneCompareElement );
+        .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST), cloneCompareElement);
     super.rebuildSubQOpElement(compareElement, compareElementAlias);
 
 
@@ -295,7 +273,7 @@ public abstract class CommonFilterBlockProcessor extends BaseFilterBlockProcesso
     this.makeTop();
 
     // add compare item
-    //TODO multi parameter in sub query IN
+    // TODO multi parameter in sub query IN
     CommonTree compareElementAlias = super.addSelectItem((CommonTree) topSelect
         .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST), super.cloneSubQOpElement());
 

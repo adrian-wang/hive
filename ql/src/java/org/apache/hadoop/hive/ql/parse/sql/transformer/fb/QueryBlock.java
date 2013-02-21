@@ -108,7 +108,7 @@ public class QueryBlock extends BaseFilterBlock {
         }
         if (fbContext.getTypeStack().peek() instanceof WhereFilterBlock) {
           FilterBlockProcessorFactory.getUnCorrelatedProcessor(fbContext.getSubQStack().peek()
-              .getASTNode().getType()).process(fbContext, this, context);
+              .getASTNode()).process(fbContext, this, context);
         }
       }
     }

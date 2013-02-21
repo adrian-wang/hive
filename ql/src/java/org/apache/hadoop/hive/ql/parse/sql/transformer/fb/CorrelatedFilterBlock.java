@@ -28,7 +28,7 @@ public class CorrelatedFilterBlock extends NormalFilterBlack {
   public void process(FilterBlockContext fbContext, TranslateContext context)
       throws SqlXlateException {
     FilterBlockProcessorFactory.getCorrelatedProcessor(
-        fbContext.getSubQStack().peek().getASTNode().getType()).process(fbContext, this, context);
+        fbContext.getSubQStack().peek().getASTNode()).process(fbContext, this, context);
 
     super.processStackSubq(fbContext, context);
   }

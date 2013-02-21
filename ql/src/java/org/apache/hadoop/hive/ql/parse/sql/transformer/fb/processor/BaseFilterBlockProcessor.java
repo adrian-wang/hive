@@ -139,20 +139,6 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
     return tableRefElement;
   }
 
-  CommonTree createFunction(String functionName, CommonTree element) {
-    CommonTree standardFunction = this.createSqlASTNode(
-        PantheraParser_PLSQLParser.STANDARD_FUNCTION, "STANDARD_FUNCTION");
-    CommonTree function = this.createSqlASTNode(PantheraParser_PLSQLParser.ID, functionName);
-    this.attachChild(standardFunction, function);
-    CommonTree arguments = this.createSqlASTNode(PantheraParser_PLSQLParser.ARGUMENTS, "ARGUMENTS");
-    this.attachChild(function, arguments);
-    CommonTree argument = this.createSqlASTNode(PantheraParser_PLSQLParser.ARGUMENT, "ARGUMENT");
-    this.attachChild(arguments, argument);
-    CommonTree expr = this.createSqlASTNode(PantheraParser_PLSQLParser.EXPR, "EXPR");
-    this.attachChild(argument, expr);
-    this.attachChild(expr, element);
-    return standardFunction;
-  }
 
   CommonTree createOpBranch(CommonTree viewAlias, CommonTree colAlias) {
     CommonTree subQ = FilterBlockUtil.cloneTree(subQNode);

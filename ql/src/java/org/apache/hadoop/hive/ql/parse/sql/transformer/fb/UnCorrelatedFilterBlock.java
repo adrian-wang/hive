@@ -40,7 +40,7 @@ public class UnCorrelatedFilterBlock extends NormalFilterBlack {
       // return;
     }
     FilterBlockProcessorFactory.getUnCorrelatedProcessor(
-        fbContext.getSubQStack().peek().getASTNode().getType()).process(fbContext, this, context);
+        fbContext.getSubQStack().peek().getASTNode()).process(fbContext, this, context);
     super.processStackSubq(fbContext, context);
   }
 

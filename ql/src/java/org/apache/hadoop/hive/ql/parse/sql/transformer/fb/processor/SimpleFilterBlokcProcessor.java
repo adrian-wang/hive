@@ -49,7 +49,7 @@ public class SimpleFilterBlokcProcessor extends BaseFilterBlockProcessor {
 
   @Override
   void processFB() throws SqlXlateException {
-    // TODO Auto-generated method stub
+    // Do nothing.
 
   }
 

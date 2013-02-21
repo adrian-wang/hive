@@ -59,7 +59,7 @@ public abstract class NormalFilterBlack extends BaseFilterBlock {
     }
     // multi level sub query's non-bottom-query must be uncorrelated.
     FilterBlockProcessorFactory.getUnCorrelatedProcessor(
-        currentSubqFB.getASTNode().getType()).process(fbContext, this, context);
+        currentSubqFB.getASTNode()).process(fbContext, this, context);
     this.processStackSubq(fbContext, context);
     fbContext.getSubQStack().push(subqFB);
     fbContext.getQueryStack().push(queryBlock);

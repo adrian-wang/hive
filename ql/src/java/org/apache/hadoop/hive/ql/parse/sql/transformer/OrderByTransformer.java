@@ -51,8 +51,8 @@ public class OrderByTransformer extends BaseSqlASTTransformer {
             .getFirstChildWithType(PantheraParser_PLSQLParser.SUBQUERY))
             .getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_SELECT))
             .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST);
-        if(selectList==null){
-          //? select *
+        if (selectList == null) {
+          // ? select *
           return;
         }
         CommonTree orderByElements = (CommonTree) order.getChild(0);
@@ -61,15 +61,22 @@ public class OrderByTransformer extends BaseSqlASTTransformer {
           if (ct.getType() == PantheraParser_PLSQLParser.UNSIGNED_INTEGER) {// order by 1,2
             CommonTree expr = (CommonTree) orderByElements.getChild(i).getChild(0);
             int seq = Integer.valueOf(ct.getText());
-            CommonTree selectItem = (CommonTree) selectList.getChild(seq-1);
+            CommonTree selectItem = (CommonTree) selectList.getChild(seq - 1);
             String colName;
-            if(selectItem.getChildCount()==2){
+            if (selectItem.getChildCount() == 2) {
               colName = selectItem.getChild(1).getChild(0).getText();
-            }else{
-              colName = selectItem.getChild(0).getChild(0).getChild(0).getChild(0).getText();
+            } else {
+              CommonTree anyElement = (CommonTree) selectItem.getChild(0).getChild(0).getChild(0);
+              if (anyElement.getChildCount() == 2) {
+                colName = anyElement.getChild(1).getText();
+              } else {
+                colName = anyElement.getChild(0).getText();
+              }
             }
-            CommonTree cascatedElement = SqlXlateUtil.newSqlASTNode(PantheraParser_PLSQLParser.CASCATED_ELEMENT, "CASCATED_ELEMENT");
-            CommonTree anyElement = SqlXlateUtil.newSqlASTNode(PantheraParser_PLSQLParser.ANY_ELEMENT, "ANY_ELEMENT");
+            CommonTree cascatedElement = SqlXlateUtil.newSqlASTNode(
+                PantheraParser_PLSQLParser.CASCATED_ELEMENT, "CASCATED_ELEMENT");
+            CommonTree anyElement = SqlXlateUtil.newSqlASTNode(
+                PantheraParser_PLSQLParser.ANY_ELEMENT, "ANY_ELEMENT");
             CommonTree col = SqlXlateUtil.newSqlASTNode(PantheraParser_PLSQLParser.ID, colName);
             expr.deleteChild(0);
             expr.addChild(cascatedElement);

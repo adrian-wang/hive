@@ -206,4 +206,19 @@ public class FilterBlockUtil {
     attachChild(alias, aliasName);
     return alias;
   }
+
+  public static CommonTree createFunction(String functionName, CommonTree element) {
+    CommonTree standardFunction = createSqlASTNode(
+        PantheraParser_PLSQLParser.STANDARD_FUNCTION, "STANDARD_FUNCTION");
+    CommonTree function = createSqlASTNode(PantheraParser_PLSQLParser.FUNCTION_ENABLING_OVER, functionName);
+    attachChild(standardFunction, function);
+    CommonTree arguments = createSqlASTNode(PantheraParser_PLSQLParser.ARGUMENTS, "ARGUMENTS");
+    attachChild(function, arguments);
+    CommonTree argument = createSqlASTNode(PantheraParser_PLSQLParser.ARGUMENT, "ARGUMENT");
+    attachChild(arguments, argument);
+    CommonTree expr = createSqlASTNode(PantheraParser_PLSQLParser.EXPR, "EXPR");
+    attachChild(argument, expr);
+    attachChild(expr, element);
+    return standardFunction;
+  }
 }
