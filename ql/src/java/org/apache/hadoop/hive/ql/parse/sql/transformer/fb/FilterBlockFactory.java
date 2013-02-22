@@ -76,6 +76,8 @@ public abstract class FilterBlockFactory {
   static final int HAVING = 18;
   static final int NOT_BETWEEN = 19;
   static final int BETWEEN = 20;
+  static final int IS_NULL=21;
+  static final int IS_NOT_NULL=22;
 
 
 
@@ -104,6 +106,8 @@ public abstract class FilterBlockFactory {
     fbMap.put(SELECT_LIST, new SelectExprFilterBlockBuilder());
     fbMap.put(WHERE, new WhereFilterBlockBuilder());
     fbMap.put(HAVING, new HavingFilterBlockBuilder());
+    fbMap.put(IS_NULL, new OpBuilder());
+    fbMap.put(IS_NOT_NULL, new OpBuilder());
   }
 
   /**

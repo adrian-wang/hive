@@ -62,6 +62,8 @@ public class PLSQLFilterBlockFactory extends FilterBlockFactory {
     typeMap.put(PantheraParser_PLSQLParser.SELECT_LIST, SELECT_LIST);
     typeMap.put(PantheraParser_PLSQLParser.SQL92_RESERVED_WHERE, WHERE);
     typeMap.put(PantheraParser_PLSQLParser.SQL92_RESERVED_HAVING, HAVING);
+    typeMap.put(PantheraParser_PLSQLParser.IS_NULL, IS_NULL);
+    typeMap.put(PantheraParser_PLSQLParser.IS_NOT_NULL, IS_NOT_NULL);
   }
 
   public static PLSQLFilterBlockFactory getInstance() {
