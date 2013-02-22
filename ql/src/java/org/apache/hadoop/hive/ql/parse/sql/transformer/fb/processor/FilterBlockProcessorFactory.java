@@ -157,11 +157,11 @@ public class FilterBlockProcessorFactory {
     CommonTree selectItem = (CommonTree) select
         .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST).getChild(0);
     CommonTree expr = (CommonTree) selectItem.getChild(0);
-    if (expr.getChild(0).getType() != PantheraParser_PLSQLParser.STANDARD_FUNCTION) {
+//    if (expr.getChild(0).getType() != PantheraParser_PLSQLParser.STANDARD_FUNCTION) {
       CommonTree function = FilterBlockUtil.createFunction(aggregationName, (CommonTree) expr
           .deleteChild(0));
       FilterBlockUtil.attachChild(expr, function);
-    }
+//    }
     // deletes scope node
     subQ.deleteChild(1);
     subQ.addChild(subQuery);

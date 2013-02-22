@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hive.ql.parse.sql.transformer.fb.processor;
 
+import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.FilterBlockUtil;
+
 import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
 
 /**
@@ -28,7 +30,7 @@ public class CompareProcessor4UC extends CommonFilterBlockProcessor {
 
   @Override
   public void processFB() {
-    super.processCompareUC(createSqlASTNode(PantheraParser_PLSQLParser.CROSS_VK, "cross"));
+    super.processCompareUC(FilterBlockUtil.createSqlASTNode(PantheraParser_PLSQLParser.CROSS_VK, "cross"));
   }
 
 }

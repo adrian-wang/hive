@@ -18,6 +18,7 @@
 package org.apache.hadoop.hive.ql.parse.sql.transformer.fb.processor;
 
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
+import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.FilterBlockUtil;
 
 import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
 /**
@@ -29,7 +30,7 @@ public class GreaterThanProcessor4HavingUC extends CommonFilterBlockProcessor {
 
   @Override
   void processFB() throws SqlXlateException {
-    super.processCompareHavingUC(super.createSqlASTNode(PantheraParser_PLSQLParser.CROSS_VK,
+    super.processCompareHavingUC(FilterBlockUtil.createSqlASTNode(PantheraParser_PLSQLParser.CROSS_VK,
         "cross"));
   }
 }

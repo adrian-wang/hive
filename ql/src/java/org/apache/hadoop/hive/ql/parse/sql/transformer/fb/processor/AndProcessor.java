@@ -5,6 +5,7 @@ import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
 import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
 import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.FilterBlock;
 import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.FilterBlockContext;
+import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.FilterBlockUtil;
 
 public class AndProcessor extends CommonFilterBlockProcessor {
 
@@ -26,7 +27,7 @@ public class AndProcessor extends CommonFilterBlockProcessor {
 
   @Override
   void processFB() throws SqlXlateException {
-    super.processAnd(createSqlASTNode(PantheraExpParser.LEFTSEMI_VK, "leftsemi"));
+    super.processAnd(FilterBlockUtil.createSqlASTNode(PantheraExpParser.LEFTSEMI_VK, "leftsemi"));
 
   }
 }

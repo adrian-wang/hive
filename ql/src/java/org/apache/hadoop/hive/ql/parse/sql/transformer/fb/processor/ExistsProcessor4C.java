@@ -19,6 +19,7 @@ package org.apache.hadoop.hive.ql.parse.sql.transformer.fb.processor;
 
 import org.apache.hadoop.hive.ql.parse.sql.PantheraExpParser;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
+import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.FilterBlockUtil;
 
 import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
 /**
@@ -33,9 +34,9 @@ public class ExistsProcessor4C extends CommonFilterBlockProcessor {
     boolean isNot = super.subQNode.getParent().getType() == PantheraParser_PLSQLParser.SQL92_RESERVED_NOT ? true
         : false;
     if (isNot) {
-      super.processNotExistsC(super.createSqlASTNode(PantheraExpParser.CROSS_VK, "leftsemi"));
+      super.processNotExistsC(FilterBlockUtil.createSqlASTNode(PantheraExpParser.CROSS_VK, "leftsemi"));
     } else {
-      super.processExistsC(super.createSqlASTNode(PantheraExpParser.CROSS_VK, "leftsemi"));
+      super.processExistsC(FilterBlockUtil.createSqlASTNode(PantheraExpParser.CROSS_VK, "leftsemi"));
     }
   }
 
