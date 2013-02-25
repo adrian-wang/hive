@@ -17,7 +17,9 @@
  */
 package org.apache.hadoop.hive.ql.parse.sql.transformer.fb;
 
+import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
 import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
+
 /**
  * Filter block which process WHERE, SELECT_LIST & HAVING node type.
  * TypeFilterBlock.
@@ -26,7 +28,8 @@ import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
 public abstract class TypeFilterBlock extends BaseFilterBlock {
 
   @Override
-  public void process(FilterBlockContext fbContext, TranslateContext context) {
+  public void process(FilterBlockContext fbContext, TranslateContext context)
+      throws SqlXlateException {
     fbContext.getTypeStack().push(this);
 
     for (FilterBlock fb : getChildren()) {
@@ -36,7 +39,11 @@ public abstract class TypeFilterBlock extends BaseFilterBlock {
     this.setTransformedNode(this.getChildren() == null ? null : this.getChildren().get(0)
         .getTransformedNode());// null or one child.
 
+    execute(fbContext, context);
     fbContext.getTypeStack().pop();
   }
+
+  abstract void execute(FilterBlockContext fbContext, TranslateContext context)
+      throws SqlXlateException;
 
 }

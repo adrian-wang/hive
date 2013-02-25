@@ -17,11 +17,9 @@
  */
 package org.apache.hadoop.hive.ql.parse.sql.generator;
 
-import java.util.List;
-
+import org.antlr33.runtime.tree.CommonTree;
 import org.apache.hadoop.hive.ql.parse.ASTNode;
 import org.apache.hadoop.hive.ql.parse.HiveParser;
-import org.apache.hadoop.hive.ql.parse.sql.SqlASTNode;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateUtil;
 import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
 
@@ -30,8 +28,8 @@ import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
 public class CharStringGenerator extends BaseHiveASTGenerator {
 
   @Override
-  public boolean generate(ASTNode hiveRoot, SqlASTNode sqlRoot, ASTNode currentHiveNode,
-      SqlASTNode currentSqlNode, TranslateContext context) throws Exception {
+  public boolean generate(ASTNode hiveRoot, CommonTree sqlRoot, ASTNode currentHiveNode,
+      CommonTree currentSqlNode, TranslateContext context) throws Exception {
     ASTNode ret = SqlXlateUtil.newASTNode(HiveParser.StringLiteral, currentSqlNode.getText());
 
     //
@@ -42,10 +40,10 @@ public class CharStringGenerator extends BaseHiveASTGenerator {
     //
     int childIndex = currentSqlNode.getChildIndex();
     if (childIndex > 0) {
-      SqlASTNode parent = (SqlASTNode) currentSqlNode.getParent();
+      CommonTree parent = (CommonTree) currentSqlNode.getParent();
       assert (parent != null);
 
-      SqlASTNode preSibling = (SqlASTNode) parent.getChild(childIndex - 1);
+      CommonTree preSibling = (CommonTree) parent.getChild(childIndex - 1);
       if (preSibling.getType() == PantheraParser_PLSQLParser.SQL92_RESERVED_DATE) {
         int childCount = currentHiveNode.getChildCount();
         assert (childCount > 0);
@@ -56,7 +54,7 @@ public class CharStringGenerator extends BaseHiveASTGenerator {
         return true;
       }
     }
-    
+
     super.attachHiveNode(hiveRoot, currentHiveNode, ret);
     return true;
   }

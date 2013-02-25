@@ -15,23 +15,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hive.ql.parse.sql.generator;
+package org.apache.hadoop.hive.ql.parse.sql.transformer.fb.processor;
 
-import org.antlr33.runtime.tree.CommonTree;
-import org.apache.hadoop.hive.ql.parse.ASTNode;
-import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
+import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
 
+import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
 /**
- * Do nothing, just push down.
- * NothingGenerator.
+ * uncorrelated not in processor
+ * NotInProcessor4UC.
  *
  */
-public class NothingGenerator extends BaseHiveASTGenerator {
+public class NotInProcessor4UC extends CommonFilterBlockProcessor {
 
   @Override
-  public boolean generate(ASTNode hiveRoot, CommonTree sqlRoot, ASTNode currentHiveNode,
-      CommonTree currentSqlNode, TranslateContext context) throws Exception {
-    return super.generateChildren(hiveRoot, sqlRoot, currentHiveNode, currentSqlNode, context);
+  void processFB() throws SqlXlateException {
+    super.processNotInUC(super.createSqlASTNode(PantheraParser_PLSQLParser.CROSS_VK, "cross"));
   }
 
 }

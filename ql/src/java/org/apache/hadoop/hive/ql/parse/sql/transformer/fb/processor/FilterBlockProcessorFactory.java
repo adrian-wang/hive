@@ -17,32 +17,55 @@
  */
 package org.apache.hadoop.hive.ql.parse.sql.transformer.fb.processor;
 
-import java.util.Map;
-
-import org.apache.hadoop.hive.ql.parse.sql.PantheraMap;
+import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
 
 import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
-
+/**
+ *
+ * FilterBlockProcessorFactory.
+ *
+ */
 public class FilterBlockProcessorFactory {
 
-  private static Map<Integer, FilterBlockProcessor> unCorrelatedTransferMap = new PantheraMap<FilterBlockProcessor>();
-  private static Map<Integer, FilterBlockProcessor> correlatedTransferMap = new PantheraMap<FilterBlockProcessor>();
 
 
-  static {
-    unCorrelatedTransferMap.put(PantheraParser_PLSQLParser.GREATER_THAN_OP, new GreaterThanProcessor4UC());
+  public static FilterBlockProcessor getUnCorrelatedTransfer(int type) throws SqlXlateException {
+    switch (type) {
+    case PantheraParser_PLSQLParser.GREATER_THAN_OP:
+      return new GreaterThanProcessor4UC();
+    case PantheraParser_PLSQLParser.EQUALS_OP:
+      return new EqualsProcessor4UC();
+    case PantheraParser_PLSQLParser.NOT_IN:
+      return new NotInProcessor4UC();
+    case PantheraParser_PLSQLParser.SQL92_RESERVED_IN:
+      return new InProcessor4UC();
+    default:
+      throw new SqlXlateException("Unimplement sub query type:" + type);
+    }
+
   }
 
-  static {
-
+  public static FilterBlockProcessor getCorrelatedTransfer(int type) throws SqlXlateException {
+    switch (type) {
+    case PantheraParser_PLSQLParser.EQUALS_OP:
+    case PantheraParser_PLSQLParser.GREATER_THAN_OP:
+    case PantheraParser_PLSQLParser.LESS_THAN_OP:
+      return new CompareOpProcessor4C();
+    case PantheraParser_PLSQLParser.SQL92_RESERVED_EXISTS:
+      return new ExistsProcessor4C();
+    default:
+      throw new SqlXlateException("Unimplement sub query type:" + type);
+    }
   }
 
-  public static FilterBlockProcessor getUnCorrelatedTransfer(int type) {
-    return unCorrelatedTransferMap.get(type);
-  }
-
-  public static FilterBlockProcessor getCorrelatedTransfer(int type) {
-    return correlatedTransferMap.get(type);
+  public static FilterBlockProcessor getHavingUnCorrelatedTransfer(int type)
+      throws SqlXlateException {
+    switch (type) {
+    case PantheraParser_PLSQLParser.GREATER_THAN_OP:
+      return new GreaterThanProcessor4HavingUC();
+    default:
+      throw new SqlXlateException("Unimplement sub query type:" + type);
+    }
   }
 
   public static FilterBlockProcessor getSimpleTransfer() {

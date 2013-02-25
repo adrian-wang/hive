@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hive.ql.parse.sql.transformer.fb;
 
+import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
 import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
 import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.processor.FilterBlockProcessorFactory;
 
@@ -24,7 +25,8 @@ import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.processor.FilterBlockP
 public class UnCorrelatedFilterBlock extends NormalFilterBlack {
 
   @Override
-  public void process(FilterBlockContext fbContext, TranslateContext context) {
+  public void process(FilterBlockContext fbContext, TranslateContext context)
+      throws SqlXlateException {
 
     // If SubQFB is empty and QueryBlock stack only has one element, it ¡s the outer-most query
     if ((fbContext.getSubQStack().size() == 0)
@@ -35,9 +37,9 @@ public class UnCorrelatedFilterBlock extends NormalFilterBlack {
       FilterBlockProcessorFactory.getSimpleTransfer().process(fbContext, this, context);
       return;
     }
-    FilterBlockProcessorFactory.getUnCorrelatedTransfer(fbContext.getSubQStack().peek().getASTNode().getType())
-        .process(
-            fbContext, this, context);
+    // FilterBlockProcessorFactory.getUnCorrelatedTransfer(fbContext.getSubQStack().peek().getASTNode().getType())
+    // .process(
+    // fbContext, this, context);
 
   }
 

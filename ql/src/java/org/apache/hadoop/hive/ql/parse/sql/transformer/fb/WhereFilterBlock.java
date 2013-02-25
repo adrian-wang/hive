@@ -17,8 +17,17 @@
  */
 package org.apache.hadoop.hive.ql.parse.sql.transformer.fb;
 
+import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
+import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
+
 
 public class WhereFilterBlock extends TypeFilterBlock {
+
+  @Override
+  void execute(FilterBlockContext fbContext, TranslateContext context) throws SqlXlateException {
+    // TODO Auto-generated method stub
+
+  }
 
 
 }

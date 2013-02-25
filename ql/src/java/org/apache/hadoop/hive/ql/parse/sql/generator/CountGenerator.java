@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hive.ql.parse.sql.generator;
 
+import org.antlr33.runtime.tree.CommonTree;
 import org.apache.hadoop.hive.ql.parse.ASTNode;
 import org.apache.hadoop.hive.ql.parse.HiveParser;
-import org.apache.hadoop.hive.ql.parse.sql.SqlASTNode;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateUtil;
 import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
 
@@ -28,13 +28,13 @@ import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
 public class CountGenerator extends BaseHiveASTGenerator {
 
   @Override
-  public boolean generate(ASTNode hiveRoot, SqlASTNode sqlRoot, ASTNode currentHiveNode,
-      SqlASTNode currentSqlNode, TranslateContext context) throws Exception {
+  public boolean generate(ASTNode hiveRoot, CommonTree sqlRoot, ASTNode currentHiveNode,
+      CommonTree currentSqlNode, TranslateContext context) throws Exception {
 
     ASTNode ret = SqlXlateUtil.newASTNode(HiveParser.Identifier, currentSqlNode.getText());
     super.attachHiveNode(hiveRoot, currentHiveNode, ret);
 
-    SqlASTNode node = (SqlASTNode) (currentSqlNode.getChildCount() == 1 ? currentSqlNode
+    CommonTree node = (CommonTree) (currentSqlNode.getChildCount() == 1 ? currentSqlNode
         .getChild(0) : currentSqlNode.getChild(1));
     if (node.getType() == PantheraParser_PLSQLParser.ASTERISK) {
       return true;

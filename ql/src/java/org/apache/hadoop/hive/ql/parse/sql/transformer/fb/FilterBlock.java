@@ -20,6 +20,7 @@ package org.apache.hadoop.hive.ql.parse.sql.transformer.fb;
 import java.util.List;
 
 import org.antlr33.runtime.tree.CommonTree;
+import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
 import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
 
 /**
@@ -63,14 +64,13 @@ public interface FilterBlock {
   /**
    * Nested Subqueries are transformed to inline view with various joins<br>
    * <li>Use equi-joins for all equal conditions<br>
-   * Left semi join, Left outer join (if null is involved), Inner join  <li>Use cross join for
-   * some of the non-equal conditions <li>Use select distinct with consideration of _rowid on the
-   * result of outer/cross/inner join. Left Semi-joins are fine. Logical Relationships between
-   * Filters are either absorbed or transformed to Set Operations <li>NOT: "not" operator is
-   * eliminated from the tree using logical mathematics <li>OR: "or" operator is transformed to
-   * "UNION" operator with consideration of _rowid <li>AND: "and" operator is transformed to
-   * "INTERSECT" operator with consideration of _rowid Correlated Filters need special treatment
-   * according to semantics <li>
+   * Left semi join, Left outer join (if null is involved), Inner join <li>Use cross join for some
+   * of the non-equal conditions <li>Use select distinct with consideration of _rowid on the result
+   * of outer/cross/inner join. Left Semi-joins are fine. Logical Relationships between Filters are
+   * either absorbed or transformed to Set Operations <li>NOT: "not" operator is eliminated from the
+   * tree using logical mathematics <li>OR: "or" operator is transformed to "UNION" operator with
+   * consideration of _rowid <li>AND: "and" operator is transformed to "INTERSECT" operator with
+   * consideration of _rowid Correlated Filters need special treatment according to semantics <li>
    * Most correlated filters find its positions in join conditions <li>Syntax Transformation Results
    * of Correlated Filters and Uncorrelated Filters are often different. E.g. ANY/SOME/ALL <li>We
    * don¡¯t support a nested query referencing columns other than its own source or its direct
@@ -91,5 +91,5 @@ public interface FilterBlock {
    * @param context
    * @Inherited
    */
-  void process(FilterBlockContext fbContext, TranslateContext context);
+  void process(FilterBlockContext fbContext, TranslateContext context) throws SqlXlateException;
 }

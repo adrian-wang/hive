@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hive.ql.parse.sql.generator;
 
+import org.antlr33.runtime.tree.CommonTree;
 import org.apache.hadoop.hive.ql.parse.ASTNode;
 import org.apache.hadoop.hive.ql.parse.HiveParser;
-import org.apache.hadoop.hive.ql.parse.sql.SqlASTNode;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateUtil;
 import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
 
@@ -28,22 +28,22 @@ import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
 public class StandardFunctionGenerator extends BaseHiveASTGenerator {
 
   @Override
-  public boolean generate(ASTNode hiveRoot, SqlASTNode sqlRoot, ASTNode currentHiveNode,
-      SqlASTNode currentSqlNode, TranslateContext context) throws Exception {
+  public boolean generate(ASTNode hiveRoot, CommonTree sqlRoot, ASTNode currentHiveNode,
+      CommonTree currentSqlNode, TranslateContext context) throws Exception {
 
-    SqlASTNode node = (SqlASTNode) currentSqlNode.getChild(0);
+    CommonTree node = (CommonTree) currentSqlNode.getChild(0);
 
     ASTNode tokFunc;
 
     if (currentSqlNode.getType() == PantheraParser_PLSQLParser.ROUTINE_CALL) {
       tokFunc = SqlXlateUtil.newASTNode(HiveParser.TOK_FUNCTION, "TOK_FUNCTION");
-      SqlASTNode Arguments = (SqlASTNode) currentSqlNode.getFirstChildWithType(PantheraParser_PLSQLParser.ARGUMENTS);
+      CommonTree Arguments = (CommonTree) currentSqlNode.getFirstChildWithType(PantheraParser_PLSQLParser.ARGUMENTS);
       if (Arguments != null) {
-        SqlASTNode firstArg = (SqlASTNode) Arguments.getFirstChildWithType(PantheraParser_PLSQLParser.ARGUMENT);
+        CommonTree firstArg = (CommonTree) Arguments.getFirstChildWithType(PantheraParser_PLSQLParser.ARGUMENT);
         if (firstArg != null) {
-          SqlASTNode expr = (SqlASTNode) firstArg.getFirstChildWithType(PantheraParser_PLSQLParser.EXPR);
+          CommonTree expr = (CommonTree) firstArg.getFirstChildWithType(PantheraParser_PLSQLParser.EXPR);
           if (expr != null) {
-            SqlASTNode distinct = (SqlASTNode) expr
+            CommonTree distinct = (CommonTree) expr
                 .getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_DISTINCT);
             if (distinct != null) {
               tokFunc = SqlXlateUtil.newASTNode(HiveParser.TOK_FUNCTIONDI, "TOK_FUNCTIONDI");
@@ -53,7 +53,7 @@ public class StandardFunctionGenerator extends BaseHiveASTGenerator {
       }
 
     } else {
-      SqlASTNode arg1 = (SqlASTNode) node.getChild(0);
+      CommonTree arg1 = (CommonTree) node.getChild(0);
       assert (arg1 != null);
       if (arg1.getType() == PantheraParser_PLSQLParser.ASTERISK) {
         if (arg1.getChildCount() > 0) {

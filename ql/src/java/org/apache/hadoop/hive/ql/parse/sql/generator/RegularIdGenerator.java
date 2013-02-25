@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hive.ql.parse.sql.generator;
 
+import org.antlr33.runtime.tree.CommonTree;
 import org.apache.hadoop.hive.ql.parse.ASTNode;
 import org.apache.hadoop.hive.ql.parse.HiveParser;
-import org.apache.hadoop.hive.ql.parse.sql.SqlASTNode;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateUtil;
 import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
 
@@ -32,15 +32,15 @@ import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
 public class RegularIdGenerator extends BaseHiveASTGenerator {
 
   @Override
-  public boolean generate(ASTNode hiveRoot, SqlASTNode sqlRoot, ASTNode currentHiveNode,
-      SqlASTNode currentSqlNode, TranslateContext context) throws Exception {
+  public boolean generate(ASTNode hiveRoot, CommonTree sqlRoot, ASTNode currentHiveNode,
+      CommonTree currentSqlNode, TranslateContext context) throws Exception {
     assert(currentSqlNode.getType() == PantheraParser_PLSQLParser.REGULAR_ID);
 
     //
     // if the parent is a Extract node, then simply translate this REGULAR_ID node into a HIVE
     // Identifier node whose text is the function name.
     //
-    SqlASTNode Parent = (SqlASTNode) currentSqlNode.getParent();
+    CommonTree Parent = (CommonTree) currentSqlNode.getParent();
     if (Parent != null && Parent.getType() == PantheraParser_PLSQLParser.EXTRACT_VK) {
       ASTNode funcName = SqlXlateUtil.newASTNode(HiveParser.Identifier, currentSqlNode.getText());
       attachHiveNode(hiveRoot, currentHiveNode, funcName);

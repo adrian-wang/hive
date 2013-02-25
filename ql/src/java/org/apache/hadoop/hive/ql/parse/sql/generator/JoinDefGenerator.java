@@ -17,9 +17,10 @@
  */
 package org.apache.hadoop.hive.ql.parse.sql.generator;
 
+import org.antlr33.runtime.tree.CommonTree;
 import org.apache.hadoop.hive.ql.parse.ASTNode;
 import org.apache.hadoop.hive.ql.parse.HiveParser;
-import org.apache.hadoop.hive.ql.parse.sql.SqlASTNode;
+import org.apache.hadoop.hive.ql.parse.sql.PantheraExpParser;
 import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
 
 import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
@@ -27,8 +28,8 @@ import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
 public class JoinDefGenerator extends BaseHiveASTGenerator {
 
   @Override
-  public boolean generate(ASTNode hiveRoot, SqlASTNode sqlRoot, ASTNode currentHiveNode,
-      SqlASTNode currentSqlNode, TranslateContext context) throws Exception {
+  public boolean generate(ASTNode hiveRoot, CommonTree sqlRoot, ASTNode currentHiveNode,
+      CommonTree currentSqlNode, TranslateContext context) throws Exception {
     ASTNode join;
     if (currentSqlNode.getChild(0).getType() == PantheraParser_PLSQLParser.FULL_VK) {
       join = super.newHiveASTNode(HiveParser.TOK_FULLOUTERJOIN, "TOK_FULLOUTERJOIN");
@@ -36,6 +37,10 @@ public class JoinDefGenerator extends BaseHiveASTGenerator {
       join = super.newHiveASTNode(HiveParser.TOK_LEFTOUTERJOIN, "TOK_LEFTOUTERJOIN");
     } else if (currentSqlNode.getChild(0).getType() == PantheraParser_PLSQLParser.RIGHT_VK) {
       join = super.newHiveASTNode(HiveParser.TOK_RIGHTOUTERJOIN, "TOK_RIGHTOUTERJOIN");
+    } else if (currentSqlNode.getChild(0).getType() == PantheraParser_PLSQLParser.CROSS_VK) {
+      join = super.newHiveASTNode(HiveParser.TOK_CROSSJOIN, "TOK_CROSSJOIN");
+    } else if (currentSqlNode.getChild(0).getType() == PantheraExpParser.LEFTSEMI_VK) {
+      join = super.newHiveASTNode(HiveParser.TOK_LEFTSEMIJOIN, "TOK_LEFTSEMIJOIN");
     } else {
       join = super.newHiveASTNode(HiveParser.TOK_JOIN, "TOK_JOIN");
     }

@@ -78,9 +78,7 @@ public abstract class BaseFilterBlock implements FilterBlock {
     }
   }
 
-  CommonTree dupNode(CommonTree node) {
-    return new CommonTree(node.getToken());
-  }
+
 
   @Override
   public String toString() {

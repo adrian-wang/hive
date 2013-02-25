@@ -19,9 +19,9 @@ package org.apache.hadoop.hive.ql.parse.sql.generator;
 
 import java.util.Iterator;
 
+import org.antlr33.runtime.tree.CommonTree;
 import org.apache.hadoop.hive.ql.parse.ASTNode;
 import org.apache.hadoop.hive.ql.parse.HiveParser;
-import org.apache.hadoop.hive.ql.parse.sql.SqlASTNode;
 import org.apache.hadoop.hive.ql.parse.sql.SqlParseException;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateUtil;
 import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
@@ -31,8 +31,8 @@ import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
 public class GroupGenerator extends BaseHiveASTGenerator {
 
   @Override
-  public boolean generate(ASTNode hiveRoot, SqlASTNode sqlRoot, ASTNode currentHiveNode,
-      SqlASTNode currentSqlNode, TranslateContext context) throws Exception {
+  public boolean generate(ASTNode hiveRoot, CommonTree sqlRoot, ASTNode currentHiveNode,
+      CommonTree currentSqlNode, TranslateContext context) throws Exception {
 
     ASTNode ret = SqlXlateUtil.newASTNode(HiveParser.TOK_GROUPBY, "TOK_GROUPBY");
     super.attachHiveNode(hiveRoot, currentHiveNode, ret);
@@ -43,10 +43,10 @@ public class GroupGenerator extends BaseHiveASTGenerator {
     }
     while (i.hasNext()) {
       Object o = i.next();
-      if (!(o instanceof SqlASTNode)) {
+      if (!(o instanceof CommonTree)) {
         throw new SqlParseException("illegal sql AST node:" + o);
       }
-      SqlASTNode node = (SqlASTNode) o;
+      CommonTree node = (CommonTree) o;
       HiveASTGenerator generator = GeneratorFactory.getGenerator(node);
       if (generator == null) {
         throw new SqlParseException("illegal sql AST node:" + o);

@@ -65,7 +65,7 @@ public class GenerateTest extends BaseSQLTest {
 
   public void testMultiplicationOperator() {
     String sql = "select price * (1 - discount) as disc_price, count(*) as count_order from src;";
-    String ast = "(TOK_QUERY (TOK_FROM (TOK_TABREF (TOK_TABNAME src))) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (* (TOK_TABLE_OR_COL price) (- 1 discount)) disc_price) (TOK_SELEXPR (TOK_FUNCTIONSTAR count) count_order))))";
+    String ast = "(TOK_QUERY (TOK_FROM (TOK_TABREF (TOK_TABNAME src))) (TOK_INSERT (TOK_DESTINATION (TOK_DIR TOK_TMP_FILE)) (TOK_SELECT (TOK_SELEXPR (* (TOK_TABLE_OR_COL price) (- 1 (TOK_TABLE_OR_COL discount))) disc_price) (TOK_SELEXPR (TOK_FUNCTIONSTAR count) count_order))))";
     testGenerateText(sql, ast);
   }
 

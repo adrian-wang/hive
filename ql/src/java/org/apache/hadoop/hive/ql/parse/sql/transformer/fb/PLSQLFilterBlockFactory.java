@@ -53,7 +53,7 @@ public class PLSQLFilterBlockFactory extends FilterBlockFactory {
     typeMap.put(PantheraParser_PLSQLParser.SQL92_RESERVED_LIKE, LIKE);
     typeMap.put(PantheraParser_PLSQLParser.SQL92_RESERVED_AND, AND);
     typeMap.put(PantheraParser_PLSQLParser.SQL92_RESERVED_OR, OR);
-    typeMap.put(PantheraParser_PLSQLParser.SQL92_RESERVED_NOT, NOT);
+//    typeMap.put(PantheraParser_PLSQLParser.SQL92_RESERVED_NOT, NOT);//FIXME not exists
     typeMap.put(PantheraParser_PLSQLParser.SQL92_RESERVED_SELECT, SELECT);
     typeMap.put(PantheraParser_PLSQLParser.SQL92_RESERVED_EXISTS, EXISTS);
     typeMap.put(PantheraParser_PLSQLParser.SELECT_LIST, SELECT_LIST);
@@ -65,8 +65,11 @@ public class PLSQLFilterBlockFactory extends FilterBlockFactory {
     return instance;
   }
 
+  /**
+   * FIXME process the case without table name but correlated.
+   */
   @Override
-  boolean isCorrelated(Stack<CommonTree> selectStack, CommonTree branch) throws SqlXlateException {
+  public boolean isCorrelated(Stack<CommonTree> selectStack, CommonTree branch) throws SqlXlateException {
     if (branch.getType() == PantheraParser_PLSQLParser.CASCATED_ELEMENT) {
       SqlASTNode child = (SqlASTNode) branch.getChild(0);
       if (child.getType() == PantheraParser_PLSQLParser.ANY_ELEMENT) {
@@ -89,6 +92,7 @@ public class PLSQLFilterBlockFactory extends FilterBlockFactory {
         }
       }
     }
+    // FIXME
     return false;
   }
 

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hive.ql.parse.sql.transformer.fb.processor;
 
+import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
 import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
 import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.FilterBlock;
 import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.FilterBlockContext;
@@ -29,5 +30,5 @@ import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.FilterBlockContext;
 
 public interface FilterBlockProcessor {
 
-  void process(FilterBlockContext fbContext, FilterBlock fb, TranslateContext context);
+  void process(FilterBlockContext fbContext, FilterBlock fb, TranslateContext context) throws SqlXlateException;
 }

@@ -17,7 +17,18 @@
  */
 package org.apache.hadoop.hive.ql.parse.sql.transformer.fb;
 
+import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
+import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
+
 
 public class HavingFilterBlock extends TypeFilterBlock {
+
+  @Override
+  void execute(FilterBlockContext fbContext, TranslateContext context) throws SqlXlateException {
+    //needn't restore queryblock's aggregation function when process HAVING sub query.
+    //Tips:WHERE sub query had been processed.
+    fbContext.getQueryStack().peek().setAggregationList(null);
+
+  }
 
 }

@@ -17,10 +17,9 @@
  */
 package org.apache.hadoop.hive.ql.parse.sql.generator;
 
-import org.antlr33.runtime.tree.Tree;
+import org.antlr33.runtime.tree.CommonTree;
 import org.apache.hadoop.hive.ql.parse.ASTNode;
 import org.apache.hadoop.hive.ql.parse.HiveParser;
-import org.apache.hadoop.hive.ql.parse.sql.SqlASTNode;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateUtil;
 import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
 
@@ -35,8 +34,8 @@ import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
 public class AnyElementGenerator extends BaseHiveASTGenerator {
 
   @Override
-  public boolean generate(ASTNode hiveRoot, SqlASTNode sqlRoot, ASTNode currentHiveNode,
-      SqlASTNode currentSqlNode, TranslateContext context) throws Exception {
+  public boolean generate(ASTNode hiveRoot, CommonTree sqlRoot, ASTNode currentHiveNode,
+      CommonTree currentSqlNode, TranslateContext context) throws Exception {
 
     if (currentSqlNode.getChildCount() > 1) {
       // two leaf with ANY_ELEMENT
@@ -49,12 +48,9 @@ public class AnyElementGenerator extends BaseHiveASTGenerator {
       return super.generateChildrenExcept(hiveRoot, sqlRoot, currentHiveNode, currentSqlNode,
           context, 0);
     }
-    Tree grandpa = currentSqlNode.getParent().getParent();
-    if (grandpa.getChildCount() > 1 && grandpa.getChild(1).getChild(0) == currentSqlNode) {
-      // currentSqlNode is in right branch.
-      return super.generateChildren(hiveRoot, sqlRoot, currentHiveNode, currentSqlNode, context);
-    } else if (currentSqlNode.getChildCount() == 1) {
-      SqlASTNode leaf = (SqlASTNode) currentSqlNode.getChild(0);
+
+    if (currentSqlNode.getChildCount() == 1) {
+      CommonTree leaf = (CommonTree) currentSqlNode.getChild(0);
       String leafText = leaf.getText();
       if (leaf.getType() == PantheraParser_PLSQLParser.ID && "null".equals(leafText.toLowerCase())
           || leafText.contains("\"") || leafText.contains("'")) {

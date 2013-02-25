@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
 
+import org.antlr33.runtime.tree.CommonTree;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -54,7 +55,7 @@ public final class SqlXlateUtil {
 
   private static final Log LOG = LogFactory.getLog("hive.ql.parse.sql.SqlXlateUtil");
 
-  private static int aliasNum = 0;
+
 
   /**
    * Create a new Hive ASTNode from type and text
@@ -215,12 +216,12 @@ public final class SqlXlateUtil {
    *          root of the AST subtree
    * @return whether there's a node of type tokenType
    */
-  public static boolean hasNodeTypeInTree(SqlASTNode node, int tokenType) {
+  public static boolean hasNodeTypeInTree(CommonTree node, int tokenType) {
     if (node.getType() == tokenType) {
       return true;
     }
     for (int i = 0; i < node.getChildCount(); i++) {
-      if (hasNodeTypeInTree((SqlASTNode) node.getChild(i), tokenType)) {
+      if (hasNodeTypeInTree((CommonTree) node.getChild(i), tokenType)) {
         return true;
       }
     }
@@ -259,12 +260,10 @@ public final class SqlXlateUtil {
    * @param collection
    *          result set
    */
-  public static void getSrcTblAlias(SqlASTNode n, Set<String> srcTbls) {
-    boolean skipRecursion = false;
+  public static void getSrcTblAlias(CommonTree n, Set<String> srcTbls) {
     if (n.getType() == PantheraParser_PLSQLParser.TABLE_REF_ELEMENT) {
       if (n.getChild(0).getType() == PantheraParser_PLSQLParser.ALIAS) {
         srcTbls.add(n.getChild(0).getChild(0).getText());
-        skipRecursion = true;
       }
     } else if (n.getType() == PantheraParser_PLSQLParser.TABLEVIEW_NAME) {
       if (n.getChildCount() == 1) {
@@ -275,10 +274,8 @@ public final class SqlXlateUtil {
       }
     }
     // recurse for all children
-    if (!skipRecursion) {
-      for (int i = 0; i < n.getChildCount(); i++) {
-        getSrcTblAlias((SqlASTNode) n.getChild(i), srcTbls);
-      }
+    for (int i = 0; i < n.getChildCount(); i++) {
+      getSrcTblAlias((CommonTree) n.getChild(i), srcTbls);
     }
   }
 
@@ -557,7 +554,7 @@ public final class SqlXlateUtil {
    *
    */
   public static class AliasGenerator {
-
+    private int aliasNum = 0;
 
     /**
      * Generate an alias for SubQuery
@@ -587,11 +584,13 @@ public final class SqlXlateUtil {
       // later we will check for conflicts
       return "gen_" + RandomStringUtils.randomAlphanumeric(12);
     }
+
+    private synchronized int getAliasNum() {
+      return aliasNum++;
+    }
   }
 
-  static synchronized int getAliasNum() {
-    return aliasNum++;
-  }
+
 
   /**
    * Get table alias name from tab ref tree
@@ -799,5 +798,16 @@ public final class SqlXlateUtil {
     not.setQueryInfo(src.getQueryInfo());
     SqlXlateUtil.attachChild(not, src);
     return not;
+  }
+
+  /**
+   * exchange left & right branch<br>
+   * if only one branch, no effect.
+   *
+   * @param branch
+   */
+  public static void exchangeChildrenPosition(CommonTree branch) {
+    CommonTree left = (CommonTree) branch.deleteChild(0);
+    branch.addChild(left);
   }
 }

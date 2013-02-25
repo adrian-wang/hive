@@ -20,9 +20,9 @@ package org.apache.hadoop.hive.ql.parse.sql.generator;
 import java.util.Iterator;
 
 import org.antlr.runtime.tree.Tree;
+import org.antlr33.runtime.tree.CommonTree;
 import org.apache.hadoop.hive.ql.parse.ASTNode;
 import org.apache.hadoop.hive.ql.parse.HiveParser;
-import org.apache.hadoop.hive.ql.parse.sql.SqlASTNode;
 import org.apache.hadoop.hive.ql.parse.sql.SqlParseException;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateUtil;
 import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
@@ -38,8 +38,8 @@ public abstract class BaseHiveASTGenerator implements HiveASTGenerator {
   private HiveASTGenerator preGenerator;
   private HiveASTGenerator postGeneator;
 
-  boolean generateChildren(ASTNode hiveRoot, SqlASTNode sqlRoot, ASTNode currentHiveNode,
-      SqlASTNode currentSqlNode, TranslateContext context) throws Exception {
+  boolean generateChildren(ASTNode hiveRoot, CommonTree sqlRoot, ASTNode currentHiveNode,
+      CommonTree currentSqlNode, TranslateContext context) throws Exception {
     if (currentSqlNode.getChildren() == null) {
       return true;
     }
@@ -49,10 +49,10 @@ public abstract class BaseHiveASTGenerator implements HiveASTGenerator {
     }
     while (i.hasNext()) {
       Object o = i.next();
-      if (!(o instanceof SqlASTNode)) {
+      if (!(o instanceof org.antlr33.runtime.tree.CommonTree)) {
         throw new SqlParseException("illegal sql AST node:" + o);
       }
-      SqlASTNode node = (SqlASTNode) o;
+      CommonTree node = (CommonTree) o;
       HiveASTGenerator generator = GeneratorFactory.getGenerator(node);
       if (generator == null) {
         throw new SqlParseException("illegal sql AST node:" + o);
@@ -77,18 +77,18 @@ public abstract class BaseHiveASTGenerator implements HiveASTGenerator {
    * @return
    * @throws Exception
    */
-  boolean generateChildrenExcept(ASTNode hiveRoot, SqlASTNode sqlRoot, ASTNode currentHiveNode,
-      SqlASTNode currentSqlNode, TranslateContext context, int idx) throws Exception {
+  boolean generateChildrenExcept(ASTNode hiveRoot, CommonTree sqlRoot, ASTNode currentHiveNode,
+      CommonTree currentSqlNode, TranslateContext context, int idx) throws Exception {
 
     for (int i = 0; i < currentSqlNode.getChildCount(); i++) {
       if (i == idx) {
         continue;
       }
       Object o = currentSqlNode.getChild(i);
-      if (!(o instanceof SqlASTNode)) {
+      if (!(o instanceof CommonTree)) {
         throw new SqlParseException("illegal sql AST node:" + o);
       }
-      SqlASTNode node = (SqlASTNode) o;
+      CommonTree node = (CommonTree) o;
       if (!GeneratorFactory.getGenerator(node).generateHiveAST(hiveRoot, sqlRoot,
           currentHiveNode, node, context)) {
         return false;
@@ -139,17 +139,17 @@ public abstract class BaseHiveASTGenerator implements HiveASTGenerator {
     return SqlXlateUtil.newASTNode(ttype, text);
   }
 
-  boolean baseProcess(int ttype, String text, ASTNode hiveRoot, SqlASTNode sqlRoot,
+  boolean baseProcess(int ttype, String text, ASTNode hiveRoot, CommonTree sqlRoot,
       ASTNode currentHiveNode,
-      SqlASTNode currentSqlNode, TranslateContext context) throws Exception {
+      CommonTree currentSqlNode, TranslateContext context) throws Exception {
     ASTNode ret = this.newHiveASTNode(ttype, text);
     this.attachHiveNode(hiveRoot, currentHiveNode, ret);
     return this.generateChildren(hiveRoot, sqlRoot, ret, currentSqlNode, context);
   }
 
   @Override
-  public boolean generateHiveAST(ASTNode hiveRoot, SqlASTNode sqlRoot, ASTNode currentHiveNode,
-      SqlASTNode currentSqlNode, TranslateContext context) throws Exception {
+  public boolean generateHiveAST(ASTNode hiveRoot, CommonTree sqlRoot, ASTNode currentHiveNode,
+      CommonTree currentSqlNode, TranslateContext context) throws Exception {
     if (this.preGenerator != null
         && !this.preGenerator.generateHiveAST(hiveRoot, sqlRoot, currentHiveNode, currentSqlNode,
             context)) {
@@ -167,8 +167,8 @@ public abstract class BaseHiveASTGenerator implements HiveASTGenerator {
   }
 
 
-  abstract public boolean generate(ASTNode hiveRoot, SqlASTNode sqlRoot, ASTNode currentHiveNode,
-      SqlASTNode currentSqlNode, TranslateContext context) throws Exception;
+  abstract public boolean generate(ASTNode hiveRoot, CommonTree sqlRoot, ASTNode currentHiveNode,
+      CommonTree currentSqlNode, TranslateContext context) throws Exception;
 
   public void setHivePreGenerator(HiveASTGenerator preGenerator) {
     this.preGenerator = preGenerator;
@@ -178,9 +178,9 @@ public abstract class BaseHiveASTGenerator implements HiveASTGenerator {
     this.postGeneator = postGenerator;
   }
 
-  boolean nullOrNotGenerator(boolean isNull, ASTNode hiveRoot, SqlASTNode sqlRoot,
+  boolean nullOrNotGenerator(boolean isNull, ASTNode hiveRoot, CommonTree sqlRoot,
       ASTNode currentHiveNode,
-      SqlASTNode currentSqlNode, TranslateContext context) throws Exception {
+      CommonTree currentSqlNode, TranslateContext context) throws Exception {
     ASTNode ret = this.newHiveASTNode(HiveParser.TOK_FUNCTION, "TOK_FUNCTION");
     this.attachHiveNode(hiveRoot, currentHiveNode, ret);
     currentHiveNode = ret;

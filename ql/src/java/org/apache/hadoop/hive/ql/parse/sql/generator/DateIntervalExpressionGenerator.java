@@ -17,25 +17,25 @@
  */
 package org.apache.hadoop.hive.ql.parse.sql.generator;
 
+import java.sql.Date;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
-import java.sql.Date;
 
+import org.antlr33.runtime.tree.CommonTree;
 import org.apache.hadoop.hive.ql.parse.ASTNode;
 import org.apache.hadoop.hive.ql.parse.HiveParser;
-import org.apache.hadoop.hive.ql.parse.sql.SqlASTNode;
+import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateUtil;
 import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
-import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
 
 import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
 
 /**
- * Generator for "date value expression +/- interval value expression". 
+ * Generator for "date value expression +/- interval value expression".
  *
  * Note: this generator is a workaround for TPC-H queries, not a complete support.
- * Supported "interval value expression" is of form: 
- *   interval 'quoted_string' (year|month|day) <any following elements are ignored>
+ * Supported "interval value expression" is of form:
+ * interval 'quoted_string' (year|month|day) <any following elements are ignored>
  *
  */
 public class DateIntervalExpressionGenerator extends BaseHiveASTGenerator {
@@ -52,33 +52,36 @@ public class DateIntervalExpressionGenerator extends BaseHiveASTGenerator {
   }
 
   @Override
-  public boolean generate(ASTNode hiveRoot, SqlASTNode sqlRoot, ASTNode currentHiveNode,
-      SqlASTNode currentSqlNode, TranslateContext context) throws Exception {
-    if (currentSqlNode.getChildCount() >= 5 &&
-        ((SqlASTNode) currentSqlNode.getChild(0)).getType() == PantheraParser_PLSQLParser.SQL92_RESERVED_DATE &&
-        ((SqlASTNode) currentSqlNode.getChild(2)).getType() == PantheraParser_PLSQLParser.REGULAR_ID &&
-        ((SqlASTNode) currentSqlNode.getChild(2)).getText().equalsIgnoreCase ("interval")) {
-      SqlASTNode dateStringNode = (SqlASTNode) currentSqlNode.getChild(1);
-      SqlASTNode intervalStringNode = (SqlASTNode) currentSqlNode.getChild(3);
-      SqlASTNode intervalUnitNode = (SqlASTNode) currentSqlNode.getChild(4);
+  public boolean generate(ASTNode hiveRoot, CommonTree sqlRoot, ASTNode currentHiveNode,
+      CommonTree currentSqlNode, TranslateContext context) throws Exception {
+    if (currentSqlNode.getChildCount() >= 5
+        &&
+        ((CommonTree) currentSqlNode.getChild(0)).getType() == PantheraParser_PLSQLParser.SQL92_RESERVED_DATE
+        &&
+        ((CommonTree) currentSqlNode.getChild(2)).getType() == PantheraParser_PLSQLParser.REGULAR_ID
+        &&
+        ((CommonTree) currentSqlNode.getChild(2)).getText().equalsIgnoreCase("interval")) {
+      CommonTree dateStringNode = (CommonTree) currentSqlNode.getChild(1);
+      CommonTree intervalStringNode = (CommonTree) currentSqlNode.getChild(3);
+      CommonTree intervalUnitNode = (CommonTree) currentSqlNode.getChild(4);
       if (dateStringNode.getType() != PantheraParser_PLSQLParser.CHAR_STRING ||
           intervalStringNode.getType() != PantheraParser_PLSQLParser.CHAR_STRING ||
           (intervalUnitNode.getType() != PantheraParser_PLSQLParser.YEAR_VK &&
-          intervalUnitNode.getType() != PantheraParser_PLSQLParser.MONTH_VK &&
+              intervalUnitNode.getType() != PantheraParser_PLSQLParser.MONTH_VK &&
           intervalUnitNode.getType() != PantheraParser_PLSQLParser.DAY_VK)) {
         throw new SqlXlateException("Unsupported date or interval value expression.");
       }
 
       Date date;
       try {
-        date = Date.valueOf(dateStringNode.getText().replace('\'',' ').trim());
+        date = Date.valueOf(dateStringNode.getText().replace('\'', ' ').trim());
       } catch (IllegalArgumentException e) {
         throw new SqlXlateException("Unsupported date or interval value expression.");
       }
 
       int intervalValue;
       try {
-        intervalValue = Integer.parseInt(intervalStringNode.getText().replace('\'',' ').trim());
+        intervalValue = Integer.parseInt(intervalStringNode.getText().replace('\'', ' ').trim());
       } catch (NumberFormatException e) {
         throw new SqlXlateException("Unsupported date or interval value expression.");
       }
@@ -87,16 +90,16 @@ public class DateIntervalExpressionGenerator extends BaseHiveASTGenerator {
       SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
       Calendar calendar = Calendar.getInstance();
       calendar.setTime(date);
-      switch(intervalUnitNode.getType()) {
-        case PantheraParser_PLSQLParser.YEAR_VK:
-          field = Calendar.YEAR;
-          break;
-        case PantheraParser_PLSQLParser.MONTH_VK:
-          field = Calendar.MONTH;
-          break;
-        default:
-          field = Calendar.DAY_OF_YEAR;
-          break;
+      switch (intervalUnitNode.getType()) {
+      case PantheraParser_PLSQLParser.YEAR_VK:
+        field = Calendar.YEAR;
+        break;
+      case PantheraParser_PLSQLParser.MONTH_VK:
+        field = Calendar.MONTH;
+        break;
+      default:
+        field = Calendar.DAY_OF_YEAR;
+        break;
       }
 
       if (currentSqlNode.getType() == PantheraParser_PLSQLParser.MINUS_SIGN) {

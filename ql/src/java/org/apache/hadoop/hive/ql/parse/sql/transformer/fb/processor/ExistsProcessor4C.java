@@ -15,23 +15,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hive.ql.parse.sql.generator;
+package org.apache.hadoop.hive.ql.parse.sql.transformer.fb.processor;
 
-import org.antlr33.runtime.tree.CommonTree;
-import org.apache.hadoop.hive.ql.parse.ASTNode;
-import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
+import org.apache.hadoop.hive.ql.parse.sql.PantheraExpParser;
+import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
 
+import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
 /**
- * Do nothing, just push down.
- * NothingGenerator.
+ * correlated exists processor
+ * ExistsProcessor4C.
  *
  */
-public class NothingGenerator extends BaseHiveASTGenerator {
+public class ExistsProcessor4C extends CommonFilterBlockProcessor {
 
   @Override
-  public boolean generate(ASTNode hiveRoot, CommonTree sqlRoot, ASTNode currentHiveNode,
-      CommonTree currentSqlNode, TranslateContext context) throws Exception {
-    return super.generateChildren(hiveRoot, sqlRoot, currentHiveNode, currentSqlNode, context);
+  void processFB() throws SqlXlateException {
+    boolean isNot = super.subQNode.getParent().getType() == PantheraParser_PLSQLParser.SQL92_RESERVED_NOT ? true
+        : false;
+    if (isNot) {
+      super.processNotExistsC(super.createSqlASTNode(PantheraExpParser.LEFTSEMI_VK, "leftsemi"));
+    } else {
+      super.processExistsC(super.createSqlASTNode(PantheraExpParser.LEFTSEMI_VK, "leftsemi"));
+    }
   }
 
 }

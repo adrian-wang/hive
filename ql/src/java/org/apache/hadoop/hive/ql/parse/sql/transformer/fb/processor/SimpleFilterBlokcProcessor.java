@@ -18,11 +18,9 @@
 package org.apache.hadoop.hive.ql.parse.sql.transformer.fb.processor;
 
 import org.antlr33.runtime.tree.CommonTree;
-import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
-import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.FilterBlock;
-import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.FilterBlockContext;
 
 import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
+
 /**
  *
  * SimpleFilterBlokcProcessor.
@@ -30,8 +28,11 @@ import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
  */
 public class SimpleFilterBlokcProcessor extends BaseFilterBlockProcessor {
 
+  /**
+   * FIXME:Unfinshed
+   */
   @Override
-  public void process(FilterBlockContext fbContext, FilterBlock fb, TranslateContext context) {
+  public void processFB() {
     CommonTree tree = fbContext.getQueryStack().peek().cloneSimpleQuery();
     fb.setTransformedNode(tree);
     CommonTree where = super.createSqlASTNode(PantheraParser_PLSQLParser.SQL92_RESERVED_WHERE,

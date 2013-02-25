@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hive.ql.parse.sql.generator;
 
+import org.antlr33.runtime.tree.CommonTree;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hive.ql.parse.ASTNode;
-import org.apache.hadoop.hive.ql.parse.sql.SqlASTNode;
 import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
 
 /**
@@ -31,8 +31,8 @@ import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
 public interface HiveASTGenerator {
   public static final Log LOG = LogFactory.getLog("hive.ql.parse.sql.HiveASTGenerator");
 
-  boolean generateHiveAST(ASTNode hiveRoot, SqlASTNode sqlRoot, ASTNode currentHiveNode,
-      SqlASTNode currentSqlNode, TranslateContext context) throws Exception;
+  boolean generateHiveAST(ASTNode hiveRoot, CommonTree sqlRoot, ASTNode currentHiveNode,
+      CommonTree currentSqlNode, TranslateContext context) throws Exception;
 
   void setHivePreGenerator(HiveASTGenerator preGenerator);
 

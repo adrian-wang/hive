@@ -15,23 +15,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hive.ql.parse.sql.generator;
+package org.apache.hadoop.hive.ql.parse.sql.transformer.fb.processor;
 
-import org.antlr33.runtime.tree.CommonTree;
-import org.apache.hadoop.hive.ql.parse.ASTNode;
-import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
+import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
 
 /**
- * Do nothing, just push down.
- * NothingGenerator.
+ * Correlated FilterBlock processor for all compare operator include > >= < <= = !=
+ * CompareOpProcessor4C.
  *
  */
-public class NothingGenerator extends BaseHiveASTGenerator {
+public class CompareOpProcessor4C extends CommonFilterBlockProcessor {
 
   @Override
-  public boolean generate(ASTNode hiveRoot, CommonTree sqlRoot, ASTNode currentHiveNode,
-      CommonTree currentSqlNode, TranslateContext context) throws Exception {
-    return super.generateChildren(hiveRoot, sqlRoot, currentHiveNode, currentSqlNode, context);
-  }
+  public void processFB() throws SqlXlateException {
+    super.processCompareC(null);
 
+  }
 }

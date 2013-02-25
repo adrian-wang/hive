@@ -17,13 +17,6 @@
  */
 package org.apache.hadoop.hive.ql.parse.sql.transformer.fb.processor;
 
-import org.antlr33.runtime.tree.CommonTree;
-import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
-import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.FilterBlock;
-import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.FilterBlockContext;
-import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.QueryBlock;
-import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.SubQFilterBlock;
-
 import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
 
 /**
@@ -31,49 +24,11 @@ import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
  * GreaterThanProcessor4UC.
  *
  */
-public class GreaterThanProcessor4UC extends BaseFilterBlockProcessor {
+public class GreaterThanProcessor4UC extends CommonFilterBlockProcessor {
 
   @Override
-  public void process(FilterBlockContext fbContext, FilterBlock fb, TranslateContext context) {
-
-    QueryBlock bottomQuery = fbContext.getQueryStack().pop();
-    QueryBlock topQuery = fbContext.getQueryStack().peek();
-    fbContext.getQueryStack().push(bottomQuery);
-    SubQFilterBlock subQ = fbContext.getSubQStack().peek();
-    CommonTree topSelect = topQuery.getASTNode();// maybe need clone.
-    CommonTree bottomSelect = bottomQuery.getASTNode();
-    CommonTree subQNode = subQ.getASTNode();
-
-    if (subQNode.getChild(1).getType() == PantheraParser_PLSQLParser.SQL92_RESERVED_ALL) {// >all
-      // join
-      CommonTree from = (CommonTree) topSelect
-          .getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_FROM);
-      CommonTree join = super.createSqlASTNode(PantheraParser_PLSQLParser.JOIN_DEF, "join");
-      super.attachChild((CommonTree) from.getChild(0), join);
-      super.attachChild(join, super.createSqlASTNode(PantheraParser_PLSQLParser.CROSS_VK, "cross"));
-      CommonTree tableRefElement = super.createSqlASTNode(
-          PantheraParser_PLSQLParser.TABLE_REF_ELEMENT, "TABLE_REF_ELEMENT");
-      super.attachChild(join, tableRefElement);
-      CommonTree viewAlias = super.createAlias(context);
-      tableRefElement.addChild(viewAlias);
-      tableRefElement.addChild(super.createSubQ(bottomSelect));
-
-      // max
-      CommonTree selectItem = (CommonTree) bottomSelect
-          .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST).getChild(0);
-      CommonTree expr = (CommonTree) selectItem.getChild(0);
-      CommonTree function = super.createFunction("max", (CommonTree) expr.deleteChild(0));
-      super.attachChild(expr, function);
-      CommonTree maxAlias = super.createAlias(context);
-      super.attachChild(selectItem, maxAlias);
-
-      // opParameter
-      subQNode.deleteChild(1);
-      super.attachChild(subQNode, super.createOpParameter(viewAlias, maxAlias));
-
-    }
-    fb.setTransformedNode(topSelect);
-
+  public void processFB() {
+    super.processCompareUC(createSqlASTNode(PantheraParser_PLSQLParser.CROSS_VK, "cross"));
   }
 
 }

@@ -20,8 +20,9 @@ package org.apache.hadoop.hive.ql.parse.sql.generator;
 
 import java.util.Map;
 
+import org.antlr33.runtime.tree.CommonTree;
+import org.apache.hadoop.hive.ql.parse.sql.PantheraExpParser;
 import org.apache.hadoop.hive.ql.parse.sql.PantheraMap;
-import org.apache.hadoop.hive.ql.parse.sql.SqlASTNode;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
 
 import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
@@ -132,6 +133,8 @@ public class GeneratorFactory {
     genMap.put(PantheraParser_PLSQLParser.FULL_VK, new NothingGenerator());
     genMap.put(PantheraParser_PLSQLParser.LEFT_VK, new NothingGenerator());
     genMap.put(PantheraParser_PLSQLParser.RIGHT_VK, new NothingGenerator());
+    genMap.put(PantheraParser_PLSQLParser.CROSS_VK, new NothingGenerator());
+    genMap.put(PantheraExpParser.LEFTSEMI_VK, new NothingGenerator());
     genMap.put(PantheraParser_PLSQLParser.SQL92_RESERVED_ASC, new NothingGenerator());
     genMap.put(PantheraParser_PLSQLParser.SQL92_RESERVED_DESC, new NothingGenerator());
     genMap.put(PantheraParser_PLSQLParser.SQL92_RESERVED_DISTINCT, new NothingGenerator());
@@ -172,7 +175,7 @@ public class GeneratorFactory {
     return generator;
   }
 
-  public static HiveASTGenerator getGenerator(SqlASTNode node) throws SqlXlateException {
+  public static HiveASTGenerator getGenerator(CommonTree node) throws SqlXlateException {
     HiveASTGenerator generator = genMap.get(node.getType());
     if (generator == null) {
       throw new SqlXlateException("Undefine generator for SQL AST node type:" + node.getType()

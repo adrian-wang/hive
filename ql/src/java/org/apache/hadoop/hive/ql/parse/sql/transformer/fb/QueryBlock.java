@@ -18,10 +18,14 @@
 package org.apache.hadoop.hive.ql.parse.sql.transformer.fb;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import org.antlr33.runtime.tree.CommonTree;
+import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
+import org.apache.hadoop.hive.ql.parse.sql.SqlXlateUtil;
 import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
+import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.processor.FilterBlockProcessorFactory;
 
 import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
 
@@ -30,11 +34,13 @@ public class QueryBlock extends BaseFilterBlock {
 
   private Set<String> tableNameSet;
   private CommonTree queryForTransfer;
+  private List<CommonTree> aggregationList;
 
 
 
   @Override
-  public void process(FilterBlockContext fbContext, TranslateContext context) {
+  public void process(FilterBlockContext fbContext, TranslateContext context)
+      throws SqlXlateException {
 
     fbContext.getQueryStack().push(this);
 
@@ -42,7 +48,53 @@ public class QueryBlock extends BaseFilterBlock {
       fb.process(fbContext, context);
     }
 
+    FilterBlock childFb = this.getChildren().size() == 0 ? null : this.getChildren().get(0);
+    // has child filter block & transformed tree
+    if (childFb != null && childFb.getTransformedNode() != null) {
+      // restore aggregation function
+      CommonTree select = childFb.getTransformedNode();
+      CommonTree selectList = (CommonTree) select
+          .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST);
+      if (selectList != null && aggregationList != null) {
+        if (selectList.getChildCount() != aggregationList.size()) {
+          throw new SqlXlateException("FATAL ERROR:mismatch select item's size after transformed.");
+        }
+        for (int i = 0; i < selectList.getChildCount(); i++) {
+          CommonTree func = aggregationList.get(i);
+          if (func != null) {
+            CommonTree selectItem = (CommonTree) selectList.getChild(i);
+            CommonTree expr = (CommonTree) selectItem.deleteChild(0);
+            selectItem.addChild(func);
+            SqlXlateUtil.exchangeChildrenPosition(selectItem);
+            this.convertAlias(func, expr);// use alias
+          }
+        }
+      }
+      this.setTransformedNode(select);
+    }
+
+
+    if (!(this.getParent() instanceof SubQFilterBlock)) {
+      // current' is top query block, add transformedNode to origin tree
+      if (this.getTransformedNode() != null) {
+        CommonTree subQueryNode = (CommonTree) this.getASTNode().getParent();// PantheraParser_PLSQLParser.SUBQUERY
+        subQueryNode.deleteChild(0);
+        subQueryNode.addChild(this.getTransformedNode());
+      }
+    } else {// current' is bottom query block
+      if (this.getTransformedNode() == null) {
+        if (fbContext.getTypeStack().peek() instanceof HavingFilterBlock) {
+          FilterBlockProcessorFactory.getHavingUnCorrelatedTransfer(fbContext.getSubQStack().peek()
+              .getASTNode().getType()).process(fbContext, this, context);
+        }
+        if (fbContext.getTypeStack().peek() instanceof WhereFilterBlock) {
+          FilterBlockProcessorFactory.getUnCorrelatedTransfer(fbContext.getSubQStack().peek()
+              .getASTNode().getType()).process(fbContext, this, context);
+        }
+      }
+    }
     fbContext.getQueryStack().pop();
+
 
   }
 
@@ -57,67 +109,27 @@ public class QueryBlock extends BaseFilterBlock {
 
   void buildQueryForTransfer() {
     CommonTree root = this.getASTNode();
-    CommonTree cloneRoot = super.dupNode(root);
-    CommonTree from = (CommonTree) root
-        .getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_FROM);
-    CommonTree cloneFrom = super.dupNode(from);
-    cloneRoot.addChild(cloneFrom);
-    CommonTree selectList = (CommonTree) root
-        .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST);
-    CommonTree cloneSelectList = super.dupNode(selectList);
-    cloneRoot.addChild(cloneSelectList);
-    cloneTree(cloneFrom, from);
-    cloneFilterTree(cloneSelectList, selectList);
+    CommonTree cloneRoot = FilterBlockUtil.dupNode(root);
+    for (int i = 0; i < root.getChildCount(); i++) {
+      CommonTree child = (CommonTree) root.getChild(i);
+      int type = child.getType();
+      if (type == PantheraParser_PLSQLParser.SQL92_RESERVED_FROM
+          || type == PantheraParser_PLSQLParser.SELECT_LIST
+          || type == PantheraParser_PLSQLParser.ASTERISK) {
+        CommonTree clone = FilterBlockUtil.dupNode(child);
+        cloneRoot.addChild(clone);
+        FilterBlockUtil.cloneTree(clone, child);
+      }
+    }
+    aggregationList = FilterBlockUtil.filterAggregation((CommonTree) cloneRoot
+        .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST));
+
     queryForTransfer = cloneRoot;
   }
-
-  /**
-   * clone tree
-   *
-   * @param clone
-   * @param node
-   */
-  void cloneTree(CommonTree clone, CommonTree node) {
-    for (int i = 0; i < node.getChildCount(); i++) {
-      CommonTree sub = (CommonTree) node.getChild(i);
-      CommonTree cloneSub = super.dupNode(sub);
-      clone.addChild(cloneSub);
-      cloneTree(cloneSub, sub);
-    }
-  }
-
-  /**
-   * clone tree with filter aggregation function
-   *
-   * @param clone
-   * @param node
-   */
-  void cloneFilterTree(CommonTree clone, CommonTree node) {
-    for (int i = 0; i < node.getChildCount(); i++) {
-      CommonTree sub = filter((CommonTree) node.getChild(i));
-      CommonTree cloneSub = super.dupNode(sub);
-      clone.addChild(cloneSub);
-      cloneTree(cloneSub, sub);
-    }
-
-  }
-
-  CommonTree filter(CommonTree node) {
-    // FIXME just deal with the most simple branch.
-    int type = node.getType();
-    if (type == PantheraParser_PLSQLParser.STANDARD_FUNCTION) {
-      return (CommonTree) node.getChild(0).getChild(0).getChild(0).getChild(0).getChild(0);
-      // STANDARD_FUNCTION.functionName.ARGUMENTS.ARGUMENT.EXPR.CASCATED_ELEMENT
-    }
-    return node;
-  }
-
 
   public Set<String> getTableNameSet() {
     return tableNameSet;
   }
-
-
 
   /**
    * clone QueryBlock's simple query without where, group...
@@ -125,14 +137,37 @@ public class QueryBlock extends BaseFilterBlock {
    * @return
    */
   public CommonTree cloneSimpleQuery() {
-    CommonTree root = super.dupNode(queryForTransfer);
-    cloneTree(root, queryForTransfer);
-    return root;
+    return FilterBlockUtil.cloneTree(queryForTransfer);
   }
 
+  /**
+   * clone QueryBlock's query tree
+   *
+   * @return
+   */
+  public CommonTree cloneWholeQuery() {
+    return FilterBlockUtil.cloneTree(this.getASTNode());
+  }
 
+  public void setAggregationList(List<CommonTree> aggregationList) {
+    this.aggregationList = aggregationList;
+  }
 
-
-
-
+  /**
+   * set alias leaf's text to origin leaf
+   *
+   * @param origin
+   * @param alias
+   */
+  private void convertAlias(CommonTree origin, CommonTree alias) {
+    CommonTree o = origin;
+    while (o.getChildCount() > 0) {
+      o = (CommonTree) o.getChild(0);
+    }
+    CommonTree a = alias;
+    while (a.getChildCount() > 0) {
+      a = (CommonTree) a.getChild(0);
+    }
+    o.getToken().setText(a.getText());
+  }
 }

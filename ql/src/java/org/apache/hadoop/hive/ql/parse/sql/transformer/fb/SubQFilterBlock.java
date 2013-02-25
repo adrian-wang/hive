@@ -17,17 +17,19 @@
  */
 package org.apache.hadoop.hive.ql.parse.sql.transformer.fb;
 
+import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
 import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
 
 
 public class SubQFilterBlock extends BaseFilterBlock {
 
   @Override
-  public void process(FilterBlockContext fbContext, TranslateContext context) {
+  public void process(FilterBlockContext fbContext, TranslateContext context) throws SqlXlateException{
     fbContext.getSubQStack().push(this);
     for (FilterBlock fb : this.getChildren()) {
       fb.process(fbContext, context);
     }
+    this.setTransformedNode(this.getChildren().get(0).getTransformedNode());
     fbContext.getSubQStack().pop();
 
   }

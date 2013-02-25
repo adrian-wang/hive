@@ -17,20 +17,21 @@
  */
 package org.apache.hadoop.hive.ql.parse.sql.generator;
 
+import org.antlr33.runtime.tree.CommonTree;
 import org.apache.hadoop.hive.ql.parse.ASTNode;
 import org.apache.hadoop.hive.ql.parse.HiveParser;
-import org.apache.hadoop.hive.ql.parse.sql.SqlASTNode;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateUtil;
 import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
 
 public class FunctionEnablingOverGenerator extends BaseHiveASTGenerator implements HiveASTGenerator {
 
   @Override
-  public boolean generate(ASTNode hiveRoot, SqlASTNode sqlRoot, ASTNode currentHiveNode,
-      SqlASTNode currentSqlNode, TranslateContext context) throws Exception {
-    ASTNode ret = SqlXlateUtil.newASTNode(HiveParser.Identifier,currentSqlNode.getText());
+  public boolean generate(ASTNode hiveRoot, CommonTree sqlRoot, ASTNode currentHiveNode,
+      CommonTree currentSqlNode, TranslateContext context) throws Exception {
+    ASTNode ret = SqlXlateUtil.newASTNode(HiveParser.Identifier, currentSqlNode.getText());
     super.attachHiveNode(hiveRoot, currentHiveNode, ret);
-    return super.generateChildren(hiveRoot, sqlRoot, currentHiveNode, (SqlASTNode)currentSqlNode.getChild(0), context);
+    return super.generateChildren(hiveRoot, sqlRoot, currentHiveNode, (CommonTree) currentSqlNode
+        .getChild(0), context);
   }
 
 }
