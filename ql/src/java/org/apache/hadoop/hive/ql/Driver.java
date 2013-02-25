@@ -95,6 +95,9 @@ import org.apache.hadoop.hive.ql.parse.SemanticAnalyzer;
 import org.apache.hadoop.hive.ql.parse.SemanticAnalyzerFactory;
 import org.apache.hadoop.hive.ql.parse.SemanticException;
 import org.apache.hadoop.hive.ql.parse.VariableSubstitution;
+import org.apache.hadoop.hive.ql.parse.sql.SqlParseDriver;
+import org.apache.hadoop.hive.ql.parse.sql.SqlParseException;
+import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
 import org.apache.hadoop.hive.ql.plan.HiveOperation;
 import org.apache.hadoop.hive.ql.plan.TableDesc;
 import org.apache.hadoop.hive.ql.processors.CommandProcessor;
@@ -173,7 +176,7 @@ public class Driver implements CommandProcessor {
           try {
             hiveLockMgr.close();
           } catch (LockException e1) {
-            //nothing can do here
+            // nothing can do here
           }
           hiveLockMgr = null;
         }
@@ -328,7 +331,7 @@ public class Driver implements CommandProcessor {
 
   /**
    * Compile a new query. Any currently-planned query associated with this Driver is discarded.
-   *
+   * 
    * @param command
    *          The SQL query to compile.
    */
@@ -383,17 +386,20 @@ public class Driver implements CommandProcessor {
   }
 
   /**
-   * Compile a new query, but potentially reset taskID counter.  Not resetting task counter
+   * Compile a new query, but potentially reset taskID counter. Not resetting task counter
    * is useful for generating re-entrant QL queries.
-   * @param command  The HiveQL query to compile
-   * @param resetTaskIds Resets taskID counter if true.
+   * 
+   * @param command
+   *          The HiveQL query to compile
+   * @param resetTaskIds
+   *          Resets taskID counter if true.
    * @return 0 for ok
    */
   public int compile(String command, boolean resetTaskIds) {
     PerfLogger perfLogger = PerfLogger.getPerfLogger();
     perfLogger.PerfLogBegin(LOG, PerfLogger.COMPILE);
 
-    //holder for parent command type/string when executing reentrant queries
+    // holder for parent command type/string when executing reentrant queries
     QueryState queryState = new QueryState();
 
     if (plan != null) {
@@ -407,13 +413,25 @@ public class Driver implements CommandProcessor {
     saveSession(queryState);
 
     try {
-      command = new VariableSubstitution().substitute(conf,command);
+      command = new VariableSubstitution().substitute(conf, command);
       ctx = new Context(conf);
       ctx.setTryCount(getTryCount());
       ctx.setCmd(command);
 
-      ParseDriver pd = new ParseDriver();
-      ASTNode tree = pd.parse(command, ctx);
+      ASTNode tree = null;
+      String parserTypeConf = conf.get("hive.ql.mode", "hql");
+      LOG.debug("qlmode config : \"" + parserTypeConf + "\"");
+      if (parserTypeConf.equals("sql")) {
+        SqlParseDriver pd = new SqlParseDriver(conf);
+        tree = pd.parse(command, ctx);
+        // set the ql mode to hql so that facilities in semantic analyzers which calls
+        // Driver.compile will go in the correct compiler path
+        conf.set("hive.ql.mode", "hql");
+      } else {
+        ParseDriver pd = new ParseDriver();
+        tree = pd.parse(command, ctx);
+      }
+
       tree = ParseUtils.findRootNonNullToken(tree);
 
       BaseSemanticAnalyzer sem = SemanticAnalyzerFactory.get(conf, tree);
@@ -478,7 +496,7 @@ public class Driver implements CommandProcessor {
         plan.getFetchTask().initialize(conf, plan, null);
       }
 
-      //do the authorization check
+      // do the authorization check
       if (HiveConf.getBoolVar(conf,
           HiveConf.ConfVars.HIVE_AUTHORIZATION_ENABLED)) {
         try {
@@ -492,8 +510,11 @@ public class Driver implements CommandProcessor {
           perfLogger.PerfLogEnd(LOG, PerfLogger.DO_AUTHORIZATION);
         }
       }
-
-      //restore state after we're done executing a specific query
+      // restore the ql mode setting
+      if (parserTypeConf.equals("sql")) {
+        conf.set("hive.ql.mode", "sql");
+      }
+      // restore state after we're done executing a specific query
 
       return 0;
     } catch (SemanticException e) {
@@ -508,6 +529,18 @@ public class Driver implements CommandProcessor {
       console.printError(errorMessage, "\n"
           + org.apache.hadoop.util.StringUtils.stringifyException(e));
       return (11);
+    } catch (SqlParseException e) {
+      errorMessage = "FAILED: SQL Parse Error: " + e.getMessage();
+      SQLState = ErrorMsg.findSQLState(e.getMessage());
+      console.printError(errorMessage, "\n"
+          + org.apache.hadoop.util.StringUtils.stringifyException(e));
+      return (13);
+    } catch (SqlXlateException e) {
+      errorMessage = "FAILED: SQL AST Translate Error: " + e.getMessage();
+      SQLState = ErrorMsg.findSQLState(e.getMessage());
+      console.printError(errorMessage, "\n"
+          + org.apache.hadoop.util.StringUtils.stringifyException(e));
+      return (14);
     } catch (Exception e) {
       errorMessage = "FAILED: Hive Internal Error: " + Utilities.getNameMessage(e);
       SQLState = ErrorMsg.findSQLState(e.getMessage());
@@ -644,7 +677,7 @@ public class Driver implements CommandProcessor {
       }
 
 
-      //cache the results for table authorization
+      // cache the results for table authorization
       Set<String> tableAuthChecked = new HashSet<String>();
       for (ReadEntity read : inputs) {
         Table tbl = null;
@@ -708,7 +741,7 @@ public class Driver implements CommandProcessor {
     List<HiveLockObj> locks = new LinkedList<HiveLockObj>();
 
     HiveLockObjectData lockData =
-      new HiveLockObjectData(plan.getQueryId(),
+        new HiveLockObjectData(plan.getQueryId(),
                              String.valueOf(System.currentTimeMillis()),
                              "IMPLICIT",
                              plan.getQueryStr());
@@ -743,7 +776,7 @@ public class Driver implements CommandProcessor {
         String partn = partns[idx];
         partialName += partn;
         String[] nameValue = partn.split("=");
-        assert(nameValue.length == 2);
+        assert (nameValue.length == 2);
         partialSpec.put(nameValue[0], nameValue[1]);
         try {
           locks.add(new HiveLockObj(
@@ -810,7 +843,7 @@ public class Driver implements CommandProcessor {
       }
 
       HiveLockObjectData lockData =
-        new HiveLockObjectData(plan.getQueryId(),
+          new HiveLockObjectData(plan.getQueryId(),
                                String.valueOf(System.currentTimeMillis()),
                                "IMPLICIT",
                                plan.getQueryStr());
@@ -892,7 +925,7 @@ public class Driver implements CommandProcessor {
     try {
       driverRunHooks = getHooks(HiveConf.ConfVars.HIVE_DRIVER_RUN_HOOKS, HiveDriverRunHook.class);
       for (HiveDriverRunHook driverRunHook : driverRunHooks) {
-          driverRunHook.preDriverRun(hookContext);
+        driverRunHook.preDriverRun(hookContext);
       }
     } catch (Exception e) {
       errorMessage = "FAILED: Hive Internal Error: " + Utilities.getNameMessage(e);
@@ -917,19 +950,19 @@ public class Driver implements CommandProcessor {
 
     if (ckLock) {
       boolean lockOnlyMapred = HiveConf.getBoolVar(conf, HiveConf.ConfVars.HIVE_LOCK_MAPRED_ONLY);
-      if(lockOnlyMapred) {
+      if (lockOnlyMapred) {
         Queue<Task<? extends Serializable>> taskQueue = new LinkedList<Task<? extends Serializable>>();
         taskQueue.addAll(plan.getRootTasks());
         while (taskQueue.peek() != null) {
           Task<? extends Serializable> tsk = taskQueue.remove();
           requireLock = requireLock || tsk.requireLock();
-          if(requireLock) {
+          if (requireLock) {
             break;
           }
           if (tsk instanceof ConditionalTask) {
-            taskQueue.addAll(((ConditionalTask)tsk).getListTasks());
+            taskQueue.addAll(((ConditionalTask) tsk).getListTasks());
           }
-          if(tsk.getChildTasks()!= null) {
+          if (tsk.getChildTasks() != null) {
             taskQueue.addAll(tsk.getChildTasks());
           }
           // does not add back up task here, because back up task should be the same
@@ -950,12 +983,12 @@ public class Driver implements CommandProcessor {
 
     ret = execute();
     if (ret != 0) {
-      //if needRequireLock is false, the release here will do nothing because there is no lock
+      // if needRequireLock is false, the release here will do nothing because there is no lock
       releaseLocks(ctx.getHiveLocks());
       return new CommandProcessorResponse(ret, errorMessage, SQLState);
     }
 
-    //if needRequireLock is false, the release here will do nothing because there is no lock
+    // if needRequireLock is false, the release here will do nothing because there is no lock
     releaseLocks(ctx.getHiveLocks());
 
     perfLogger.PerfLogEnd(LOG, PerfLogger.DRIVER_RUN);
@@ -964,7 +997,7 @@ public class Driver implements CommandProcessor {
     // Take all the driver run hooks and post-execute them.
     try {
       for (HiveDriverRunHook driverRunHook : driverRunHooks) {
-          driverRunHook.postDriverRun(hookContext);
+        driverRunHook.postDriverRun(hookContext);
       }
     } catch (Exception e) {
       errorMessage = "FAILED: Hive Internal Error: " + Utilities.getNameMessage(e);
@@ -979,8 +1012,9 @@ public class Driver implements CommandProcessor {
 
   /**
    * Returns a set of hooks specified in a configuration variable.
-   *
+   * 
    * See getHooks(HiveConf.ConfVars hookConfVar, Class<T> clazz)
+   * 
    * @param hookConfVar
    * @return
    * @throws Exception
@@ -990,14 +1024,16 @@ public class Driver implements CommandProcessor {
   }
 
   /**
-   * Returns the hooks specified in a configuration variable.  The hooks are returned in a list in
+   * Returns the hooks specified in a configuration variable. The hooks are returned in a list in
    * the order they were specified in the configuration variable.
-   *
-   * @param hookConfVar The configuration variable specifying a comma separated list of the hook
-   *                    class names.
-   * @param clazz       The super type of the hooks.
-   * @return            A list of the hooks cast as the type specified in clazz, in the order
-   *                    they are listed in the value of hookConfVar
+   * 
+   * @param hookConfVar
+   *          The configuration variable specifying a comma separated list of the hook
+   *          class names.
+   * @param clazz
+   *          The super type of the hooks.
+   * @return A list of the hooks cast as the type specified in clazz, in the order
+   *         they are listed in the value of hookConfVar
    * @throws Exception
    */
   private <T extends Hook> List<T> getHooks(HiveConf.ConfVars hookConfVar, Class<T> clazz)
@@ -1284,7 +1320,7 @@ public class Driver implements CommandProcessor {
 
   /**
    * Launches a new task
-   *
+   * 
    * @param tsk
    *          task being launched
    * @param queryId
@@ -1342,7 +1378,7 @@ public class Driver implements CommandProcessor {
 
   /**
    * Polls running tasks to see if a task has ended.
-   *
+   * 
    * @param results
    *          Set of result objects for running tasks
    * @return The result object for any completed/failed task

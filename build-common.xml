@@ -208,6 +208,7 @@
     <echo message="Project: ${ant.project.name}"/>
     <mkdir dir="${test.data.dir}"/>
     <mkdir dir="${test.log.dir}/clientpositive"/>
+    <mkdir dir="${test.log.dir}/clientpositive/sql"/>
     <mkdir dir="${test.log.dir}/clientnegative"/>
     <mkdir dir="${test.log.dir}/positive"/>
     <mkdir dir="${test.log.dir}/negative"/>
