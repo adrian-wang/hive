@@ -199,18 +199,22 @@ public class MultipleTableSelectTransformer extends BaseSqlASTTransformer {
       }
 
       //
-      // For a where condition that refers a single column and no subquery, then it can be a join filter.
+      // For a where condition that refers any columns from a single table and no subquery, then it can be a join filter.
       //
-      int columnRefCount = 0;
-      int childIndex = 0;
-      for (int i = 0; i < node.getChildCount(); i++) {
-        if (IsColumnRef(node.getChild(i))) {
-          childIndex = i;
-          ++columnRefCount;
+      List<CommonTree> anyElementList = new ArrayList<CommonTree>();
+      FilterBlockUtil.findNode(node, PantheraParser_PLSQLParser.ANY_ELEMENT, anyElementList);
+
+      Set<String> referencedTables = new HashSet<String>();
+      String srcTable;
+      for (CommonTree anyElement : anyElementList) {
+        srcTable = getTableName(qf, (SqlASTNode) anyElement);
+        if (srcTable != null) {
+          referencedTables.add(srcTable);
         }
       }
-      if (columnRefCount == 1 && !SqlXlateUtil.hasNodeTypeInTree(node, PantheraParser_PLSQLParser.SQL92_RESERVED_SELECT)) {
-        String srcTable = getTableName(qf, (SqlASTNode) node.getChild(childIndex).getChild(0));
+
+      if (referencedTables.size() == 1 && !SqlXlateUtil.hasNodeTypeInTree(node, PantheraParser_PLSQLParser.SQL92_RESERVED_SELECT)) {
+        srcTable = (String) referencedTables.toArray()[0];
         //
         // Skip if the column is not in any of the src tables.
         //
