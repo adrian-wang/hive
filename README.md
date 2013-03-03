@@ -1,6 +1,6 @@
 # An Analytical SQL Engine (ASE) for Hadoop #
 
-#### Project contact: [Shengsheng Huang] (mailto:jason.dai@intel.com), [Jason Dai](mailto:jason.dai@intel.com)
+#### Project contact: [Shengsheng Huang] (mailto:shengsheng.huang@intel.com), [Jason Dai](mailto:jason.dai@intel.com)
 
 ["Project Panthera"](<https://github.com/intel-hadoop/project-panthera>) is our open source efforts to enable efficient support of standard SQL features on Hadoop. While Higher level languages or APIs (such as Pig, Hive and Cascading) significantly lower the barrier to MapReduce, SQL is still the most important query language in modern business application environment, with more than 30 years of investments by the industry. There is a wealth of business users, enterprise analytics applications and third-party tools (such as query builders and BI applications) that all require full SQL support.
 
