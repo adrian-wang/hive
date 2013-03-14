@@ -74,6 +74,7 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
     originalTopSelect = topQuery.getASTNode();
     fbContext.getQueryStack().push(bottomQuery);
     subQ = fbContext.getSubQStack().peek();
+    subQ.setTransformed();
     topSelect = topQuery.cloneSimpleQuery();
     fbContext.setLogicTopSelect(topSelect);
     bottomSelect = bottomQuery.cloneWholeQuery();

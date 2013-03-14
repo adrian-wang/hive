@@ -119,13 +119,12 @@ public class QueryBlock extends BaseFilterBlock {
       this.getTransformedNode().addChild(limit);
     }
 
-    // Dose top subq been transformed?
-    if (!fbContext.getSubQStack().isEmpty()&&!fbContext.getSubQStack().peek().hasTransformed()) {
-      this.setASTNode(this.getTransformedNode());
-      FilterBlockProcessorFactory.getUnCorrelatedProcessor(
-          fbContext.getSubQStack().peek().getASTNode()).process(fbContext,
-          this, context);
-
+    // Did it's above subq been transformed? TPCH 20.sql
+    if (!fbContext.getSubQStack().isEmpty() && !fbContext.getSubQStack().peek().hasTransformed()) {
+        this.setASTNode(this.getTransformedNode());
+        FilterBlockProcessorFactory.getUnCorrelatedProcessor(
+            fbContext.getSubQStack().peek().getASTNode()).process(fbContext,
+            this, context);
     }
 
     fbContext.getQueryStack().pop();

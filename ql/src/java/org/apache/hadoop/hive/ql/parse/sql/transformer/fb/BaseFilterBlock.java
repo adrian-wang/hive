@@ -32,6 +32,9 @@ public abstract class BaseFilterBlock implements FilterBlock {
   private FilterBlock parent;
   private boolean hasTransformed = false;//for SubQFilterBlock
 
+  /**
+   * TODO evil logic ?
+   */
   public void setTransformed() {
     this.hasTransformed = true;
   }

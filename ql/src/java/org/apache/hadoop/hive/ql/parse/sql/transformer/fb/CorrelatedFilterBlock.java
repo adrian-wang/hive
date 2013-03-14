@@ -31,7 +31,6 @@ public class CorrelatedFilterBlock extends NormalFilterBlock {
         fbContext.getSubQStack().peek().getASTNode()).process(fbContext, this, context);
 
 //    super.processStackSubq(fbContext, context);
-    fbContext.getSubQStack().peek().setTransformed();
   }
 
 
