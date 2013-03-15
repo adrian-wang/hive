@@ -76,12 +76,30 @@ public class AndFilterBlock extends LogicFilterBlock {
           columnName = anyElement.getChild(0).getText();
         }
         List<CommonTree> nameList = new ArrayList<CommonTree>();
-        FilterBlockUtil.findNodeText(innerSelectList, columnName, nameList);
-        if (nameList.isEmpty()) {
+        CommonTree selectItem = null;
+        boolean isExist = false;
+        for (int j = 0; j < innerSelectList.getChildCount(); j++) {
+          selectItem = (CommonTree) innerSelectList.getChild(j);
+          FilterBlockUtil.findNodeText(selectItem, columnName, nameList);
+          if (!nameList.isEmpty()) {
+            isExist = true;
+            break;
+          }
+        }
+        if (!isExist) {
           CommonTree newSelectItem = FilterBlockUtil.cloneTree((CommonTree) outerSelectList
               .getChild(i));
           newSelectItem.deleteChild(1);
           innerSelectList.addChild(newSelectItem);
+        } else {
+          if (selectItem.getChildCount() == 2) {
+            String alias = selectItem.getChild(1).getChild(0).getText();
+            for (int k = 0; k < anyElement.getChildCount(); k++) {
+              anyElement.deleteChild(k);
+            }
+            CommonTree newColumn = FilterBlockUtil.createSqlASTNode(PantheraExpParser.ID, alias);
+            anyElement.addChild(newColumn);
+          }
         }
       }
     }

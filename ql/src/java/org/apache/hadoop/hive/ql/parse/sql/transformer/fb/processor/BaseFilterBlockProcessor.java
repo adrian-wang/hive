@@ -209,37 +209,38 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
    * @throws SqlXlateException
    */
   Map<Boolean, List<CommonTree>> getFilterKey(CommonTree filterOp) throws SqlXlateException {
+
     Map<Boolean, List<CommonTree>> result = new HashMap<Boolean, List<CommonTree>>();
     Stack<CommonTree> selectStack = new Stack<CommonTree>();
     selectStack.push(originalTopSelect);
     selectStack.push(originalBottomSelect);
     for (int i = 0; i < filterOp.getChildCount(); i++) {
       CommonTree child = (CommonTree) filterOp.getChild(i);
-      if (PLSQLFilterBlockFactory.getInstance().isCorrelated(this.fbContext.getqInfo(),
+      if (!PLSQLFilterBlockFactory.getInstance().isCorrelated(this.fbContext.getqInfo(),
           selectStack, child)) {
-        int unCorrelatedElementIndex = child.getChildIndex() == 0 ? 1 : 0;
-        CommonTree unCorrelatedChild = (CommonTree) child.getParent().getChild(
-            unCorrelatedElementIndex);
-        if (unCorrelatedChild.getType() == PantheraParser_PLSQLParser.CASCATED_ELEMENT) {
+        if (child.getType() == PantheraParser_PLSQLParser.CASCATED_ELEMENT) {
           List<CommonTree> uncorrelatedList = result.get(false);
           if (uncorrelatedList == null) {
             uncorrelatedList = new ArrayList<CommonTree>();
             result.put(false, uncorrelatedList);
           }
-          uncorrelatedList.add(unCorrelatedChild);
+          uncorrelatedList.add(child);
         }
-        if (child.getType() == PantheraParser_PLSQLParser.CASCATED_ELEMENT) {
-          List<CommonTree> correlatedList = result.get(true);
-          if (correlatedList == null) {
-            correlatedList = new ArrayList<CommonTree>();
-            result.put(true, correlatedList);
-          }
-          correlatedList.add(child);
+      }
+
+      if (PLSQLFilterBlockFactory.getInstance().isCorrelated(this.fbContext.getqInfo(),
+          selectStack, child)) {
+        List<CommonTree> correlatedList = result.get(true);
+        if (correlatedList == null) {
+          correlatedList = new ArrayList<CommonTree>();
+          result.put(true, correlatedList);
         }
+        correlatedList.add(child);
       }
     }
 
     return result;
+
   }
 
   /**
