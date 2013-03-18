@@ -770,13 +770,19 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
                 joinKeyAlias.getChild(0).getText());
           }
           if (isLeftJoin) {
-            CommonTree isNull = FilterBlockUtil.createSqlASTNode(PantheraParser_PLSQLParser.IS_NULL,
+            CommonTree isNull = FilterBlockUtil.createSqlASTNode(
+                PantheraParser_PLSQLParser.IS_NULL,
                 "IS_NULL");
             isNull.addChild(FilterBlockUtil.cloneTree(bottomKey));
             CommonTree and = FilterBlockUtil.createSqlASTNode(
                 PantheraParser_PLSQLParser.SQL92_RESERVED_AND, "and");
             and.addChild(fb.getASTNode());
             and.addChild(isNull);
+            if (context.getBallFromBuskate(isNull) != null) {
+              throw new SqlXlateException("fatal error: translate context conflict.");
+            }
+            //for CrossjoinTransformer which should not optimise isNull node in WHERE.
+            context.putBallToBuskate(isNull, true);
             this.fb.setASTNode(and);
           }
         }
