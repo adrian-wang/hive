@@ -12,6 +12,7 @@ public class PantheraExpParser extends PantheraParser_PLSQLParser {
   public static final int LIMIT_VK = 997;
 
   public static final String LEFTSEMI_STR = "leftsemi";
+  public static final String LEFT_STR="left";
 
   public PantheraExpParser(TokenStream input, PantheraParser gPantheraParser) {
     super(input, gPantheraParser);

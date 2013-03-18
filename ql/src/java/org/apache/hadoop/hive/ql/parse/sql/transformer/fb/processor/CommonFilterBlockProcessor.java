@@ -115,7 +115,7 @@ public abstract class CommonFilterBlockProcessor extends BaseFilterBlockProcesso
     // select list
     CommonTree compareKeyAlias2 = super.addAlias((CommonTree) ((CommonTree) bottomSelect
         .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST)).getChild(0));// childCount==0;
-    super.rebuildSelectListByFilter(true, bottomAlias, topAlias);
+    super.rebuildSelectListByFilter(false,true, bottomAlias, topAlias);
 
     // TODO cross join optimization will do it
     // on
@@ -148,7 +148,7 @@ public abstract class CommonFilterBlockProcessor extends BaseFilterBlockProcesso
 
 
     super.processSelectAsterisk(bottomSelect);
-    super.rebuildSelectListByFilter(false, bottomAlias, topAlias);
+    super.rebuildSelectListByFilter(false,false, bottomAlias, topAlias);
 
     // // delete where
     // super.deleteBranch(bottomSelect, PantheraParser_PLSQLParser.SQL92_RESERVED_WHERE);
@@ -346,10 +346,18 @@ public abstract class CommonFilterBlockProcessor extends BaseFilterBlockProcesso
     super.subQNode = super.buildNotIn4Minus(minuendSelect, topSelect);
     bottomSelect = topSelect;
     topSelect = minuendSelect;
-
+//    super.fbContext.setLogicTopSelect(topSelect);
     this.processNotInUC();
+  }
 
-
+  void processNotExistsCByRightOuterJoin(CommonTree joinType) throws SqlXlateException{
+    this.makeTop();
+    this.makeJoin(FilterBlockUtil.createSqlASTNode(PantheraParser_PLSQLParser.CROSS_VK,
+        PantheraExpParser.LEFT_STR));
+    super.processSelectAsterisk(bottomSelect);
+    super.rebuildSelectListByFilter(true,false, bottomAlias, topAlias);
+    this.makeEnd();
+    super.buildWhereByFB(null, null, null);
   }
 
   void processAnd(CommonTree joinType) {

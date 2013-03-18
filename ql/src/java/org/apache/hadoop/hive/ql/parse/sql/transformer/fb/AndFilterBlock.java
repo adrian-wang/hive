@@ -64,7 +64,7 @@ public class AndFilterBlock extends LogicFilterBlock {
         .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST);
     List<CommonTree> nodeList = new ArrayList<CommonTree>();
     FilterBlockUtil.findNode(select, PantheraExpParser.SELECT_LIST, nodeList);
-    if (!nodeList.isEmpty()) {
+    if (!nodeList.isEmpty() && nodeList.get(0) != outerSelectList) {
       CommonTree innerSelectList = nodeList.get(0);
       for (int i = 0; i < outerSelectList.getChildCount(); i++) {
         CommonTree anyElement = (CommonTree) outerSelectList.getChild(i).getChild(0).getChild(0)
