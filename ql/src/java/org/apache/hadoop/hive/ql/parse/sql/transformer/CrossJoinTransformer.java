@@ -96,14 +96,14 @@ public class CrossJoinTransformer extends BaseSqlASTTransformer {
   public void transform(SqlASTNode tree, TranslateContext context) throws SqlXlateException {
     tf.transformAST(tree, context);
     for (QueryInfo qf : context.getqInfoList()) {
-      transformQuery(qf, qf.getSelectKeyForThisQ());
+      transformQuery(context, qf, qf.getSelectKeyForThisQ());
       // Update the from in the query info in case it was changed by the transformer.
       qf.setFrom((CommonTree) qf.getSelectKeyForThisQ().getFirstChildWithType(
           PantheraParser_PLSQLParser.SQL92_RESERVED_FROM));
     }
   }
 
-  private void transformQuery(QueryInfo qf, CommonTree node) throws SqlXlateException {
+  private void transformQuery(TranslateContext context, QueryInfo qf, CommonTree node) throws SqlXlateException {
     if (node.getType() == PantheraParser_PLSQLParser.SQL92_RESERVED_SELECT) {
       CommonTree from = (CommonTree) node
           .getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_FROM);
@@ -120,7 +120,7 @@ public class CrossJoinTransformer extends BaseSqlASTTransformer {
         CommonTree where = (CommonTree) node
             .getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_WHERE);
         if (where != null) {
-          transformWhereCondition(qf, (CommonTree) where.getChild(0).getChild(0), joinInfo);
+          transformWhereCondition(context, qf, (CommonTree) where.getChild(0).getChild(0), joinInfo);
         }
         //
         // Transform the from clause tree using the generated join operation info.
@@ -135,12 +135,12 @@ public class CrossJoinTransformer extends BaseSqlASTTransformer {
     for (int i = 0; i < node.getChildCount(); i++) {
       CommonTree child = (CommonTree) node.getChild(i);
       if (child.getType() != PantheraParser_PLSQLParser.SQL92_RESERVED_FROM) {
-        transformQuery(qf, child);
+        transformQuery(context, qf, child);
       }
     }
   }
 
-  private void transformWhereCondition(QueryInfo qf, CommonTree node, JoinInfo joinInfo)
+  private void transformWhereCondition(TranslateContext context, QueryInfo qf, CommonTree node, JoinInfo joinInfo)
       throws SqlXlateException {
     //
     // We can only transform equality expression between two columns whose ancesotors are all AND
@@ -148,9 +148,9 @@ public class CrossJoinTransformer extends BaseSqlASTTransformer {
     // into JOIN on ...
     //
     if (node.getType() == PantheraParser_PLSQLParser.SQL92_RESERVED_AND) {
-      transformWhereCondition(qf, (CommonTree) node.getChild(0), joinInfo); // Transform the left
+      transformWhereCondition(context, qf, (CommonTree) node.getChild(0), joinInfo); // Transform the left
                                                                             // child.
-      transformWhereCondition(qf, (CommonTree) node.getChild(1), joinInfo); // Transform the right
+      transformWhereCondition(context, qf, (CommonTree) node.getChild(1), joinInfo); // Transform the right
                                                                             // child.
 
       CommonTree leftChild = (CommonTree) node.getChild(0);
@@ -200,6 +200,11 @@ public class CrossJoinTransformer extends BaseSqlASTTransformer {
           node.getParent().setChild(node.getChildIndex(), trueNode);
           return;
         }
+      }
+
+      // If there is a hint for keeping the node in the where clause, then skip it
+      if (context.getBallFromBuskate(node) != null) {
+        return;
       }
 
       //
