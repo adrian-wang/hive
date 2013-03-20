@@ -82,7 +82,8 @@ public class QueryBlock extends BaseFilterBlock {
         }
       }
       if (countAsterisk.getSelectItem() != null) {
-        SqlXlateUtil.addCommonTreeChild(selectList, countAsterisk.getPosition(), countAsterisk.getSelectItem());
+        SqlXlateUtil.addCommonTreeChild(selectList, countAsterisk.getPosition(), countAsterisk
+            .getSelectItem());
       }
       this.setTransformedNode(select);
     }
@@ -113,10 +114,20 @@ public class QueryBlock extends BaseFilterBlock {
       }
     }
 
-    //limit
-    if(limit!=null&&this.getTransformedNode()!=null){
+    // limit
+    if (limit != null && this.getTransformedNode() != null) {
       this.getTransformedNode().addChild(limit);
     }
+
+    // Dose top subq been transformed?
+    if (!fbContext.getSubQStack().isEmpty()&&!fbContext.getSubQStack().peek().hasTransformed()) {
+      this.setASTNode(this.getTransformedNode());
+      FilterBlockProcessorFactory.getUnCorrelatedProcessor(
+          fbContext.getSubQStack().peek().getASTNode()).process(fbContext,
+          this, context);
+
+    }
+
     fbContext.getQueryStack().pop();
 
 
@@ -243,6 +254,10 @@ public class QueryBlock extends BaseFilterBlock {
       this.selectItem = selectItem;
     }
 
+  }
+
+  public void setQueryForTransfer(CommonTree queryForTransfer) {
+    this.queryForTransfer = queryForTransfer;
   }
 
 }

@@ -27,9 +27,18 @@ import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
 
 public abstract class BaseFilterBlock implements FilterBlock {
   private CommonTree astNode;
-  private List<FilterBlock> children =new ArrayList<FilterBlock>();
+  private List<FilterBlock> children = new ArrayList<FilterBlock>();
   private CommonTree transformedNode;
   private FilterBlock parent;
+  private boolean hasTransformed = false;//for SubQFilterBlock
+
+  public void setTransformed() {
+    this.hasTransformed = true;
+  }
+
+  public boolean hasTransformed() {
+    return this.hasTransformed;
+  }
 
   public void setTransformedNode(CommonTree node) {
     this.transformedNode = node;
@@ -77,7 +86,8 @@ public abstract class BaseFilterBlock implements FilterBlock {
     }
   }
 
-  void processChildren(FilterBlockContext fbContext, TranslateContext context) throws SqlXlateException{
+  void processChildren(FilterBlockContext fbContext, TranslateContext context)
+      throws SqlXlateException {
     for (FilterBlock fb : this.getChildren()) {
       fb.process(fbContext, context);
     }

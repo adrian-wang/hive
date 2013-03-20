@@ -17,9 +17,15 @@
  */
 package org.apache.hadoop.hive.ql.parse.sql.transformer.fb;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import org.antlr33.runtime.tree.CommonTree;
+import org.apache.hadoop.hive.ql.parse.sql.PantheraExpParser;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
 import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
-import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.processor.FilterBlockProcessorFactory;
+
+import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
 
 /**
  * transform and to intersect
@@ -30,11 +36,54 @@ public class AndFilterBlock extends LogicFilterBlock {
 
   /**
    * this must have two children.
+   *
    * @throws SqlXlateException
    */
   @Override
-  public void process(FilterBlockContext fbContext, TranslateContext context) throws SqlXlateException {
-    super.processChildren(fbContext, context);
-    FilterBlockProcessorFactory.getAndProcessor().process(fbContext, this, context);
+  public void process(FilterBlockContext fbContext, TranslateContext context)
+      throws SqlXlateException {
+    // super.processChildren(fbContext, context);
+    // FilterBlockProcessorFactory.getAndProcessor().process(fbContext, this, context);
+    FilterBlock leftFB = this.getChildren().get(0);
+    leftFB.process(fbContext, context);
+    fbContext.getQueryStack().peek().setQueryForTransfer(leftFB.getTransformedNode());
+    FilterBlock rightFB = this.getChildren().get(1);
+    rightFB.process(fbContext, context);
+    CommonTree logicTopSelect = fbContext.getLogicTopSelect();
+    this.rebuildSelectList(logicTopSelect);
+    this.setTransformedNode(rightFB.getTransformedNode());
+  }
+
+  /**
+   * add select item to the most left select
+   *
+   * @param select
+   */
+  private void rebuildSelectList(CommonTree select) {
+    CommonTree outerSelectList = (CommonTree) select
+        .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST);
+    List<CommonTree> nodeList = new ArrayList<CommonTree>();
+    FilterBlockUtil.findNode(select, PantheraExpParser.SELECT_LIST, nodeList);
+    if (!nodeList.isEmpty()) {
+      CommonTree innerSelectList = nodeList.get(0);
+      for (int i = 0; i < outerSelectList.getChildCount(); i++) {
+        CommonTree anyElement = (CommonTree) outerSelectList.getChild(i).getChild(0).getChild(0)
+            .getChild(0);
+        String columnName;
+        if (anyElement.getChildCount() == 2) {
+          columnName = anyElement.getChild(1).getText();
+        } else {
+          columnName = anyElement.getChild(0).getText();
+        }
+        List<CommonTree> nameList = new ArrayList<CommonTree>();
+        FilterBlockUtil.findNodeText(innerSelectList, columnName, nameList);
+        if (nameList.isEmpty()) {
+          CommonTree newSelectItem = FilterBlockUtil.cloneTree((CommonTree) outerSelectList
+              .getChild(i));
+          newSelectItem.deleteChild(1);
+          innerSelectList.addChild(newSelectItem);
+        }
+      }
+    }
   }
 }

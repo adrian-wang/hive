@@ -33,8 +33,8 @@ import org.apache.hadoop.hive.ql.parse.sql.SqlASTNode;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateUtil;
 import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
-import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.FilterBlockUtil;
 import org.apache.hadoop.hive.ql.parse.sql.transformer.QueryInfo.Column;
+import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.FilterBlockUtil;
 
 import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
 
@@ -117,7 +117,6 @@ public class CrossJoinTransformer extends BaseSqlASTTransformer {
         if (where != null) {
           transformWhereCondition(qf, (CommonTree) where.getChild(0).getChild(0), joinInfo);
         }
-        assert(joinInfo.joinFilterInfo.isEmpty());
         //
         // Transform the from clause tree using the generated join operation info.
         //

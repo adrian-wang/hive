@@ -24,7 +24,7 @@ import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
 import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.processor.FilterBlockProcessorFactory;
 
 
-public abstract class NormalFilterBlack extends BaseFilterBlock {
+public abstract class NormalFilterBlock extends BaseFilterBlock {
 
   /**
    * TODO

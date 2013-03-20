@@ -17,12 +17,14 @@
  */
 package org.apache.hadoop.hive.ql.parse.sql.transformer.fb;
 
+import org.antlr33.runtime.tree.CommonTree;
+import org.apache.hadoop.hive.ql.parse.sql.PantheraExpParser;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
 import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
 import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.processor.FilterBlockProcessorFactory;
 
 
-public class UnCorrelatedFilterBlock extends NormalFilterBlack {
+public class UnCorrelatedFilterBlock extends NormalFilterBlock {
 
   @Override
   public void process(FilterBlockContext fbContext, TranslateContext context)
@@ -32,16 +34,27 @@ public class UnCorrelatedFilterBlock extends NormalFilterBlack {
     // TODO I forget something.
     if ((fbContext.getSubQStack().size() == 0)
         && (fbContext.getQueryStack().size() == 1)) {
-      // if (this.getParent() == fbContext.getQueryStack().peek()) {// simple filter, do nothing.
-      FilterBlockProcessorFactory.getSimpleProcessor().process(fbContext, this, context);
+
+//       FilterBlockProcessorFactory.getSimpleProcessor().process(fbContext, this, context);
+
+
+      CommonTree topSelect = fbContext.getQueryStack().peek().cloneSimpleQuery();
+      CommonTree condition = this.getASTNode();
+
+      CommonTree where = FilterBlockUtil.createSqlASTNode(PantheraExpParser.SQL92_RESERVED_WHERE, "where");
+      topSelect.addChild(where);
+      CommonTree logicExpr = FilterBlockUtil.createSqlASTNode(PantheraExpParser.LOGIC_EXPR,
+          "LOGIC_EXPR");
+      where.addChild(logicExpr);
+      logicExpr.addChild(condition);
+
+      this.setTransformedNode(topSelect);
       return;
-      // }
-      // FilterBlockProcessorFactory.getSimpleTransfer().process(fbContext, this, context);
-      // return;
     }
     FilterBlockProcessorFactory.getUnCorrelatedProcessor(
         fbContext.getSubQStack().peek().getASTNode()).process(fbContext, this, context);
-    super.processStackSubq(fbContext, context);
+//    super.processStackSubq(fbContext, context);
+    fbContext.getSubQStack().peek().setTransformed();
   }
 
 

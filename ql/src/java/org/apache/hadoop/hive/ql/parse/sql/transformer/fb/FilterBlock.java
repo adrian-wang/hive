@@ -61,6 +61,10 @@ public interface FilterBlock {
 
   String toStringTree();
 
+  void setTransformed();
+
+  boolean hasTransformed();
+
   /**
    * Nested Subqueries are transformed to inline view with various joins<br>
    * <li>Use equi-joins for all equal conditions<br>

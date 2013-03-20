@@ -28,8 +28,8 @@ public class SubQFilterBlock extends BaseFilterBlock {
       throws SqlXlateException {
     fbContext.getSubQStack().push(this);
     super.processChildren(fbContext, context);
-    SubQFilterBlock subqFB = fbContext.getSubQStack().pop();
     this.setTransformedNode(this.getChildren().get(0).getTransformedNode());
+    fbContext.getSubQStack().pop();
   }
 
 

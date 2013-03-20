@@ -144,6 +144,18 @@ public class FilterBlockUtil {
     }
   }
 
+  public static void findNodeText(CommonTree node, String text, List<CommonTree> nodeList) {
+    if (node == null) {
+      return;
+    }
+    if (node.getText().equals(text)) {
+      nodeList.add(node);
+    }
+    for (int i = 0; i < node.getChildCount(); i++) {
+      findNodeText((CommonTree) node.getChild(i), text, nodeList);
+    }
+  }
+
   /**
    * clone tree
    *

@@ -76,6 +76,12 @@ public class SubQUnnestTransformer extends BaseSqlASTTransformer {
     }
   }
 
+  /**
+   * Transform inline view firstly.
+   * @param tree
+   * @param context
+   * @throws SqlXlateException
+   */
   void transformQInfoDeepFirst(SqlASTNode tree, TranslateContext context) throws SqlXlateException {
 
     QueryInfo qInfo = context.getQInfoRoot();

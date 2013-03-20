@@ -22,7 +22,7 @@ import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
 import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.processor.FilterBlockProcessorFactory;
 
 
-public class CorrelatedFilterBlock extends NormalFilterBlack {
+public class CorrelatedFilterBlock extends NormalFilterBlock {
 
   @Override
   public void process(FilterBlockContext fbContext, TranslateContext context)
@@ -30,7 +30,8 @@ public class CorrelatedFilterBlock extends NormalFilterBlack {
     FilterBlockProcessorFactory.getCorrelatedProcessor(
         fbContext.getSubQStack().peek().getASTNode()).process(fbContext, this, context);
 
-    super.processStackSubq(fbContext, context);
+//    super.processStackSubq(fbContext, context);
+    fbContext.getSubQStack().peek().setTransformed();
   }
 
 

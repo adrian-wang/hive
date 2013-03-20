@@ -144,8 +144,8 @@ public abstract class FilterBlockFactory {
     }
     FilterBlock fb;
     // merge normalFilterBlock
-    if (fbl != null && fbl.size() == 2 && fbl.get(0) instanceof NormalFilterBlack
-        && fbl.get(1) instanceof NormalFilterBlack) {
+    if (fbl != null && fbl.size() == 2 && fbl.get(0) instanceof NormalFilterBlock
+        && fbl.get(1) instanceof NormalFilterBlock) {
       // both UnCorrelatedFilterBlock
       if (fbl.get(0) instanceof UnCorrelatedFilterBlock
           && fbl.get(1) instanceof UnCorrelatedFilterBlock) {
