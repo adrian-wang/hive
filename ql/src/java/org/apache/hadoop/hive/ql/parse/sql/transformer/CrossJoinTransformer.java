@@ -220,6 +220,10 @@ public class CrossJoinTransformer extends BaseSqlASTTransformer {
         srcTable = getTableName(qf, (CommonTree) anyElement);
         if (srcTable != null) {
           referencedTables.add(srcTable);
+        } else {
+          // If the condition refers to a table which is not in the from clause or refers to a column
+          // which is not existing, then skip this condition.
+          return;
         }
       }
 
