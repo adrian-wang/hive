@@ -38,6 +38,7 @@ import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
 
 /**
  * Transform filter block tree with every QueryInfo.
+ *
  * FilterBlockTransformer.
  *
  */
@@ -78,6 +79,7 @@ public class SubQUnnestTransformer extends BaseSqlASTTransformer {
 
   /**
    * Transform inline view firstly.
+   *
    * @param tree
    * @param context
    * @throws SqlXlateException
@@ -142,14 +144,21 @@ public class SubQUnnestTransformer extends BaseSqlASTTransformer {
   }
 
   /**
-   * rebuild SELECT_LIST, GROUP, ORDER_BY with column alias of unnested inlineview
+   * rebuild SELECT_LIST, GROUP, ORDER_BY with column alias of unnested inlineview.
+   *
    * TODO WHERE
+   *
    * @param select
    * @param selectListStrList
    * @param selectList
    */
   private void rebuildSelect(CommonTree select, List<List<String>> selectListStrList,
       List<CommonTree> selectList) {
+    if (selectListStrList.isEmpty()) {
+      // bottom select,needn't rebuild
+      return;
+    }
+    // TODO optimization, simple select(without subquery),needn't rebuild
 
     // SELECT_LIST
     CommonTree selectListNode = (CommonTree) select
@@ -211,8 +220,9 @@ public class SubQUnnestTransformer extends BaseSqlASTTransformer {
       for (int j = 0; j < strList.size(); j++) {
         String str = strList.get(j);
         if (str.equals(originalColumnName)) {
-          return select.getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST).getChild(j)
-              .getChild(1).getChild(0).getText();
+          CommonTree alias = (CommonTree) select.getFirstChildWithType(
+              PantheraParser_PLSQLParser.SELECT_LIST).getChild(j).getChild(1);
+          return alias == null ? null : alias.getChild(0).getText();
         }
       }
     }
