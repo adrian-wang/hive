@@ -125,7 +125,7 @@ public class CrossJoinTransformer extends BaseSqlASTTransformer {
         //
         // Transform the from clause tree using the generated join operation info.
         //
-        transformFromClause(from, joinInfo);
+        transformFromClause(qf, from, joinInfo);
       }
     }
 
@@ -268,6 +268,13 @@ public class CrossJoinTransformer extends BaseSqlASTTransformer {
 
     if (anyElement.getChildCount() > 1) {
       table = anyElement.getChild(0).getText();
+      if (anyElement.getChildCount() > 2) {
+        // schema.table
+        table += ("." + anyElement.getChild(1).getText());
+        // merge schema and table as HIVE does not support schema.table.column in where clause.
+        anyElement.deleteChild(1);
+        ((CommonTree)anyElement.getChild(0)).getToken().setText(table);
+      }
       //
       // Return null table name if it is not a src table.
       //
@@ -294,43 +301,71 @@ public class CrossJoinTransformer extends BaseSqlASTTransformer {
     return table;
   }
 
-  private void transformFromClause(CommonTree oldFrom, JoinInfo joinInfo) throws SqlXlateException {
+  private void transformFromClause(QueryInfo qf, CommonTree oldFrom, JoinInfo joinInfo) throws SqlXlateException {
     Set<String> alreadyJoinedTables = new HashSet<String>();
 
     CommonTree topTableRef = (CommonTree) oldFrom.getChild(0);
     SqlXlateUtil.getSrcTblAlias((CommonTree) topTableRef.getChild(0), alreadyJoinedTables);
     assert (alreadyJoinedTables.size() == 1);
+    String firstTable = (String) alreadyJoinedTables.toArray()[0];
     for (int i = 1; i < topTableRef.getChildCount(); i++) {
       CommonTree joinNode = (CommonTree) topTableRef.getChild(i);
-      if (joinNode.getChildCount() >= 2
-          && joinNode.getChild(0).getType() == PantheraParser_PLSQLParser.CROSS_VK) {
-        Set<String> srcTables = new HashSet<String>();
-        SqlXlateUtil.getSrcTblAlias((CommonTree) joinNode.getChild(1), srcTables);
-        assert (srcTables.size() == 1);
-        String srcTable = (String) srcTables.toArray()[0];
+      Set<String> srcTables = new HashSet<String>();
+      SqlXlateUtil.getSrcTblAlias((CommonTree) joinNode
+          .getFirstChildWithType(PantheraParser_PLSQLParser.TABLE_REF_ELEMENT), srcTables);
+      assert (srcTables.size() == 1);
+      String srcTable = (String) srcTables.toArray()[0];
 
-        for (String alreadyJoinedTable : alreadyJoinedTables) {
-          JoinPair tableJoinPair = new JoinPair(alreadyJoinedTable, srcTable);
-          List<CommonTree> JoinEqualityNodes = joinInfo.joinPairInfo.get(tableJoinPair);
-          if (JoinEqualityNodes != null) {
-            generateJoin(joinNode, JoinEqualityNodes);
-          }
+      // if any column is referenced in join conditions, add missing table name for HIVE.
+      CommonTree OnNode = (CommonTree) joinNode
+          .getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_ON);
+      if (OnNode != null) {
+        List<CommonTree> anyElementList = new ArrayList<CommonTree>();
+        FilterBlockUtil.findNode(OnNode, PantheraParser_PLSQLParser.ANY_ELEMENT, anyElementList);
+        for (CommonTree anyElement : anyElementList) {
+          getTableName(qf, anyElement);
+        }
+      }
+
+      for (String alreadyJoinedTable : alreadyJoinedTables) {
+        JoinPair tableJoinPair = new JoinPair(alreadyJoinedTable, srcTable);
+        List<CommonTree> JoinEqualityNodes = joinInfo.joinPairInfo.get(tableJoinPair);
+        if (JoinEqualityNodes != null) {
+          generateJoin(joinNode, JoinEqualityNodes);
           joinInfo.joinPairInfo.remove(tableJoinPair);
         }
+      }
+      alreadyJoinedTables.add(srcTable);
 
-        addJoinCondition(joinInfo.joinFilterInfo.get(srcTable), (CommonTree) joinNode.getChild(
-            joinNode.getChildCount() - 1).getChild(0));
+      List<CommonTree> joinFilters;
+      if (i == 1) {
+        //need consider the join filter of the first table
+        joinFilters = joinInfo.joinFilterInfo.get(firstTable);
+        if (joinFilters != null) {
+          generateJoin(joinNode, joinFilters);
+          joinInfo.joinFilterInfo.remove(firstTable);
+        }
+      }
+
+      joinFilters = joinInfo.joinFilterInfo.get(srcTable);
+      if (joinFilters != null) {
+        generateJoin(joinNode, joinFilters);
+        joinInfo.joinFilterInfo.remove(srcTable);
       }
     }
 
-    if (!joinInfo.joinPairInfo.isEmpty()) {
+    if (!joinInfo.joinPairInfo.isEmpty() || !joinInfo.joinFilterInfo.isEmpty()) {
       throw new SqlXlateException("Cross join transformer: bad cross join!");
     }
   }
 
-  private void generateJoin(CommonTree joinNode, List<CommonTree> joinEqualityNodes) {
+  private void generateJoin(CommonTree joinNode, List<CommonTree> joinConditionNodes) {
     CommonTree OnNode;
     CommonTree logicExprNode;
+
+    if (joinConditionNodes == null) {
+      return;
+    }
 
     OnNode = (CommonTree) joinNode
         .getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_ON);
@@ -344,29 +379,29 @@ public class CrossJoinTransformer extends BaseSqlASTTransformer {
           "LOGIC_EXPR");
       newOnNode.addChild(logicExprNode);
 
-      if (joinNode.getChild(0).getText().equals(PantheraExpParser.LEFTSEMI_STR)) {
-        ((CommonTree) joinNode.getChild(0)).getToken().setType(PantheraExpParser.LEFTSEMI_VK);
-        joinNode.addChild(newOnNode);
-      } else if (joinNode.getChild(0).getText().equals(PantheraExpParser.LEFT_STR)) {
-        ((CommonTree) joinNode.getChild(0)).getToken().setType(PantheraExpParser.LEFT_VK);
-        joinNode.addChild(newOnNode);
+      if (joinNode.getChild(0).getType() == PantheraParser_PLSQLParser.CROSS_VK) {
+        if (joinNode.getChild(0).getText().equals(PantheraExpParser.LEFTSEMI_STR)) {
+          ((CommonTree) joinNode.getChild(0)).getToken().setType(PantheraExpParser.LEFTSEMI_VK);
+          joinNode.addChild(newOnNode);
+        } else if (joinNode.getChild(0).getText().equals(PantheraExpParser.LEFT_STR)) {
+          ((CommonTree) joinNode.getChild(0)).getToken().setType(PantheraExpParser.LEFT_VK);
+          joinNode.addChild(newOnNode);
+        } else {
+          // Remove the CROSS node
+          joinNode.setChild(0, joinNode.getChild(1));
+          joinNode.setChild(1, newOnNode);
+        }
       } else {
-        // Remove the CROSS node
-        joinNode.setChild(0, joinNode.getChild(1));
-        joinNode.setChild(1, newOnNode);
+        joinNode.addChild(newOnNode);
       }
     } else {
       logicExprNode = (CommonTree) OnNode.getChild(0);
     }
 
-    addJoinCondition(joinEqualityNodes, logicExprNode);
+    addJoinCondition(joinConditionNodes, logicExprNode);
   }
 
   private void addJoinCondition(List<CommonTree> joinConditionNodes, CommonTree logicExpr) {
-    if (joinConditionNodes == null) {
-      return;
-    }
-
     Iterator<CommonTree> iterator = joinConditionNodes.iterator();
     CommonTree expressionRoot;
     if (logicExpr.getChildCount() == 0) {

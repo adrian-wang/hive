@@ -33,7 +33,7 @@ public class TransformerBuilder {
       new PrepareQueryInfoTransformer(
       new SubQUnnestTransformer(
       new PrepareFilterBlockTransformer(
-      new PrepareQueryInfoTransformer(
+      new CrossJoinTransformer(
       new MultipleTableSelectTransformer(
       new WhereConditionOptimizationTransformer(
       new PrepareQueryInfoTransformer(
