@@ -20,6 +20,7 @@ package org.apache.hadoop.hive.ql.parse.sql;
 
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -909,16 +910,10 @@ public final class SqlXlateUtil {
     branch.addChild(left);
   }
 
-  public static boolean containTableName(String tableName, Tree node) {
-    if (node.getType() == PantheraParser_PLSQLParser.ID && node.getText().equals(tableName)) {
-      return true;
-    }
-    for (int i = 0; i < node.getChildCount(); i++) {
-      if (containTableName(tableName, node.getChild(i))) {
-        return true;
-      }
-    }
-    return false;
+  public static boolean containTableName(String tableName, CommonTree node) {
+    Set<String> srcTblAliases = new HashSet<String>();
+    getSrcTblAlias(node, srcTblAliases);
+    return srcTblAliases.contains(tableName);
   }
 
 

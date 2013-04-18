@@ -255,6 +255,13 @@ public class MultipleTableSelectTransformer extends BaseSqlASTTransformer {
 
     if (anyElement.getChildCount() > 1) {
       table = anyElement.getChild(0).getText();
+      if (anyElement.getChildCount() > 2) {
+        // schema.table
+        table += ("." + anyElement.getChild(1).getText());
+        // merge schema and table as HIVE does not support schema.table.column in where clause.
+        anyElement.deleteChild(1);
+        ((CommonTree)anyElement.getChild(0)).getToken().setText(table);
+      }
       //
       // Return null table name if it is not a src table.
       //
@@ -326,13 +333,13 @@ public class MultipleTableSelectTransformer extends BaseSqlASTTransformer {
           } else if (alreadyJoinedTables.contains(tableJoinPair.getFirst()) && alreadyJoinedTables.contains(tableJoinPair.getSecond())) {
             int firstIndex;
             for (firstIndex = 0; firstIndex < newTableRef.getChildCount() - 1; firstIndex++) {
-              if (SqlXlateUtil.containTableName(tableJoinPair.getFirst(), newTableRef.getChild(firstIndex))) {
+              if (SqlXlateUtil.containTableName(tableJoinPair.getFirst(), (CommonTree)newTableRef.getChild(firstIndex))) {
                 break;
               }
             }
             int secondIndex;
             for (secondIndex = 0; secondIndex < newTableRef.getChildCount() - 1; secondIndex++) {
-              if (SqlXlateUtil.containTableName(tableJoinPair.getSecond(), newTableRef.getChild(secondIndex))) {
+              if (SqlXlateUtil.containTableName(tableJoinPair.getSecond(), (CommonTree)newTableRef.getChild(secondIndex))) {
                 break;
               }
             }
@@ -398,7 +405,7 @@ public class MultipleTableSelectTransformer extends BaseSqlASTTransformer {
     // Find which child of the old From tree contains the table name.
     //
     for (int i = 0; i < oldFrom.getChildCount(); i++) {
-      Tree tableRefTree = oldFrom.getChild(i);
+      CommonTree tableRefTree = (CommonTree)oldFrom.getChild(i);
       if (SqlXlateUtil.containTableName(tableName, tableRefTree)) {
         oldFrom.deleteChild(i);
         //

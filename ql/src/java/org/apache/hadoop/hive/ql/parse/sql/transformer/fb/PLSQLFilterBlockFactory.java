@@ -84,13 +84,13 @@ public class PLSQLFilterBlockFactory extends FilterBlockFactory {
         }
         if (child.getChildCount() == 2) {// tableName.columnName
 
-          if (SqlXlateUtil.containTableName(child.getChild(0).getText(), selectStack.peek()
+          if (SqlXlateUtil.containTableName(child.getChild(0).getText(), (CommonTree)selectStack.peek()
               .getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_FROM))) {
             return false;
           }
           CommonTree temp = selectStack.pop();
           boolean correlated = SqlXlateUtil.containTableName(child.getChild(0).getText(),
-              selectStack.peek()
+              (CommonTree)selectStack.peek()
                   .getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_FROM));
           selectStack.push(temp);
           if (correlated) {
@@ -141,13 +141,13 @@ public class PLSQLFilterBlockFactory extends FilterBlockFactory {
           if (selectStack.size() <= 1) {
             return false;
           }
-          if (SqlXlateUtil.containTableName(child.getChild(0).getText(), selectStack.peek()
+          if (SqlXlateUtil.containTableName(child.getChild(0).getText(), (CommonTree)selectStack.peek()
               .getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_FROM))) {
             return false;
           }
           CommonTree temp = selectStack.pop();
           boolean correlated = SqlXlateUtil.containTableName(child.getChild(0).getText(),
-              selectStack.peek()
+              (CommonTree)selectStack.peek()
                   .getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_FROM));
           selectStack.push(temp);
           if (correlated) {
