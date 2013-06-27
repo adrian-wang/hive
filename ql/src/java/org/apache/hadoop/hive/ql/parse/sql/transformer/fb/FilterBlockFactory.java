@@ -22,8 +22,10 @@ import java.util.Map;
 import java.util.Stack;
 
 import org.antlr33.runtime.tree.CommonTree;
+import org.apache.hadoop.hive.ql.parse.sql.PantheraExpParser;
 import org.apache.hadoop.hive.ql.parse.sql.PantheraMap;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
+import org.apache.hadoop.hive.ql.parse.sql.SqlXlateUtil;
 import org.apache.hadoop.hive.ql.parse.sql.transformer.QueryInfo;
 
 /**
@@ -108,6 +110,7 @@ public abstract class FilterBlockFactory {
     fbMap.put(HAVING, new HavingFilterBlockBuilder());
     fbMap.put(IS_NULL, new OpBuilder());
     fbMap.put(IS_NOT_NULL, new OpBuilder());
+    fbMap.put(NOT, new NotBuilder());
   }
 
   /**
@@ -200,9 +203,9 @@ public abstract class FilterBlockFactory {
           fb.setASTNode(node);
           return fb;
         }
-        if(fbl.get(0) instanceof UnCorrelatedFilterBlock){
+        if (fbl.get(0) instanceof UnCorrelatedFilterBlock) {
           // expression > constant
-          //TODO expression > correlated column
+          // TODO expression > correlated column
           fb = new UnCorrelatedFilterBlock();
           fb.setASTNode(node);
           return fb;
@@ -293,6 +296,135 @@ public abstract class FilterBlockFactory {
       return processFilterBlock(selectStack, node, fbl, fb);
     }
 
+  }
+
+  /**
+   * transform NOT logic expression with remove NOT node <br>
+   * TODO: should be create LogicExpressTransformer for all logic optimization & transformer
+   */
+  public class NotBuilder implements FilterBlockBuilder {
+    @Override
+    public FilterBlock build(QueryInfo node, Stack<CommonTree> selectStack, CommonTree node2,
+        List<FilterBlock> fbl) throws SqlXlateException {
+      if (fbl.isEmpty() || fbl.size() > 1) {
+        throw new SqlXlateException("Error to prepare filter block:error NOT logic ");
+      }
+      FilterBlock fb = fbl.get(0);
+      CommonTree astNode = (CommonTree) fb.getASTNode();
+      // simple NOT EXISTS, do nothing
+      if (astNode.getType() == PantheraExpParser.SQL92_RESERVED_EXISTS
+          && node2.equals(astNode.getParent())) {
+        return fb;
+      }
+      buildNot(astNode);
+
+      //remove NOT node
+      CommonTree child = (CommonTree) node2.getChild(0);
+      CommonTree parent = (CommonTree) node2.getParent();
+      int position = node2.childIndex;
+      parent.deleteChild(position);
+      SqlXlateUtil.addCommonTreeChild(parent, position, child);
+
+      return fb;
+    }
+
+    public void buildNot(CommonTree astNode) throws SqlXlateException {
+      switch (astNode.getType()) {
+
+      // such as NOT(... OR (NOT) EXISTS ...)
+      case PantheraExpParser.SQL92_RESERVED_EXISTS:
+        CommonTree parent = (CommonTree) astNode.getParent();
+        // NOT EXISTS -> EXISTS
+        if (parent.getType() == PantheraExpParser.SQL92_RESERVED_NOT) {
+          CommonTree grandpa = (CommonTree) parent.getParent();
+          int position = parent.childIndex;
+          grandpa.deleteChild(position);
+          SqlXlateUtil.addCommonTreeChild(grandpa, position, astNode);
+        }
+        // EXIST -> NOT EXISTS
+        else {
+          CommonTree notNode = FilterBlockUtil.createSqlASTNode(
+              PantheraExpParser.SQL92_RESERVED_NOT, "not");
+          int position = astNode.childIndex;
+          parent.deleteChild(position);
+          notNode.addChild(astNode);
+          SqlXlateUtil.addCommonTreeChild(parent, position, notNode);
+        }
+        break;
+      case PantheraExpParser.SQL92_RESERVED_IN:
+        astNode.getToken().setType(PantheraExpParser.NOT_IN);
+        astNode.getToken().setText("NOT_IN");
+        break;
+      case PantheraExpParser.NOT_IN:
+        astNode.getToken().setType(PantheraExpParser.SQL92_RESERVED_IN);
+        astNode.getToken().setText("in");
+        break;
+      case PantheraExpParser.LESS_THAN_OP:
+        astNode.getToken().setType(PantheraExpParser.GREATER_THAN_OR_EQUALS_OP);
+        astNode.getToken().setText(">=");
+        break;
+      case PantheraExpParser.LESS_THAN_OR_EQUALS_OP:
+        astNode.getToken().setType(PantheraExpParser.GREATER_THAN_OP);
+        astNode.getToken().setText(">");
+        break;
+      case PantheraExpParser.GREATER_THAN_OP:
+        astNode.getToken().setType(PantheraExpParser.LESS_THAN_OR_EQUALS_OP);
+        astNode.getToken().setText("<=");
+        break;
+      case PantheraExpParser.GREATER_THAN_OR_EQUALS_OP:
+        astNode.getToken().setType(PantheraExpParser.LESS_THAN_OP);
+        astNode.getToken().setText("<");
+        break;
+      case PantheraExpParser.NOT_EQUAL_OP:
+        astNode.getToken().setType(PantheraExpParser.EQUALS_OP);
+        astNode.getToken().setText("=");
+        break;
+      case PantheraExpParser.EQUALS_OP:
+        astNode.getToken().setType(PantheraExpParser.NOT_EQUAL_OP);
+        astNode.getToken().setText("<>");
+        break;
+      case PantheraExpParser.SQL92_RESERVED_OR:
+        buildChild(astNode);
+        astNode.getToken().setType(PantheraExpParser.SQL92_RESERVED_AND);
+        astNode.getToken().setText("and");
+        break;
+      case PantheraExpParser.SQL92_RESERVED_AND:
+        buildChild(astNode);
+        astNode.getToken().setType(PantheraExpParser.SQL92_RESERVED_OR);
+        astNode.getToken().setText("or");
+        break;
+      case PantheraExpParser.SQL92_RESERVED_LIKE:
+        astNode.getToken().setType(PantheraExpParser.NOT_LIKE);
+        astNode.getToken().setText("NOT_LIKE");
+        break;
+      case PantheraExpParser.SQL92_RESERVED_BETWEEN:
+        astNode.getToken().setType(PantheraExpParser.NOT_BETWEEN);
+        astNode.getToken().setText("NOT_BETWEEN");
+        break;
+      case PantheraExpParser.IS_NULL:
+        astNode.getToken().setType(PantheraExpParser.IS_NOT_NULL);
+        astNode.getToken().setText("IS_NOT_NULL");
+        break;
+      case PantheraExpParser.IS_NOT_NULL:
+        astNode.getToken().setType(PantheraExpParser.IS_NULL);
+        astNode.getToken().setText("IS_NULL");
+        break;
+      default:
+        throw new SqlXlateException("Unsupported logic express in NOT:" + astNode.getText());
+      }
+
+    }
+
+    private void buildChild(CommonTree node) throws SqlXlateException {
+      for(int i=0;i<node.getChildCount();i++){
+        CommonTree astNode = (CommonTree)node.getChild(i);
+        // for NOT EXISTS
+        if(astNode.getType()==PantheraExpParser.SQL92_RESERVED_NOT){
+          astNode = (CommonTree)astNode.getChild(0);
+        }
+        buildNot(astNode);
+      }
+    }
   }
 
 

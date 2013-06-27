@@ -56,7 +56,7 @@ public class PLSQLFilterBlockFactory extends FilterBlockFactory {
     typeMap.put(PantheraParser_PLSQLParser.SQL92_RESERVED_LIKE, LIKE);
     typeMap.put(PantheraParser_PLSQLParser.SQL92_RESERVED_AND, AND);
     typeMap.put(PantheraParser_PLSQLParser.SQL92_RESERVED_OR, OR);
-    // typeMap.put(PantheraParser_PLSQLParser.SQL92_RESERVED_NOT, NOT);//FIXME not exists
+    typeMap.put(PantheraParser_PLSQLParser.SQL92_RESERVED_NOT, NOT);
     typeMap.put(PantheraParser_PLSQLParser.SQL92_RESERVED_SELECT, SELECT);
     typeMap.put(PantheraParser_PLSQLParser.SQL92_RESERVED_EXISTS, EXISTS);
     typeMap.put(PantheraParser_PLSQLParser.SELECT_LIST, SELECT_LIST);
@@ -84,14 +84,14 @@ public class PLSQLFilterBlockFactory extends FilterBlockFactory {
         }
         if (child.getChildCount() == 2) {// tableName.columnName
 
-          if (SqlXlateUtil.containTableName(child.getChild(0).getText(), (CommonTree)selectStack.peek()
-              .getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_FROM))) {
+          if (SqlXlateUtil.containTableName(child.getChild(0).getText(), (CommonTree) selectStack
+              .peek().getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_FROM))) {
             return false;
           }
           CommonTree temp = selectStack.pop();
           boolean correlated = SqlXlateUtil.containTableName(child.getChild(0).getText(),
-              (CommonTree)selectStack.peek()
-                  .getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_FROM));
+              (CommonTree) selectStack.peek().getFirstChildWithType(
+                  PantheraParser_PLSQLParser.SQL92_RESERVED_FROM));
           selectStack.push(temp);
           if (correlated) {
             return true;
@@ -141,14 +141,14 @@ public class PLSQLFilterBlockFactory extends FilterBlockFactory {
           if (selectStack.size() <= 1) {
             return false;
           }
-          if (SqlXlateUtil.containTableName(child.getChild(0).getText(), (CommonTree)selectStack.peek()
-              .getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_FROM))) {
+          if (SqlXlateUtil.containTableName(child.getChild(0).getText(), (CommonTree) selectStack
+              .peek().getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_FROM))) {
             return false;
           }
           CommonTree temp = selectStack.pop();
           boolean correlated = SqlXlateUtil.containTableName(child.getChild(0).getText(),
-              (CommonTree)selectStack.peek()
-                  .getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_FROM));
+              (CommonTree) selectStack.peek().getFirstChildWithType(
+                  PantheraParser_PLSQLParser.SQL92_RESERVED_FROM));
           selectStack.push(temp);
           if (correlated) {
             return true;

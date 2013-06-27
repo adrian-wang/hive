@@ -28,7 +28,7 @@ import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
 import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
 
 /**
- * transform and to intersect
+ * transform AND to JOIN(by rebuilding left select)
  * AndFilterBlock.
  *
  */

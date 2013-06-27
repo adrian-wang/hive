@@ -88,6 +88,7 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
     this.fb = fb;
     this.context = context;
     processFB();
+    this.rebuildColumnAlias(topSelect);
     fb.setTransformedNode(topSelect);
   }
 
@@ -543,7 +544,7 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
     for (CommonTree alias : aliasList) {
       CommonTree newAlias = this.addSelectItem(selectList, this
           .createCascatedElement((CommonTree) alias.getChild(0)));
-      this.reRebuildGroupOrder(alias, newAlias);
+      this.reRebuildGroupOrder(alias.getChild(0).getText(), newAlias.getChild(0).getText());
     }
     return selectList;
   }
@@ -819,10 +820,8 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
       // TODO
       // remove, needn't table alias.
       anyElement.deleteChild(0);
-      column = (CommonTree) anyElement.getChild(0);
-    } else {
-      column = (CommonTree) anyElement.getChild(0);
     }
+    column = (CommonTree) anyElement.getChild(0);
     Map<String, String> columnMap = this.columnAliasMap.get(topAlias == null ? "" : topAlias
         .getChild(0).getText());
     String columnAlias = columnMap.get(column.getText());
@@ -837,7 +836,7 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
    * @param oldAlias
    * @param newAlias
    */
-  void reRebuildGroupOrder(CommonTree oldAlias, CommonTree newAlias) {
+  void reRebuildGroupOrder(String oldAlias, String newAlias) {
 
     CommonTree group = topQuery.getGroup();
     CommonTree order = topQuery.getOrder();
@@ -862,14 +861,14 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
     }
   }
 
-  private void reRebuildAnyElement(CommonTree oldAlias, CommonTree newAlias, CommonTree anyElement) {
+  private void reRebuildAnyElement(String oldAlias, String newAlias, CommonTree anyElement) {
 
     if (anyElement.getChildCount() == 2) {
       anyElement.deleteChild(0);
     }
     CommonTree child = (CommonTree) anyElement.getChild(0);
-    if (child.getText().equals(oldAlias.getChild(0).getText())) {
-      child.getToken().setText(newAlias.getChild(0).getText());
+    if (child.getText().equals(oldAlias)) {
+      child.getToken().setText(newAlias);
     }
 
   }
@@ -978,4 +977,26 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
     return null;
   }
 
+  /**
+   * rebuild column alias after unnested subquery
+   *
+   * @param select
+   */
+  private void rebuildColumnAlias(CommonTree select) {
+    CommonTree selectList = (CommonTree) select
+        .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST);
+    int count = 0;
+    for (int i = 0; i < selectList.getChildCount(); i++) {
+      CommonTree selectItem = (CommonTree) selectList.getChild(i);
+      if (selectItem.getChildCount() == 2) {
+        CommonTree aliasName = (CommonTree) selectItem.getChild(1).getChild(0);
+        String oldColAlias = aliasName.getText();
+        if ("panthera".equals(oldColAlias.split("_")[0])) {
+          String newColAlias = "panthera_col_" + count++;
+          aliasName.getToken().setText(newColAlias);
+          reRebuildGroupOrder(oldColAlias,newColAlias);
+        }
+      }
+    }
+  }
 }
