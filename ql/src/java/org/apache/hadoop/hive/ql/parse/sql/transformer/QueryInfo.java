@@ -103,11 +103,19 @@ public class QueryInfo {
   private Map<CommonTree, List<Column>> keyToRowInfo = new HashMap<CommonTree, List<Column>>();
 
   // alias or column in SELECT_LIST
-  private final List<String> selectList = new ArrayList<String>();
-
+  private final Map<CommonTree, List<String>> selectLists = new HashMap<CommonTree, List<String>>();
 
 
   public List<String> getSelectList() {
+    return getSelectListForSelectKey(selectKey);
+  }
+
+  public List<String> getSelectListForSelectKey(CommonTree select) {
+    List<String> selectList = selectLists.get(select);
+    if (selectList == null) {
+      selectList = new ArrayList<String>();
+      selectLists.put(select, selectList);
+    }
     return selectList;
   }
 

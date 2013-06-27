@@ -134,7 +134,11 @@ public class RowNumTransformer  extends BaseSqlASTTransformer  {
       // Make sure parent select has no group by,order by,having.
       // Note that "order by" is a child of select statement node.
       //
-      if (parentSelect.getChildCount() == 3 && parentSelect.getParent().getParent().getChildCount() == 1) {
+
+      if (parentSelect.getParent().getParent().getChildCount() > 1) {
+        return;
+      }
+      if (parentSelect.getChildCount() == 3) {
         SqlASTNode limitParent = (SqlASTNode) parentSelect.getFirstChildWithType(PantheraExpParser.LIMIT_VK);
         if (limitParent == null) {
           return;

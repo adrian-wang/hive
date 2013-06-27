@@ -144,6 +144,12 @@ public class FilterBlockUtil {
     }
   }
 
+  public static CommonTree findOnlyNode(CommonTree node, int type) {
+    List<CommonTree> nodeList = new ArrayList<CommonTree>();
+    findNode(node, type, nodeList);
+    return nodeList.isEmpty() ? null : nodeList.get(0);
+  }
+
   public static void findNodeText(CommonTree node, String text, List<CommonTree> nodeList) {
     if (node == null) {
       return;
@@ -220,9 +226,10 @@ public class FilterBlockUtil {
   }
 
   public static CommonTree createFunction(String functionName, CommonTree element) {
-    CommonTree standardFunction = createSqlASTNode(
-        PantheraParser_PLSQLParser.STANDARD_FUNCTION, "STANDARD_FUNCTION");
-    CommonTree function = createSqlASTNode(PantheraParser_PLSQLParser.FUNCTION_ENABLING_OVER, functionName);
+    CommonTree standardFunction = createSqlASTNode(PantheraParser_PLSQLParser.STANDARD_FUNCTION,
+        "STANDARD_FUNCTION");
+    CommonTree function = createSqlASTNode(PantheraParser_PLSQLParser.FUNCTION_ENABLING_OVER,
+        functionName);
     attachChild(standardFunction, function);
     CommonTree arguments = createSqlASTNode(PantheraParser_PLSQLParser.ARGUMENTS, "ARGUMENTS");
     attachChild(function, arguments);
@@ -232,5 +239,45 @@ public class FilterBlockUtil {
     attachChild(argument, expr);
     attachChild(expr, element);
     return standardFunction;
+  }
+
+  public static boolean isFilterOp(CommonTree node) {
+    int type = node.getType();
+    switch (type) {
+    case PantheraParser_PLSQLParser.EQUALS_OP:
+    case PantheraParser_PLSQLParser.GREATER_THAN_OP:
+    case PantheraParser_PLSQLParser.GREATER_THAN_OR_EQUALS_OP:
+    case PantheraParser_PLSQLParser.LESS_THAN_OP:
+    case PantheraParser_PLSQLParser.LESS_THAN_OR_EQUALS_OP:
+    case PantheraParser_PLSQLParser.NOT_EQUAL_OP:
+      return true;
+    default:
+      return false;
+    }
+  }
+
+  public static boolean isLogicOp(CommonTree node) {
+    int type = node.getType();
+    switch (type) {
+    case PantheraParser_PLSQLParser.SQL92_RESERVED_AND:
+    case PantheraParser_PLSQLParser.SQL92_RESERVED_OR:
+      return true;
+    default:
+      return false;
+    }
+  }
+
+  /**
+   * delete the node and re-balance the tree
+   * @param op
+   */
+  public static void deleteTheNode(CommonTree op){
+    int opIndex = op.getChildIndex();
+    CommonTree parent = (CommonTree) op.getParent();
+    int parentIndex = parent.getChildIndex();
+    CommonTree grandpa = (CommonTree) parent.getParent();
+    CommonTree brother = (CommonTree) parent.getChild(opIndex == 0 ? 1 : 0);
+    grandpa.deleteChild(parentIndex);
+    SqlXlateUtil.addCommonTreeChild(grandpa, parentIndex, brother);
   }
 }

@@ -17,18 +17,22 @@
  */
 package org.apache.hadoop.hive.ql.parse.sql.transformer.fb.processor;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.antlr33.runtime.tree.CommonTree;
 import org.apache.hadoop.hive.ql.parse.sql.PantheraExpParser;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
+import org.apache.hadoop.hive.ql.parse.sql.SqlXlateUtil;
+import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
 import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.FilterBlockUtil;
 
 import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
 
 /**
- * provide common process logic for filter block processor.
- * TODO<br>
+ * provide common process logic for filter block processor. TODO<br>
  * <li>processCompareHavingUC and processEqualsUC didn¡¯t check whether single-row expression
  * returns only one row. It¡¯s ok for these 2 cases because sum and max always return one value.
  * Just a reminder don¡¯t miss the check part. If you didn¡¯t implement yet, add a ¡°TODO¡± remark
@@ -115,7 +119,7 @@ public abstract class CommonFilterBlockProcessor extends BaseFilterBlockProcesso
     // select list
     CommonTree compareKeyAlias2 = super.addAlias((CommonTree) ((CommonTree) bottomSelect
         .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST)).getChild(0));// childCount==0;
-    super.rebuildSelectListByFilter(false,true, bottomAlias, topAlias);
+    super.rebuildSelectListByFilter(false, true, bottomAlias, topAlias);
 
     // TODO cross join optimization will do it
     // on
@@ -148,20 +152,18 @@ public abstract class CommonFilterBlockProcessor extends BaseFilterBlockProcesso
 
 
     super.processSelectAsterisk(bottomSelect);
-    super.rebuildSelectListByFilter(false,false, bottomAlias, topAlias);
-
-    // // delete where
-    // super.deleteBranch(bottomSelect, PantheraParser_PLSQLParser.SQL92_RESERVED_WHERE);
-    //
-    // // on
-    // CommonTree on = super.buildOn(FilterBlockUtil.dupNode(fb.getASTNode()), super
-    // .rebuildCascatedElement((CommonTree) fb.getASTNode().getChild(0)), super
-    // .rebuildCascatedElement((CommonTree) fb.getASTNode().getChild(1)));
-    // super.attachChild(join, on);
-
+    super.rebuildSelectListByFilter(false, false, bottomAlias, topAlias);
 
     this.makeEnd();
     super.buildWhereByFB(null, null, null);
+
+    if (super.hasNotEqualCorrelated) {
+      // become inner join if there is not equal correlated.
+      join.deleteChild(0);
+      // add distinct
+      SqlXlateUtil.addCommonTreeChild(this.closingSelect, 1, FilterBlockUtil.createSqlASTNode(
+          PantheraParser_PLSQLParser.SQL92_RESERVED_DISTINCT, "distinct"));
+    }
   }
 
   /**
@@ -172,8 +174,8 @@ public abstract class CommonFilterBlockProcessor extends BaseFilterBlockProcesso
   void processCompareHavingUC(CommonTree joinType) {
 
     // delete having. DO it before clone.
-    FilterBlockUtil.deleteBranch((CommonTree) topQuery.getASTNode()
-        .getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_GROUP),
+    FilterBlockUtil.deleteBranch((CommonTree) topQuery.getASTNode().getFirstChildWithType(
+        PantheraParser_PLSQLParser.SQL92_RESERVED_GROUP),
         PantheraParser_PLSQLParser.SQL92_RESERVED_HAVING);
 
     // needn't group after transformed.
@@ -285,12 +287,11 @@ public abstract class CommonFilterBlockProcessor extends BaseFilterBlockProcesso
 
     // on
     // FIXME which is first?
-    CommonTree on = super.buildOn(
-        FilterBlockUtil.createSqlASTNode(PantheraParser_PLSQLParser.EQUALS_OP, "="), super
-            .createCascatedElementWithTableName((CommonTree) topAlias.getChild(0),
-                (CommonTree) compareElementAlias.getChild(0)), super
-            .createCascatedElementWithTableName((CommonTree) bottomAlias.getChild(0),
-                (CommonTree) comparSubqAlias.getChild(0)));
+    CommonTree on = super.buildOn(FilterBlockUtil.createSqlASTNode(
+        PantheraParser_PLSQLParser.EQUALS_OP, "="), super.createCascatedElementWithTableName(
+        (CommonTree) topAlias.getChild(0), (CommonTree) compareElementAlias.getChild(0)), super
+        .createCascatedElementWithTableName((CommonTree) bottomAlias.getChild(0),
+            (CommonTree) comparSubqAlias.getChild(0)));
     FilterBlockUtil.attachChild(join, on);
 
     this.makeEnd();
@@ -303,7 +304,8 @@ public abstract class CommonFilterBlockProcessor extends BaseFilterBlockProcesso
    * @throws SqlXlateException
    */
   void processNotInUC() throws SqlXlateException {
-    CommonTree joinType = FilterBlockUtil.createSqlASTNode(PantheraParser_PLSQLParser.CROSS_VK, "cross");
+    CommonTree joinType = FilterBlockUtil.createSqlASTNode(PantheraParser_PLSQLParser.CROSS_VK,
+        "cross");
     this.makeTop();
 
 
@@ -316,8 +318,7 @@ public abstract class CommonFilterBlockProcessor extends BaseFilterBlockProcesso
 
     // compare alias from subq
     List<CommonTree> comparSubqAlias = super.buildSelectListAlias(bottomAlias,
-        (CommonTree) bottomSelect
-            .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST));
+        (CommonTree) bottomSelect.getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST));
 
 
     this.makeEnd();
@@ -346,16 +347,29 @@ public abstract class CommonFilterBlockProcessor extends BaseFilterBlockProcesso
     super.subQNode = super.buildNotIn4Minus(minuendSelect, topSelect);
     bottomSelect = topSelect;
     topSelect = minuendSelect;
-//    super.fbContext.setLogicTopSelect(topSelect);
+    // super.fbContext.setLogicTopSelect(topSelect);
     this.processNotInUC();
   }
 
-  void processNotExistsCByRightOuterJoin(CommonTree joinType) throws SqlXlateException{
+  void processNotExistsCByLeftJoin(CommonTree joinType) throws SqlXlateException {
     this.makeTop();
-    this.makeJoin(FilterBlockUtil.createSqlASTNode(PantheraParser_PLSQLParser.CROSS_VK,
-        PantheraExpParser.LEFT_STR));
+    super.joinTypeNode = FilterBlockUtil.createSqlASTNode(PantheraParser_PLSQLParser.CROSS_VK,
+        PantheraExpParser.LEFT_STR);
+    this.makeJoin(joinTypeNode);
+
+    // for optimizing not equal condition
+    //Map<joinType node,List<not equal condition node>>
+    Map<CommonTree, List<CommonTree>> joinMap = (Map<CommonTree, List<CommonTree>>) super.context
+        .getBallFromBasket(TranslateContext.JOIN_TYPE_NODE_BALL);
+    if (joinMap == null) {
+       joinMap = new HashMap<CommonTree, List<CommonTree>>();
+      super.context.putBallToBasket(TranslateContext.JOIN_TYPE_NODE_BALL, joinMap);
+    }
+
+    joinMap.put(joinTypeNode, new ArrayList<CommonTree>());
+
     super.processSelectAsterisk(bottomSelect);
-    super.rebuildSelectListByFilter(true,false, bottomAlias, topAlias);
+    super.rebuildSelectListByFilter(true, false, bottomAlias, topAlias);
     this.makeEnd();
     super.buildWhereByFB(null, null, null);
   }

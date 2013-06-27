@@ -91,6 +91,8 @@ public class PrepareQueryInfoTransformer extends BaseSqlASTTransformer {
       int nodeType = stack.peek();
       if (nodeType == PantheraParser_PLSQLParser.SQL92_RESERVED_FROM || qInfo.isQInfoTreeRoot()) {
         qInfo = prepareQInfo(ast, qInfo, qInfoList);
+      } else {
+        buildSelectListStr(ast, qInfo.getSelectListForSelectKey(ast));
       }
       // Prepare the top most Filter Blocks
       break;
@@ -159,7 +161,7 @@ public class PrepareQueryInfoTransformer extends BaseSqlASTTransformer {
       // Build row info for select result.
       List<Column> selectRowInfo = qInfo.getRowInfo(ast);
 
-      List<String> selectList = qInfo.getSelectList();
+      List<String> selectList = qInfo.getSelectListForSelectKey(ast);
       for (String selectListItem : selectList) {
         if (selectListItem.equals("*")) {
           List<Column> fromRowInfo = qInfo.getRowInfo((CommonTree)
@@ -292,11 +294,7 @@ public class PrepareQueryInfoTransformer extends BaseSqlASTTransformer {
       if (selectItem.getChild(0).getChild(0).getType() == PantheraParser_PLSQLParser.CASCATED_ELEMENT) {
         // Direct table column reference.
         CommonTree anyElement = (CommonTree) selectItem.getChild(0).getChild(0).getChild(0);
-        if (anyElement.getChildCount() == 1) {
-          selectListStr.add(anyElement.getChild(0).getText());
-        } else {
-          selectListStr.add(anyElement.getChild(1).getText());
-        }
+        selectListStr.add(anyElement.getChild(anyElement.getChildCount() - 1).getText());
       } else {
         // Function. since it has no alias, use toStringTree() as its alias.
         selectListStr.add(selectItem.getChild(0).getChild(0).toStringTree());

@@ -29,6 +29,7 @@ public class TransformerBuilder {
   private static SqlASTTransformer tf =
       new TopQueryTransformer(
       new OrderByTransformer(
+      new NotEqualJoinTransformer(
       new CrossJoinTransformer(
       new PrepareQueryInfoTransformer(
       new SubQUnnestTransformer(
@@ -38,7 +39,7 @@ public class TransformerBuilder {
       new WhereConditionOptimizationTransformer(
       new PrepareQueryInfoTransformer(
       new RowNumTransformer(
-      new NothingTransformer())))))))))));
+      new NothingTransformer()))))))))))));
 
   private TransformerBuilder() {
   }

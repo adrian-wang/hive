@@ -168,6 +168,13 @@ public class CrossJoinTransformer extends BaseSqlASTTransformer {
         node.getParent().setChild(node.getChildIndex(), leftChild);
       }
     } else {
+      // HIVE does not support OR operator in join conditions
+      List<CommonTree> OrList = new ArrayList<CommonTree>();
+      FilterBlockUtil.findNode(node, PantheraParser_PLSQLParser.SQL92_RESERVED_OR, OrList);
+      if (!OrList.isEmpty()) {
+        return;
+      }
+
       if (node.getType() == PantheraParser_PLSQLParser.EQUALS_OP) {
         //
         // Check if this is a equality expression between two columns
@@ -203,7 +210,7 @@ public class CrossJoinTransformer extends BaseSqlASTTransformer {
       }
 
       // If there is a hint for keeping the node in the where clause, then skip it
-      if (context.getBallFromBuskate(node) != null) {
+      if (context.getBallFromBasket(node) != null) {
         return;
       }
 

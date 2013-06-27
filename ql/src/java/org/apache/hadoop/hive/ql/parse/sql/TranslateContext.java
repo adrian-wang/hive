@@ -28,10 +28,13 @@ import org.apache.hadoop.hive.ql.parse.sql.transformer.QueryInfo;
 
 /**
  * In SQL translate phase, store context information for thread.
+ *
  * TranslateContext.
  *
  */
 public class TranslateContext {
+  public final static String JOIN_TYPE_NODE_BALL = "joinTypeNode";
+
   private HiveConf conf;
   private HiveMetadata meta;
   private QueryInfo qInfoRoot;
@@ -85,11 +88,11 @@ public class TranslateContext {
 
 
 
-  public Object getBallFromBuskate(Object name) {
+  public Object getBallFromBasket(Object name) {
     return buskate.get(name);
   }
 
-  public void putBallToBuskate(Object name, Object value) {
+  public void putBallToBasket(Object name, Object value) {
     buskate.put(name, value);
   }
 

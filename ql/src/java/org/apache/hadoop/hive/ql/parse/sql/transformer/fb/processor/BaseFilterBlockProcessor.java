@@ -60,6 +60,8 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
   Map<String, String> tableAliasMap = new HashMap<String, String>();// <tableName,tableAlias>
   // <tableAlias,<columnNam,columnAliase>> TODO how to do duplicated columnName?
   Map<String, Map<String, String>> columnAliasMap = new HashMap<String, Map<String, String>>();
+  Boolean hasNotEqualCorrelated = false;
+  CommonTree joinTypeNode;
 
   /**
    * template method
@@ -105,16 +107,13 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
     this.buildTableAliasMap(viewAlias.getChild(0).getText(), FilterBlockUtil.getTableName(select));
     FilterBlockUtil.attachChild(tableRefElement, viewAlias);
     CommonTree tableExpression = FilterBlockUtil.createSqlASTNode(
-        PantheraParser_PLSQLParser.TABLE_EXPRESSION,
-        "TABLE_EXPRESSION");
+        PantheraParser_PLSQLParser.TABLE_EXPRESSION, "TABLE_EXPRESSION");
     FilterBlockUtil.attachChild(tableRefElement, tableExpression);
     CommonTree selectMode = FilterBlockUtil.createSqlASTNode(
-        PantheraParser_PLSQLParser.SELECT_MODE,
-        "SELECT_MODE");
+        PantheraParser_PLSQLParser.SELECT_MODE, "SELECT_MODE");
     FilterBlockUtil.attachChild(tableExpression, selectMode);
     CommonTree selectStatement = FilterBlockUtil.createSqlASTNode(
-        PantheraParser_PLSQLParser.SELECT_STATEMENT,
-        "SELECT_STATEMENT");
+        PantheraParser_PLSQLParser.SELECT_STATEMENT, "SELECT_STATEMENT");
     FilterBlockUtil.attachChild(selectMode, selectStatement);
     CommonTree subQuery = FilterBlockUtil.createSqlASTNode(PantheraParser_PLSQLParser.SUBQUERY,
         "SUBQUERY");
@@ -128,10 +127,8 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
     CommonTree subQ = FilterBlockUtil.cloneTree(subQNode);
     for (int i = 0; i < subQ.getChildCount(); i++) {
       if (subQ.getChild(i).getType() == PantheraParser_PLSQLParser.SUBQUERY) {
-        subQ.setChild(
-            i,
-            this.createCascatedElement((CommonTree) viewAlias.getChild(0), (CommonTree) colAlias
-                .getChild(0)));
+        subQ.setChild(i, this.createCascatedElement((CommonTree) viewAlias.getChild(0),
+            (CommonTree) colAlias.getChild(0)));
       }
 
     }
@@ -140,8 +137,7 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
 
   void buildWhereBranch(CommonTree viewAlias, CommonTree colAlias) {
     CommonTree where = FilterBlockUtil.createSqlASTNode(
-        PantheraParser_PLSQLParser.SQL92_RESERVED_WHERE,
-        "where");
+        PantheraParser_PLSQLParser.SQL92_RESERVED_WHERE, "where");
     CommonTree logicExpr = FilterBlockUtil.createSqlASTNode(PantheraParser_PLSQLParser.LOGIC_EXPR,
         "LOGIC_EXPR");
     FilterBlockUtil.attachChild(where, logicExpr);
@@ -178,8 +174,7 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
   }
 
   /**
-   * check bottom select's from table alias. If no alias, create it.
-   * FIXME if from join, it's wrong.
+   * check bottom select's from table alias. If no alias, create it. FIXME if from join, it's wrong.
    *
    * @return
    */
@@ -201,14 +196,13 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
   }
 
   /**
-   * extract join key from filter op node.
-   * TODO optimize it.
+   * extract join key from filter op node. TODO optimize it.
    *
    * @return false: bottom keys<br>
    *         true: top key
    * @throws SqlXlateException
    */
-  Map<Boolean, List<CommonTree>> getFilterKey(CommonTree filterOp) throws SqlXlateException {
+  Map<Boolean, List<CommonTree>> getFilter(CommonTree filterOp) throws SqlXlateException {
 
     Map<Boolean, List<CommonTree>> result = new HashMap<Boolean, List<CommonTree>>();
     Stack<CommonTree> selectStack = new Stack<CommonTree>();
@@ -236,6 +230,17 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
           result.put(true, correlatedList);
         }
         correlatedList.add(child);
+        if (filterOp.getType() != PantheraParser_PLSQLParser.EQUALS_OP) {
+          this.hasNotEqualCorrelated = true;
+          Map<CommonTree, List<CommonTree>> joinMap = (Map<CommonTree, List<CommonTree>>) this.context
+              .getBallFromBasket(TranslateContext.JOIN_TYPE_NODE_BALL);
+          if (joinMap != null) {
+            List<CommonTree> notEqualConditionList = joinMap.get(joinTypeNode);
+            if (notEqualConditionList != null) {
+              notEqualConditionList.add(filterOp);
+            }
+          }
+        }
       }
     }
 
@@ -256,10 +261,10 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
 
   private void getWhereKey(CommonTree filterOp, List<Map<Boolean, List<CommonTree>>> list)
       throws SqlXlateException {
-    if (isFilterOp(filterOp)) {
-      list.add(getFilterKey(filterOp));
+    if (FilterBlockUtil.isFilterOp(filterOp)) {
+      list.add(getFilter(filterOp));
       return;
-    } else if (isLogicOp(filterOp)) {
+    } else if (FilterBlockUtil.isLogicOp(filterOp)) {
       for (int i = 0; i < filterOp.getChildCount(); i++) {
         getWhereKey((CommonTree) filterOp.getChild(i), list);
       }
@@ -269,31 +274,6 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
 
   }
 
-  private boolean isFilterOp(CommonTree node) {
-    int type = node.getType();
-    switch (type) {
-    case PantheraParser_PLSQLParser.EQUALS_OP:
-    case PantheraParser_PLSQLParser.GREATER_THAN_OP:
-    case PantheraParser_PLSQLParser.GREATER_THAN_OR_EQUALS_OP:
-    case PantheraParser_PLSQLParser.LESS_THAN_OP:
-    case PantheraParser_PLSQLParser.LESS_THAN_OR_EQUALS_OP:
-    case PantheraParser_PLSQLParser.NOT_EQUAL_OP:
-      return true;
-    default:
-      return false;
-    }
-  }
-
-  private boolean isLogicOp(CommonTree node) {
-    int type = node.getType();
-    switch (type) {
-    case PantheraParser_PLSQLParser.SQL92_RESERVED_AND:
-    case PantheraParser_PLSQLParser.SQL92_RESERVED_OR:
-      return true;
-    default:
-      return false;
-    }
-  }
 
   /**
    * add cascatedElement(standardFunction...) branch to bottom SELECT_LIST node
@@ -303,18 +283,12 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
    */
   CommonTree addSelectItem(CommonTree selectList, CommonTree cascatedElement) {
     if (cascatedElement.getChild(0).getChildCount() == 2
-        && cascatedElement.getChild(0).getType() == PantheraParser_PLSQLParser.ANY_ELEMENT) {// FIXME
-      // just
-      // for
-      // tpch
-      // 20.sql
-      // &&
-      // 21.sql
+        && cascatedElement.getChild(0).getType() == PantheraParser_PLSQLParser.ANY_ELEMENT) {
+      // TODO just for tpch 20.sql & 21.sql
       cascatedElement.getChild(0).deleteChild(0);
     }
     CommonTree selectItem = FilterBlockUtil.createSqlASTNode(
-        PantheraParser_PLSQLParser.SELECT_ITEM,
-        "SELECT_ITEM");
+        PantheraParser_PLSQLParser.SELECT_ITEM, "SELECT_ITEM");
     FilterBlockUtil.attachChild(selectList, selectItem);
     CommonTree expr = FilterBlockUtil.createSqlASTNode(PantheraParser_PLSQLParser.EXPR, "EXPR");
     FilterBlockUtil.attachChild(selectItem, expr);
@@ -345,8 +319,7 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
       FilterBlockUtil.attachChild(bottomSelect, group);
     }
     CommonTree groupByElement = FilterBlockUtil.createSqlASTNode(
-        PantheraParser_PLSQLParser.GROUP_BY_ELEMENT,
-        "GROUP_BY_ELEMENT");
+        PantheraParser_PLSQLParser.GROUP_BY_ELEMENT, "GROUP_BY_ELEMENT");
     FilterBlockUtil.attachChild(group, groupByElement);
     CommonTree expr = FilterBlockUtil.createSqlASTNode(PantheraParser_PLSQLParser.EXPR, "EXPR");
     FilterBlockUtil.attachChild(groupByElement, expr);
@@ -372,8 +345,7 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
 
   CommonTree buildWhere(CommonTree op, CommonTree child0, CommonTree child1) {
     CommonTree where = FilterBlockUtil.createSqlASTNode(
-        PantheraParser_PLSQLParser.SQL92_RESERVED_WHERE,
-        "where");
+        PantheraParser_PLSQLParser.SQL92_RESERVED_WHERE, "where");
     FilterBlockUtil.attachChild(where, this.createLogicExpr(op, child0, child1));
     return where;
   }
@@ -385,27 +357,24 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
       throw new SqlXlateException("illegal condition.");
     }
     CommonTree where = FilterBlockUtil.createSqlASTNode(
-        PantheraParser_PLSQLParser.SQL92_RESERVED_WHERE,
-        "where");
+        PantheraParser_PLSQLParser.SQL92_RESERVED_WHERE, "where");
     CommonTree logicExpr = FilterBlockUtil.createSqlASTNode(PantheraParser_PLSQLParser.LOGIC_EXPR,
         "LOGIC_EXPR");
     FilterBlockUtil.attachChild(where, logicExpr);
     CommonTree currentBranch = logicExpr;
     for (int i = 0; i < leftChildren.size(); i++) {
       if (logicExpr.getChildCount() > 0) {
-        CommonTree and = FilterBlockUtil
-            .createSqlASTNode(PantheraParser_PLSQLParser.SQL92_RESERVED_AND, "and");
+        CommonTree and = FilterBlockUtil.createSqlASTNode(
+            PantheraParser_PLSQLParser.SQL92_RESERVED_AND, "and");
         FilterBlockUtil.attachChild(and, (CommonTree) logicExpr.deleteChild(0));
         FilterBlockUtil.attachChild(logicExpr, and);
         currentBranch = and;
       }
       CommonTree operation = FilterBlockUtil.cloneTree(op);
       FilterBlockUtil.attachChild(operation, this.createCascatedElement((CommonTree) leftChildren
-          .get(i)
-          .getChild(0)));
+          .get(i).getChild(0)));
       FilterBlockUtil.attachChild(operation, this.createCascatedElement((CommonTree) rightChildren
-          .get(i)
-          .getChild(0)));
+          .get(i).getChild(0)));
       FilterBlockUtil.attachChild(currentBranch, operation);
     }
     return where;
@@ -517,8 +486,7 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
 
   CommonTree createClosingSelect(CommonTree tebleRefElement) {
     CommonTree select = FilterBlockUtil.createSqlASTNode(
-        PantheraParser_PLSQLParser.SQL92_RESERVED_SELECT,
-        "select");
+        PantheraParser_PLSQLParser.SQL92_RESERVED_SELECT, "select");
     CommonTree from = FilterBlockUtil.createSqlASTNode(
         PantheraParser_PLSQLParser.SQL92_RESERVED_FROM, "from");
     FilterBlockUtil.attachChild(select, from);
@@ -531,11 +499,9 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
 
   CommonTree createCascatedElement(CommonTree child) {
     CommonTree cascatedElement = FilterBlockUtil.createSqlASTNode(
-        PantheraParser_PLSQLParser.CASCATED_ELEMENT,
-        "CASCATED_ELEMENT");
+        PantheraParser_PLSQLParser.CASCATED_ELEMENT, "CASCATED_ELEMENT");
     CommonTree anyElement = FilterBlockUtil.createSqlASTNode(
-        PantheraParser_PLSQLParser.ANY_ELEMENT,
-        "ANY_ELEMENT");
+        PantheraParser_PLSQLParser.ANY_ELEMENT, "ANY_ELEMENT");
     FilterBlockUtil.attachChild(cascatedElement, anyElement);
     FilterBlockUtil.attachChild(anyElement, child);
     return cascatedElement;
@@ -551,11 +517,9 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
    */
   CommonTree createCascatedElementWithTableName(CommonTree tableName, CommonTree child) {
     CommonTree cascatedElement = FilterBlockUtil.createSqlASTNode(
-        PantheraParser_PLSQLParser.CASCATED_ELEMENT,
-        "CASCATED_ELEMENT");
+        PantheraParser_PLSQLParser.CASCATED_ELEMENT, "CASCATED_ELEMENT");
     CommonTree anyElement = FilterBlockUtil.createSqlASTNode(
-        PantheraParser_PLSQLParser.ANY_ELEMENT,
-        "ANY_ELEMENT");
+        PantheraParser_PLSQLParser.ANY_ELEMENT, "ANY_ELEMENT");
     FilterBlockUtil.attachChild(cascatedElement, anyElement);
     FilterBlockUtil.attachChild(anyElement, tableName);
     FilterBlockUtil.attachChild(anyElement, child);
@@ -564,11 +528,9 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
 
   CommonTree createCascatedElement(CommonTree child1, CommonTree child2) {
     CommonTree cascatedElement = FilterBlockUtil.createSqlASTNode(
-        PantheraParser_PLSQLParser.CASCATED_ELEMENT,
-        "CASCATED_ELEMENT");
+        PantheraParser_PLSQLParser.CASCATED_ELEMENT, "CASCATED_ELEMENT");
     CommonTree anyElement = FilterBlockUtil.createSqlASTNode(
-        PantheraParser_PLSQLParser.ANY_ELEMENT,
-        "ANY_ELEMENT");
+        PantheraParser_PLSQLParser.ANY_ELEMENT, "ANY_ELEMENT");
     FilterBlockUtil.attachChild(cascatedElement, anyElement);
     FilterBlockUtil.attachChild(anyElement, child1);
     FilterBlockUtil.attachChild(anyElement, child2);
@@ -577,8 +539,7 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
 
   CommonTree createSelectListForClosingSelect(List<CommonTree> aliasList) {
     CommonTree selectList = FilterBlockUtil.createSqlASTNode(
-        PantheraParser_PLSQLParser.SELECT_LIST,
-        "SELECT_LIST");
+        PantheraParser_PLSQLParser.SELECT_LIST, "SELECT_LIST");
     for (CommonTree alias : aliasList) {
       CommonTree newAlias = this.addSelectItem(selectList, this
           .createCascatedElement((CommonTree) alias.getChild(0)));
@@ -597,16 +558,13 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
       CommonTree expr = (CommonTree) selectList.getChild(i).getChild(0);
       CommonTree element = (CommonTree) expr.deleteChild(0);
       CommonTree cascatedElement = FilterBlockUtil.createSqlASTNode(
-          PantheraParser_PLSQLParser.CASCATED_ELEMENT,
-          "CASCATED_ELEMENT");
+          PantheraParser_PLSQLParser.CASCATED_ELEMENT, "CASCATED_ELEMENT");
       FilterBlockUtil.attachChild(expr, cascatedElement);
       CommonTree routineCall = FilterBlockUtil.createSqlASTNode(
-          PantheraParser_PLSQLParser.ROUTINE_CALL,
-          "ROUTINE_CALL");
+          PantheraParser_PLSQLParser.ROUTINE_CALL, "ROUTINE_CALL");
       FilterBlockUtil.attachChild(cascatedElement, routineCall);
       CommonTree routineName = FilterBlockUtil.createSqlASTNode(
-          PantheraParser_PLSQLParser.ROUTINE_NAME,
-          "ROUTINE_NAME");
+          PantheraParser_PLSQLParser.ROUTINE_NAME, "ROUTINE_NAME");
       FilterBlockUtil.attachChild(routineCall, routineName);
       CommonTree collectSet = FilterBlockUtil.createSqlASTNode(PantheraParser_PLSQLParser.ID,
           "collect_set");
@@ -649,28 +607,23 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
           throw new SqlXlateException("UnProcess logic operator." + op.getText());
         }
         CommonTree cascatedElement = FilterBlockUtil.createSqlASTNode(
-              PantheraParser_PLSQLParser.CASCATED_ELEMENT,
-              "CASCATED_ELEMENT");
+            PantheraParser_PLSQLParser.CASCATED_ELEMENT, "CASCATED_ELEMENT");
         FilterBlockUtil.attachChild(newOp, cascatedElement);
         CommonTree routineCall = FilterBlockUtil.createSqlASTNode(
-            PantheraParser_PLSQLParser.ROUTINE_CALL,
-              "ROUTINE_CALL");
+            PantheraParser_PLSQLParser.ROUTINE_CALL, "ROUTINE_CALL");
         FilterBlockUtil.attachChild(cascatedElement, routineCall);
         CommonTree routineName = FilterBlockUtil.createSqlASTNode(
-            PantheraParser_PLSQLParser.ROUTINE_NAME,
-              "ROUTINE_NAME");
+            PantheraParser_PLSQLParser.ROUTINE_NAME, "ROUTINE_NAME");
         FilterBlockUtil.attachChild(routineCall, routineName);
         CommonTree arrayContains = FilterBlockUtil.createSqlASTNode(PantheraParser_PLSQLParser.ID,
-              "array_contains");
+            "array_contains");
         FilterBlockUtil.attachChild(routineName, arrayContains);
         CommonTree arguments = FilterBlockUtil.createSqlASTNode(
-            PantheraParser_PLSQLParser.ARGUMENTS,
-              "ARGUMENTS");
+            PantheraParser_PLSQLParser.ARGUMENTS, "ARGUMENTS");
         FilterBlockUtil.attachChild(routineCall, arguments);
         for (int i = 0; i < op.getChildCount(); i++) {
           CommonTree arguement = FilterBlockUtil.createSqlASTNode(
-              PantheraParser_PLSQLParser.ARGUMENT,
-                "ARGUMENT");
+              PantheraParser_PLSQLParser.ARGUMENT, "ARGUMENT");
           FilterBlockUtil.attachChild(arguments, arguement);
           CommonTree expr = FilterBlockUtil.createSqlASTNode(PantheraParser_PLSQLParser.EXPR,
               "EXPR");
@@ -737,8 +690,7 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
   }
 
   void rebuildSelectListByFilter(boolean isLeftJoin, boolean needGroup, CommonTree joinSubAlias,
-      CommonTree topAlias)
-      throws SqlXlateException {
+      CommonTree topAlias) throws SqlXlateException {
     List<Map<Boolean, List<CommonTree>>> joinKeys = this.getFilterkey();
     Set<String> selectKeySet = new HashSet<String>();
     for (int i = 0; i < joinKeys.size(); i++) {
@@ -756,33 +708,32 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
           }
           // add select item
           CommonTree joinKeyAlias = this.addSelectItem((CommonTree) bottomSelect
-                .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST), FilterBlockUtil
-                .cloneTree(bottomKey));
+              .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST), FilterBlockUtil
+              .cloneTree(bottomKey));
           // modify filter to alias
           CommonTree anyElement = (CommonTree) bottomKey.getChild(0);
           if (anyElement.getChildCount() == 2) {
             ((CommonTree) anyElement.getChild(0)).getToken().setText(
-                  joinSubAlias.getChild(0).getText());
+                joinSubAlias.getChild(0).getText());
             ((CommonTree) anyElement.getChild(1)).getToken().setText(
-                  joinKeyAlias.getChild(0).getText());
+                joinKeyAlias.getChild(0).getText());
           } else {
             ((CommonTree) anyElement.getChild(0)).getToken().setText(
                 joinKeyAlias.getChild(0).getText());
           }
-          if (isLeftJoin) {
+          if (isLeftJoin && topKeys != null) {
             CommonTree isNull = FilterBlockUtil.createSqlASTNode(
-                PantheraParser_PLSQLParser.IS_NULL,
-                "IS_NULL");
+                PantheraParser_PLSQLParser.IS_NULL, "IS_NULL");
             isNull.addChild(FilterBlockUtil.cloneTree(bottomKey));
             CommonTree and = FilterBlockUtil.createSqlASTNode(
                 PantheraParser_PLSQLParser.SQL92_RESERVED_AND, "and");
             and.addChild(fb.getASTNode());
             and.addChild(isNull);
-            if (context.getBallFromBuskate(isNull) != null) {
+            if (context.getBallFromBasket(isNull) != null) {
               throw new SqlXlateException("fatal error: translate context conflict.");
             }
-            //for CrossjoinTransformer which should not optimise isNull node in WHERE.
-            context.putBallToBuskate(isNull, true);
+            // for CrossjoinTransformer which should not optimise isNull node in WHERE.
+            context.putBallToBasket(isNull, true);
             this.fb.setASTNode(and);
           }
         }
@@ -793,15 +744,14 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
 
         // add select item
         CommonTree joinKeyAlias = this.addSelectItem((CommonTree) topSelect
-              .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST), FilterBlockUtil
-              .cloneTree(topKey));
+            .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST), FilterBlockUtil
+            .cloneTree(topKey));
         // modify filter to alias
         CommonTree anyElement = (CommonTree) topKey.getChild(0);
         if (anyElement.getChildCount() == 2) {
-          ((CommonTree) anyElement.getChild(0)).getToken().setText(
-                topAlias.getChild(0).getText());
+          ((CommonTree) anyElement.getChild(0)).getToken().setText(topAlias.getChild(0).getText());
           ((CommonTree) anyElement.getChild(1)).getToken().setText(
-                joinKeyAlias.getChild(0).getText());
+              joinKeyAlias.getChild(0).getText());
         } else {
           ((CommonTree) anyElement.getChild(0)).getToken().setText(
               joinKeyAlias.getChild(0).getText());
@@ -813,22 +763,18 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
 
   CommonTree buildWhereByFB(CommonTree subQCondition, CommonTree compareKeyAlias1,
       CommonTree compareKeyAlias2) {
-    FilterBlockUtil.deleteBranch(bottomSelect,
-        PantheraParser_PLSQLParser.SQL92_RESERVED_WHERE);
+    FilterBlockUtil.deleteBranch(bottomSelect, PantheraParser_PLSQLParser.SQL92_RESERVED_WHERE);
     CommonTree where = FilterBlockUtil.createSqlASTNode(
-        PantheraParser_PLSQLParser.SQL92_RESERVED_WHERE,
-        "where");
+        PantheraParser_PLSQLParser.SQL92_RESERVED_WHERE, "where");
     CommonTree logicExpr = FilterBlockUtil.createSqlASTNode(PantheraParser_PLSQLParser.LOGIC_EXPR,
         "LOGIC_EXPR");
     FilterBlockUtil.attachChild(where, logicExpr);
     FilterBlockUtil.attachChild(logicExpr, fb.getASTNode());
     if (compareKeyAlias1 != null && compareKeyAlias2 != null) {
-      this.addConditionToWhere(where, FilterBlockUtil.dupNode(subQCondition),
-          this
-              .createCascatedElement(FilterBlockUtil
-                  .cloneTree((CommonTree) compareKeyAlias1.getChild(0))), this
-              .createCascatedElement(FilterBlockUtil
-                  .cloneTree((CommonTree) compareKeyAlias2.getChild(0))));
+      this.addConditionToWhere(where, FilterBlockUtil.dupNode(subQCondition), this
+          .createCascatedElement(FilterBlockUtil.cloneTree((CommonTree) compareKeyAlias1
+              .getChild(0))), this.createCascatedElement(FilterBlockUtil
+          .cloneTree((CommonTree) compareKeyAlias2.getChild(0))));
     }
     FilterBlockUtil.attachChild(topSelect, where);
     return where;
@@ -836,8 +782,7 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
 
   void builldSimpleWhere(CommonTree condition) {
     CommonTree where = FilterBlockUtil.createSqlASTNode(
-        PantheraParser_PLSQLParser.SQL92_RESERVED_WHERE,
-        "where");
+        PantheraParser_PLSQLParser.SQL92_RESERVED_WHERE, "where");
     CommonTree logicExpr = FilterBlockUtil.createSqlASTNode(PantheraParser_PLSQLParser.LOGIC_EXPR,
         "LOGIC_EXPR");
     FilterBlockUtil.attachChild(where, logicExpr);
@@ -910,10 +855,11 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
       for (int i = 0; i < orderByElements.getChildCount(); i++) {
         CommonTree orderByElement = (CommonTree) orderByElements.getChild(i);
         CommonTree anyElement = (CommonTree) orderByElement.getChild(0).getChild(0).getChild(0);
-        this.reRebuildAnyElement(oldAlias, newAlias, anyElement);
+        if (anyElement != null && anyElement.getType() == PantheraParser_PLSQLParser.ANY_ELEMENT) {
+          this.reRebuildAnyElement(oldAlias, newAlias, anyElement);
+        }
       }
     }
-
   }
 
   private void reRebuildAnyElement(CommonTree oldAlias, CommonTree newAlias, CommonTree anyElement) {
@@ -959,8 +905,8 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
       FilterBlockUtil.attachChild(equals, right);
       if (logicExpr.getChildCount() > 0) {
         CommonTree origin = (CommonTree) logicExpr.deleteChild(0);
-        CommonTree and = FilterBlockUtil
-            .createSqlASTNode(PantheraParser_PLSQLParser.SQL92_RESERVED_AND, "and");
+        CommonTree and = FilterBlockUtil.createSqlASTNode(
+            PantheraParser_PLSQLParser.SQL92_RESERVED_AND, "and");
         FilterBlockUtil.attachChild(and, origin);
         FilterBlockUtil.attachChild(and, equals);
         FilterBlockUtil.attachChild(logicExpr, and);
@@ -991,15 +937,13 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
       return FilterBlockUtil.cloneTree((CommonTree) selectList.getChild(0).getChild(0).getChild(0));
     }
     CommonTree vectorExpr = FilterBlockUtil.createSqlASTNode(
-        PantheraParser_PLSQLParser.VECTOR_EXPR,
-        "VECTOR_EXPR");
+        PantheraParser_PLSQLParser.VECTOR_EXPR, "VECTOR_EXPR");
     for (int i = 0; i < selectList.getChildCount(); i++) {
 
       CommonTree expr = FilterBlockUtil.createSqlASTNode(PantheraParser_PLSQLParser.EXPR, "EXPR");
       FilterBlockUtil.attachChild(vectorExpr, expr);
       FilterBlockUtil.attachChild(expr, FilterBlockUtil.cloneTree((CommonTree) selectList.getChild(
-          i)
-          .getChild(0).getChild(0)));
+          i).getChild(0).getChild(0)));
     }
     return vectorExpr;
   }
@@ -1033,26 +977,5 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
     }
     return null;
   }
-  /**
-   * update selectList's item alias
-   *
-   * @param selectList
-   */
-  // void rebuildSelectListAlias(CommonTree selectList){
-  // for(int i=0;i<selectList.getChildCount();i++){
-  // CommonTree
-  // }
-  // }
 
-  // void rebuildSelectListAlias(CommonTree selectList,CommonTree tableAlias){
-  // for(int i=0;i<selectList.getChildCount();i++){
-  // CommonTree selectItem = (CommonTree) selectList.getChild(i);
-  // String cloumnAlias = selectItem.getChild(1).getChild(0).getText();
-  // CommonTree anyElement =(CommonTree)selectItem.getChild(0).getChild(0).getChild(0);
-  // if(anyElement.getChildCount()==2){
-  //
-  // }
-  //
-  // }
-  // }
 }
