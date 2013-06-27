@@ -63,7 +63,4 @@ Under "Project Panthera", we are building ASE, a new analytical SQL engine for H
       <td></td>
       <td>select a from x natural left join y </td>
    </tr>
-   <tr>
-      <td></td>
-   </tr>
 </table>
