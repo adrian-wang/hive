@@ -21,3 +21,49 @@ Under "Project Panthera", we are building ASE, a new analytical SQL engine for H
 - ./hive
 - hive>set hive.ql.mode=sql; (execute the command before every SQL statement)
 - hive>select a from x where b > (select max(c) from y);
+
+---
+### Feature List ###
+ - Support all Hive query
+ - Base on Hive Select Syntax, Panthera ASE support:
+
+<table>
+   <tr>
+      <td>Feature</td>
+      <td>Comment</td>
+      <td>Example </td>
+   </tr>
+   <tr>
+      <td>Multi-Table in FROM clause</td>
+      <td></td>
+      <td>select * from x,y where x.a=y.b </td>
+   </tr>
+   <tr>
+      <td>Subquery in WHERE clause</td>
+      <td>Not support non-equal joint condition </td>
+      <td>select a from x where exits (select * from y) </td>
+   </tr>
+   <tr>
+      <td>Order by column position</td>
+      <td></td>
+      <td>select a,b from x order by 1 </td>
+   </tr>
+   <tr>
+      <td>Top level UNION ALL</td>
+      <td></td>
+      <td>select a from x union all select a from y </td>
+   </tr>
+   <tr>
+      <td>UNION</td>
+      <td></td>
+      <td>select a from x union select b from y </td>
+   </tr>
+   <tr>
+      <td>NATURAL JOIN</td>
+      <td></td>
+      <td>select a from x natural left join y </td>
+   </tr>
+   <tr>
+      <td></td>
+   </tr>
+</table>
