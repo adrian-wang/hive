@@ -21,11 +21,13 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.Map.Entry;
 
 import org.antlr33.runtime.CommonToken;
 import org.antlr33.runtime.tree.CommonTree;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hive.ql.parse.sql.PantheraExpParser;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateUtil;
 import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
 import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.QueryBlock.CountAsterisk;
@@ -87,13 +89,14 @@ public class FilterBlockUtil {
       // FIXME support complex expression without function(such as (col*3)/2)
       // TODO these code(and QueryBlock's) need clear
       if (standardFunctionList.size() == 1) {
-
         CommonTree standardFunction = standardFunctionList.get(0);
-        // TODO only support a,count(*) style ,NOT support select count(*) from...
         if (standardFunction.getChild(0).getType() == PantheraParser_PLSQLParser.COUNT_VK
             && standardFunction.getChild(0).getChild(0).getType() == PantheraParser_PLSQLParser.ASTERISK) {
           countAsterisk.setPosition(i);
           countAsterisk.setSelectItem(selectItem);
+          if (selectList.getChildCount() == 1) {
+            countAsterisk.setOnlyAsterisk(true);
+          }
           continue;
         }
         List<CommonTree> exprList = new ArrayList<CommonTree>();
@@ -269,9 +272,10 @@ public class FilterBlockUtil {
 
   /**
    * delete the node and re-balance the tree
+   *
    * @param op
    */
-  public static void deleteTheNode(CommonTree op){
+  public static void deleteTheNode(CommonTree op) {
     int opIndex = op.getChildIndex();
     CommonTree parent = (CommonTree) op.getParent();
     int parentIndex = parent.getChildIndex();
@@ -279,5 +283,147 @@ public class FilterBlockUtil {
     CommonTree brother = (CommonTree) parent.getChild(opIndex == 0 ? 1 : 0);
     grandpa.deleteChild(parentIndex);
     SqlXlateUtil.addCommonTreeChild(grandpa, parentIndex, brother);
+  }
+
+  /**
+   * @param select
+   * @return SUBQUERY node
+   */
+  public static CommonTree makeSelectBranch(CommonTree select, TranslateContext context) {
+    CommonTree from = FilterBlockUtil.createSqlASTNode(
+        PantheraParser_PLSQLParser.SQL92_RESERVED_FROM, "from");
+    FilterBlockUtil.attachChild(select, from);
+    CommonTree tableRef = FilterBlockUtil.createSqlASTNode(PantheraParser_PLSQLParser.TABLE_REF,
+        "TABLE_REF");
+    FilterBlockUtil.attachChild(from, tableRef);
+    CommonTree tableRefElement = FilterBlockUtil.createSqlASTNode(
+        PantheraParser_PLSQLParser.TABLE_REF_ELEMENT, "TABLE_REF_ELEMENT");
+    FilterBlockUtil.attachChild(tableRef, tableRefElement);
+    CommonTree alias = FilterBlockUtil.createAlias(context);
+    FilterBlockUtil.attachChild(tableRefElement, alias);
+    CommonTree tableExpression = FilterBlockUtil.createSqlASTNode(
+        PantheraParser_PLSQLParser.TABLE_EXPRESSION, "TABLE_EXPRESSION");
+    FilterBlockUtil.attachChild(tableRefElement, tableExpression);
+    CommonTree selectMode = FilterBlockUtil.createSqlASTNode(
+        PantheraParser_PLSQLParser.SELECT_MODE, "SELECT_MODE");
+    FilterBlockUtil.attachChild(tableExpression, selectMode);
+    CommonTree selectStatement = FilterBlockUtil.createSqlASTNode(
+        PantheraParser_PLSQLParser.SELECT_STATEMENT, "SELECT_STATEMENT");
+    FilterBlockUtil.attachChild(selectMode, selectStatement);
+    CommonTree subquery = FilterBlockUtil.createSqlASTNode(PantheraExpParser.SUBQUERY, "SUBQUERY");
+    selectStatement.addChild(subquery);
+    return subquery;
+  }
+
+  /**
+   * replace column by alias(for clone SELECT_LIST to top select node)
+   *
+   * @param selectList
+   */
+  public static void rebuildSelectAlias(CommonTree selectList) {
+    for (int i = 0; i < selectList.getChildCount(); i++) {
+      CommonTree selectItem = (CommonTree) selectList.getChild(i);
+      if (selectItem.getChildCount() == 2) {
+        String alias = selectItem.getChild(1).getChild(0).getText();
+        CommonTree column = (CommonTree) selectItem.getChild(0).getChild(0).getChild(0).getChild(0);
+        column.getToken().setText(alias);
+      }
+    }
+  }
+
+  /**
+   * clone SELECT_LIST. if it is null, return *
+   *
+   * @param originalSelectList
+   * @return
+   */
+  public static CommonTree cloneSelectList(CommonTree originalSelectList) {
+    CommonTree selectList;
+    if (originalSelectList != null) {
+      selectList = FilterBlockUtil.cloneTree(originalSelectList);
+      removeTableNameFromSelectList(selectList);
+      FilterBlockUtil.rebuildSelectAlias(selectList);
+    } else {
+      selectList = FilterBlockUtil.createSqlASTNode(PantheraExpParser.ASTERISK, "*");
+    }
+    return selectList;
+  }
+
+  public static void removeTableNameFromSelectList(CommonTree selectList) {
+    for (int i = 0; i < selectList.getChildCount(); i++) {
+      CommonTree anyElement = (CommonTree) selectList.getChild(i).getChild(0).getChild(0).getChild(
+          0);
+      if (anyElement.getChildCount() > 1) {
+        anyElement.deleteChild(0);
+      }
+    }
+  }
+
+  /**
+   * add sequence alias name in table
+   *
+   * @param select
+   */
+  public static void addColumnAlias(CommonTree select, TranslateContext context) {
+    CommonTree selectList = (CommonTree) select
+        .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST);
+    if (selectList == null) {
+      return;
+    }
+    int count = 0;
+    for (int i = 0; i < selectList.getChildCount(); i++) {
+      CommonTree selectItem = (CommonTree) selectList.getChild(i);
+      if (selectItem.getChildCount() == 1) {
+        CommonTree anyElement = (CommonTree) selectItem.getChild(0).getChild(0).getChild(0);
+        String columnStr = null;
+        if (anyElement != null) {
+          columnStr = anyElement.getChildCount() == 1 ? anyElement.getChild(0).getText()
+              : anyElement.getChild(1).getText();
+        }
+
+        CommonTree alias = createSqlASTNode(PantheraParser_PLSQLParser.ALIAS, "ALIAS");
+        String aliasStr = "panthera_col_" + count++;
+        CommonTree aliasName = createSqlASTNode(PantheraParser_PLSQLParser.ID, aliasStr);
+        alias.addChild(aliasName);
+        selectItem.addChild(alias);
+
+        // for order by & group by
+        boolean existInBasket = false;
+        for (Entry<Object, Object> e : context.getBasket().entrySet()) {
+          Object value = e.getValue();
+          if (value instanceof String) {
+            String oldAliasStr = value.toString();
+            if (oldAliasStr.equals(columnStr)) {
+              e.setValue(aliasStr);
+              existInBasket = true;
+              break;
+            }
+          }
+        }
+        if (!existInBasket) {
+          context.putBallToBasket(columnStr, aliasStr);
+        }
+      }
+    }
+  }
+
+  public static String addTableAlias(CommonTree tableRefElement, TranslateContext context) {
+    CommonTree alias = FilterBlockUtil.createAlias(context);
+    tableRefElement.addChild(alias);
+    SqlXlateUtil.exchangeChildrenPosition(tableRefElement);
+    return alias.getChild(0).getText();
+  }
+
+  public static CommonTree createCascatedElementBranch(String tableAlias, String columnName) {
+    CommonTree cascatedElement = FilterBlockUtil.createSqlASTNode(
+        PantheraParser_PLSQLParser.CASCATED_ELEMENT, "CASCATED_ELEMENT");
+    CommonTree anyElement = FilterBlockUtil.createSqlASTNode(
+        PantheraParser_PLSQLParser.ANY_ELEMENT, "ANY_ELEMENT");
+    FilterBlockUtil.attachChild(cascatedElement, anyElement);
+    CommonTree tableNode = FilterBlockUtil.createSqlASTNode(PantheraExpParser.ID, tableAlias);
+    CommonTree columnNode = FilterBlockUtil.createSqlASTNode(PantheraExpParser.ID, columnName);
+    anyElement.addChild(tableNode);
+    anyElement.addChild(columnNode);
+    return cascatedElement;
   }
 }

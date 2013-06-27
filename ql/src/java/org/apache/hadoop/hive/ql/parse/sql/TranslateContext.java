@@ -38,7 +38,7 @@ public class TranslateContext {
   private HiveConf conf;
   private HiveMetadata meta;
   private QueryInfo qInfoRoot;
-  private final Map<Object, Object> buskate = new HashMap<Object, Object>();
+  private final Map<Object, Object> basket = new HashMap<Object, Object>();
   private List<QueryInfo> qInfoList;// without QueryInfo root
   SqlXlateUtil.AliasGenerator aliasGen = new SqlXlateUtil.AliasGenerator();
 
@@ -89,11 +89,15 @@ public class TranslateContext {
 
 
   public Object getBallFromBasket(Object name) {
-    return buskate.get(name);
+    return basket.get(name);
   }
 
   public void putBallToBasket(Object name, Object value) {
-    buskate.put(name, value);
+    basket.put(name, value);
+  }
+
+  public Map<Object, Object> getBasket() {
+    return basket;
   }
 
   public SqlXlateUtil.AliasGenerator getAliasGen() {

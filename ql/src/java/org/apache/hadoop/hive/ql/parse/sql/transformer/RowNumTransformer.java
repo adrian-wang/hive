@@ -119,7 +119,7 @@ public class RowNumTransformer  extends BaseSqlASTTransformer  {
         return;
       }
       SqlASTNode parentFrom = (SqlASTNode) parentSelect.getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_FROM);
-      if (parentFrom.getChildCount() != 1) {
+      if (parentFrom.getChildCount() != 1 || parentFrom.getChild(0).getChildCount() != 1) {
         return;
       }
 

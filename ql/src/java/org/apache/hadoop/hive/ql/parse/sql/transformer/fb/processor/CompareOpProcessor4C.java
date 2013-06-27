@@ -20,7 +20,7 @@ package org.apache.hadoop.hive.ql.parse.sql.transformer.fb.processor;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
 
 /**
- * Correlated FilterBlock processor for all compare operator include > >= < <= = !=
+ * Correlated FilterBlock processor for all compare operator include > >= < <= = != <br>
  * CompareOpProcessor4C.
  *
  */
@@ -28,7 +28,7 @@ public class CompareOpProcessor4C extends CommonFilterBlockProcessor {
 
   @Override
   public void processFB() throws SqlXlateException {
-    super.processCompareC(null);
+    super.processCompareC();
 
   }
 }

@@ -27,19 +27,22 @@ package org.apache.hadoop.hive.ql.parse.sql.transformer;
 public class TransformerBuilder {
 
   private static SqlASTTransformer tf =
-      new TopQueryTransformer(
       new OrderByTransformer(
+      new PrepareQueryInfoTransformer(
+      new SetOperatorTransformer(
       new NotEqualJoinTransformer(
       new CrossJoinTransformer(
       new PrepareQueryInfoTransformer(
       new SubQUnnestTransformer(
       new PrepareFilterBlockTransformer(
+      new PrepareQueryInfoTransformer(
       new CrossJoinTransformer(
       new MultipleTableSelectTransformer(
       new WhereConditionOptimizationTransformer(
       new PrepareQueryInfoTransformer(
+      new NaturalJoinTransformer(
       new RowNumTransformer(
-      new NothingTransformer()))))))))))));
+      new NothingTransformer())))))))))))))));
 
   private TransformerBuilder() {
   }

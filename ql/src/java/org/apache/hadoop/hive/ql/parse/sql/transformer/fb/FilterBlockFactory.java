@@ -301,6 +301,7 @@ public abstract class FilterBlockFactory {
   /**
    * transform NOT logic expression with remove NOT node <br>
    * TODO: should be create LogicExpressTransformer for all logic optimization & transformer
+   * FIXME: It's against with design which FilterBlockFactory(and FilterBlock) is unrelated with input AST tree
    */
   public class NotBuilder implements FilterBlockBuilder {
     @Override

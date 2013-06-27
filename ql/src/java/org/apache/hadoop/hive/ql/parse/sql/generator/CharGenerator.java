@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,19 +15,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hive.ql.parse.sql.transformer.fb.processor;
+package org.apache.hadoop.hive.ql.parse.sql.generator;
 
+import org.antlr33.runtime.tree.CommonTree;
+import org.apache.hadoop.hive.ql.parse.ASTNode;
+import org.apache.hadoop.hive.ql.parse.HiveParser;
+import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
 
-/**
- * Process uncorrelated filter block node which subQ is GREATER_THAN type.<br>
- * CompareProcessor4UC.
- *
- */
-public class CompareProcessor4UC extends CommonFilterBlockProcessor {
+public class CharGenerator extends BaseHiveASTGenerator {
 
   @Override
-  public void processFB() {
-    super.processCompareUC();
+  public boolean generate(ASTNode hiveRoot, CommonTree sqlRoot, ASTNode currentHiveNode,
+      CommonTree currentSqlNode, TranslateContext context) throws Exception {
+    return super.baseProcess(HiveParser.TOK_STRING, "TOK_STRING", hiveRoot, sqlRoot,
+        currentHiveNode, currentSqlNode, context);
   }
 
 }

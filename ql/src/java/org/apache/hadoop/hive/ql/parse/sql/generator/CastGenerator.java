@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,25 +19,24 @@ package org.apache.hadoop.hive.ql.parse.sql.generator;
 
 import org.antlr33.runtime.tree.CommonTree;
 import org.apache.hadoop.hive.ql.parse.ASTNode;
-import org.apache.hadoop.hive.ql.parse.HiveParser;
-import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
+import org.apache.hadoop.hive.ql.parse.sql.SqlParseException;
 import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
 
-public class UnaryOperatorGenerator extends BaseHiveASTGenerator {
+public class CastGenerator extends BaseHiveASTGenerator {
 
   @Override
   public boolean generate(ASTNode hiveRoot, CommonTree sqlRoot, ASTNode currentHiveNode,
       CommonTree currentSqlNode, TranslateContext context) throws Exception {
-    String operator = currentSqlNode.getText();
-    if ("+".equals(operator)) {
-      return super.baseProcess(HiveParser.PLUS, operator, hiveRoot, sqlRoot, currentHiveNode,
-          currentSqlNode, context);
+    if (currentSqlNode.getChildCount() != 2) {
+      throw new SqlParseException("unsupported cast function.");
     }
-    if ("-".equals(operator)) {
-      return super.baseProcess(HiveParser.MINUS, currentSqlNode.getText(), hiveRoot, sqlRoot,
-          currentHiveNode, currentSqlNode, context);
-    }
-    throw new SqlXlateException("Unsupportd unary operator:" + operator);
+    CommonTree leftChild = (CommonTree) currentSqlNode.getChild(0);
+    CommonTree rightChild = (CommonTree) currentSqlNode.getChild(1);
+    GeneratorFactory.getGenerator(rightChild).generateHiveAST(hiveRoot, sqlRoot, currentHiveNode,
+        rightChild, context);
+    GeneratorFactory.getGenerator(leftChild).generateHiveAST(hiveRoot, sqlRoot, currentHiveNode,
+        leftChild, context);
+    return true;
   }
 
 }

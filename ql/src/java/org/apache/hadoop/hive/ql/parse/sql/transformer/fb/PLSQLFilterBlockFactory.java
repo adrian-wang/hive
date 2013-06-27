@@ -77,7 +77,7 @@ public class PLSQLFilterBlockFactory extends FilterBlockFactory {
   public boolean isCorrelated(QueryInfo qInfo, Stack<CommonTree> selectStack, CommonTree branch)
       throws SqlXlateException {
     if (branch.getType() == PantheraParser_PLSQLParser.CASCATED_ELEMENT) {
-      SqlASTNode child = (SqlASTNode) branch.getChild(0);
+      CommonTree child = (CommonTree) branch.getChild(0);
       if (child.getType() == PantheraParser_PLSQLParser.ANY_ELEMENT) {
         if (selectStack.size() <= 1) {
           return false;

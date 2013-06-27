@@ -29,7 +29,7 @@ import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
 
 /**
  * Create generator by node(type), generator is singleton instance.<br>
- * If add generator, should register it in the factory.
+ * If add generator, should register it in the factory.<br>
  * GeneratorFactory.
  *
  */
@@ -143,8 +143,8 @@ public class GeneratorFactory {
     //
     // Just ignore EXTRACT_VK node because the first child of this node is the datetime field
     // (year | month | day | hour | minute | second) or time zone field (not supported yet. just
-    // passed through into hive and error is expected from hive) and the field will be translated into
-    // the corresponding UDF name in the RegularIdGenerator.
+    // passed through into hive and error is expected from hive) and the field will be translated
+    // into the corresponding UDF name in the RegularIdGenerator.
     //
     genMap.put(PantheraParser_PLSQLParser.EXTRACT_VK, new NothingGenerator());
     genMap.put(PantheraParser_PLSQLParser.REGULAR_ID, new RegularIdGenerator());
@@ -155,6 +155,13 @@ public class GeneratorFactory {
     genMap.put(PantheraExpParser.LIMIT_VK, new LimitGenerator());
     genMap.put(PantheraParser_PLSQLParser.SEARCHED_CASE, new SearchedCaseGenerator());
     genMap.put(PantheraParser_PLSQLParser.NOT_LIKE, new NotLikeGenerator());
+    genMap.put(PantheraParser_PLSQLParser.CAST_VK, new CastGenerator());
+    genMap.put(PantheraParser_PLSQLParser.NATIVE_DATATYPE, new NothingGenerator());
+    genMap.put(PantheraParser_PLSQLParser.INT_VK, new IntGenerator());
+    genMap.put(PantheraParser_PLSQLParser.CHAR_VK, new CharGenerator());
+    genMap.put(PantheraParser_PLSQLParser.PRECISION, new PrecisionGenerator());
+    genMap.put(PantheraParser_PLSQLParser.DECIMAL_VK, new DecimalGenerator());
+    genMap.put(PantheraParser_PLSQLParser.DEC_VK, new DecimalGenerator());
   }
 
   static {

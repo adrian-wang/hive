@@ -32,15 +32,15 @@ public class TableRefElementGenerator extends BaseHiveASTGenerator implements Hi
 
     ASTNode trc;
     if ((currentSqlNode.getChildCount() == 1 ? currentSqlNode.getChild(0).getChild(0).getType()
-        : currentSqlNode
-            .getChild(1).getChild(0).getType()) == PantheraParser_PLSQLParser.SELECT_MODE) {// otherwise
-                                                                                            // DIRECT_MODE
+        : currentSqlNode.getChild(1).getChild(0).getType()) == PantheraParser_PLSQLParser.SELECT_MODE) {
       trc = super.newHiveASTNode(HiveParser.TOK_SUBQUERY, "TOK_SUBQUERY");
-    } else {
+    }
+    // otherwise DIRECT_MODE
+    else {
       trc = super.newHiveASTNode(HiveParser.TOK_TABREF, "TOK_TABREF");
     }
     super.attachHiveNode(hiveRoot, currentHiveNode, trc);
-    currentHiveNode=trc;
+    currentHiveNode = trc;
     if (!super.generateChildren(hiveRoot, sqlRoot, currentHiveNode, currentSqlNode, context)) {
       return false;
     }

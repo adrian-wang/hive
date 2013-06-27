@@ -18,8 +18,9 @@
 package org.apache.hadoop.hive.ql.parse.sql.transformer.fb.processor;
 
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
+
 /**
- * uncorrelated not in processor
+ * uncorrelated not in processor.<br>
  * NotInProcessor4UC.
  *
  */

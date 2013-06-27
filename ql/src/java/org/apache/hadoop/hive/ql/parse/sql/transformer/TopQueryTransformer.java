@@ -27,10 +27,12 @@ import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.FilterBlockUtil;
 import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
 
 /**
- * Transform top query by enclosing with select statement.
+ * Transform top query by enclosing with select statement. <br>
  * TopQueryTransformer.
  *
+ * @deprecated SetOperatorTransformer have resolve the problem.
  */
+@Deprecated
 public class TopQueryTransformer extends BaseSqlASTTransformer {
 
   SqlASTTransformer tf;
@@ -82,16 +84,13 @@ public class TopQueryTransformer extends BaseSqlASTTransformer {
     FilterBlockUtil.attachChild(tableRefElement, alias);
     FilterBlockUtil.attachChild(tableRef, tableRefElement);
     CommonTree tableExpression = FilterBlockUtil.createSqlASTNode(
-        PantheraParser_PLSQLParser.TABLE_EXPRESSION,
-        "TABLE_EXPRESSION");
+        PantheraParser_PLSQLParser.TABLE_EXPRESSION, "TABLE_EXPRESSION");
     FilterBlockUtil.attachChild(tableRefElement, tableExpression);
     CommonTree selectMode = FilterBlockUtil.createSqlASTNode(
-        PantheraParser_PLSQLParser.SELECT_MODE,
-        "SELECT_MODE");
+        PantheraParser_PLSQLParser.SELECT_MODE, "SELECT_MODE");
     FilterBlockUtil.attachChild(tableExpression, selectMode);
     CommonTree selectStatement = FilterBlockUtil.createSqlASTNode(
-        PantheraParser_PLSQLParser.SELECT_STATEMENT,
-        "SELECT_STATEMENT");
+        PantheraParser_PLSQLParser.SELECT_STATEMENT, "SELECT_STATEMENT");
     FilterBlockUtil.attachChild(selectMode, selectStatement);
 
     CommonTree subquery = (CommonTree) topSelectStatement.deleteChild(0);

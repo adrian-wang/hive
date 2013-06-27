@@ -26,7 +26,7 @@ import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.FilterBlockUtil;
 import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
 
 /**
- * build FilterBlockProcessor by subquery node.
+ * build FilterBlockProcessor by subquery node. <br>
  * FilterBlockProcessorFactory.
  *
  */
@@ -53,6 +53,8 @@ public class FilterBlockProcessorFactory {
       return new NotInProcessor4UC();
     case PantheraParser_PLSQLParser.SQL92_RESERVED_IN:
       return new InProcessor4UC();
+    case PantheraParser_PLSQLParser.SQL92_RESERVED_EXISTS:
+      return new ExistsProcessor4UC();
     default:
       throw new SqlXlateException("Unimplement uncorrelated sub query type:" + type);
     }
@@ -76,6 +78,10 @@ public class FilterBlockProcessorFactory {
       }
     case PantheraParser_PLSQLParser.SQL92_RESERVED_EXISTS:
       return new ExistsProcessor4C();
+    case PantheraParser_PLSQLParser.SQL92_RESERVED_IN:
+      return new InProcessor4C();
+    case PantheraParser_PLSQLParser.NOT_IN:
+      return new NotInProcessor4C();
     default:
       throw new SqlXlateException("Unimplement correlated sub query type:" + type);
     }
@@ -96,10 +102,6 @@ public class FilterBlockProcessorFactory {
   }
 
   private FilterBlockProcessorFactory() {
-  }
-
-  public static FilterBlockProcessor getAndProcessor() {
-    return new AndProcessor();
   }
 
   /**
@@ -125,20 +127,16 @@ public class FilterBlockProcessorFactory {
         && (compareType == PantheraParser_PLSQLParser.EQUALS_OP)) {
       // FIXME create UDAF which return only one column or NULL
       deleteScopeNode(subQ);
-    } else if ((scopeType == PantheraParser_PLSQLParser.SOME_VK
-        || scopeType == PantheraParser_PLSQLParser.SQL92_RESERVED_ANY)
+    } else if ((scopeType == PantheraParser_PLSQLParser.SOME_VK || scopeType == PantheraParser_PLSQLParser.SQL92_RESERVED_ANY)
         && (compareType == PantheraParser_PLSQLParser.GREATER_THAN_OP || compareType == PantheraParser_PLSQLParser.GREATER_THAN_OR_EQUALS_OP)) {
       rebuildScopeType(subQ, "min");
-    } else if ((scopeType == PantheraParser_PLSQLParser.SOME_VK
-        || scopeType == PantheraParser_PLSQLParser.SQL92_RESERVED_ANY)
+    } else if ((scopeType == PantheraParser_PLSQLParser.SOME_VK || scopeType == PantheraParser_PLSQLParser.SQL92_RESERVED_ANY)
         && (compareType == PantheraParser_PLSQLParser.LESS_THAN_OP || compareType == PantheraParser_PLSQLParser.LESS_THAN_OR_EQUALS_OP)) {
       rebuildScopeType(subQ, "max");
-    } else if ((scopeType == PantheraParser_PLSQLParser.SOME_VK
-        || scopeType == PantheraParser_PLSQLParser.SQL92_RESERVED_ANY)
+    } else if ((scopeType == PantheraParser_PLSQLParser.SOME_VK || scopeType == PantheraParser_PLSQLParser.SQL92_RESERVED_ANY)
         && (compareType == PantheraParser_PLSQLParser.EQUALS_OP)) {
       rebuildCompareType(subQ, PantheraParser_PLSQLParser.SQL92_RESERVED_IN, "in");
-    } else if ((scopeType == PantheraParser_PLSQLParser.SOME_VK
-        || scopeType == PantheraParser_PLSQLParser.SQL92_RESERVED_ANY)
+    } else if ((scopeType == PantheraParser_PLSQLParser.SOME_VK || scopeType == PantheraParser_PLSQLParser.SQL92_RESERVED_ANY)
         && (compareType == PantheraParser_PLSQLParser.NOT_EQUAL_OP)) {
       // TODO UDAF?
       deleteScopeNode(subQ);
@@ -154,8 +152,8 @@ public class FilterBlockProcessorFactory {
     // add aggregation function
     CommonTree subQuery = (CommonTree) subQ.getChild(1).getChild(0);
     CommonTree select = (CommonTree) subQuery.getChild(0);
-    CommonTree selectItem = (CommonTree) select
-        .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST).getChild(0);
+    CommonTree selectItem = (CommonTree) select.getFirstChildWithType(
+        PantheraParser_PLSQLParser.SELECT_LIST).getChild(0);
     CommonTree expr = (CommonTree) selectItem.getChild(0);
     if (expr.getChild(0).getType() != PantheraParser_PLSQLParser.STANDARD_FUNCTION) {
       CommonTree function = FilterBlockUtil.createFunction(aggregationName, (CommonTree) expr
@@ -168,7 +166,7 @@ public class FilterBlockProcessorFactory {
   }
 
   private static void deleteScopeNode(CommonTree subQ) {
-    CommonTree subQuery = (CommonTree) subQ.getChild(0).getChild(0);
+    CommonTree subQuery = (CommonTree) subQ.getChild(1).getChild(0);
     subQ.deleteChild(1);
     subQ.addChild(subQuery);
   }

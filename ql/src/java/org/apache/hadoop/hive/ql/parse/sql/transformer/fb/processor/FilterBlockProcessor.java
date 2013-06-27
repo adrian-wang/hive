@@ -23,12 +23,13 @@ import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.FilterBlock;
 import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.FilterBlockContext;
 
 /**
- * Process every filter block node.
+ * Process every filter block node.<br>
  * FilterBlockProcessor.
  *
  */
 
 public interface FilterBlockProcessor {
 
-  void process(FilterBlockContext fbContext, FilterBlock fb, TranslateContext context) throws SqlXlateException;
+  void process(FilterBlockContext fbContext, FilterBlock fb, TranslateContext context)
+      throws SqlXlateException;
 }

@@ -27,13 +27,13 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 import org.antlr33.runtime.tree.CommonTree;
-import org.antlr33.runtime.tree.Tree;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.ql.exec.ColumnInfo;
+import org.apache.hadoop.hive.ql.lib.Node;
 import org.apache.hadoop.hive.ql.metadata.Hive;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.metadata.Table;
@@ -956,5 +956,15 @@ public final class SqlXlateUtil {
       child.setParent(parent);
       child.setChildIndex(index);
     }
+  }
+  
+  public static int getASTNodeChildIndex(ASTNode parent,ASTNode child){
+    List<Node> children = parent.getChildren();
+    for(int i=0;i<children.size();i++){
+      if(child==children.get(i)){
+        return i;
+      }
+    }
+    return -1;
   }
 }

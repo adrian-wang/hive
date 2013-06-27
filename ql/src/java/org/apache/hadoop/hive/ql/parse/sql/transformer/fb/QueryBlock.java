@@ -43,10 +43,6 @@ public class QueryBlock extends BaseFilterBlock {
   private CommonTree limit;
   private final CountAsterisk countAsterisk = new CountAsterisk();
 
-
-  /**
-   * FIXME just process two level subquery
-   */
   @Override
   public void process(FilterBlockContext fbContext, TranslateContext context)
       throws SqlXlateException {
@@ -63,9 +59,12 @@ public class QueryBlock extends BaseFilterBlock {
       CommonTree select = childFb.getTransformedNode();
       CommonTree selectList = (CommonTree) select
           .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST);
+      if (countAsterisk.isOnlyAsterisk()) {
+        selectList = null;
+      }
       if (selectList != null && aggregationList != null) {
         if (selectList.getChildCount() != aggregationList.size()) {
-          throw new SqlXlateException("FATAL ERROR:mismatch select item's size after transformed.");
+          throw new SqlXlateException("mismatch select item's size after transformed.");
         }
         for (int i = 0; i < selectList.getChildCount(); i++) {
           CommonTree func = aggregationList.get(i);
@@ -81,7 +80,23 @@ public class QueryBlock extends BaseFilterBlock {
           }
         }
       }
+      // count(*) in top query
       if (countAsterisk.getSelectItem() != null) {
+        if (selectList == null) {
+          int position;
+          if (select.getFirstChildWithType(PantheraExpParser.ASTERISK) != null) {
+            position = select.getFirstChildWithType(PantheraExpParser.ASTERISK).getChildIndex();
+          } else if (select.getFirstChildWithType(PantheraExpParser.SELECT_LIST) != null) {
+            position = select.getFirstChildWithType(PantheraExpParser.SELECT_LIST).getChildIndex();
+          } else {
+            throw new SqlXlateException("No select list");
+          }
+          select.deleteChild(position);
+          selectList = FilterBlockUtil.createSqlASTNode(PantheraExpParser.SELECT_LIST,
+              "SELECT_LIST");
+          SqlXlateUtil.addCommonTreeChild(select, position, selectList);
+
+        }
         SqlXlateUtil.addCommonTreeChild(selectList, countAsterisk.getPosition(), countAsterisk
             .getSelectItem());
       }
@@ -104,12 +119,12 @@ public class QueryBlock extends BaseFilterBlock {
       if (this.getTransformedNode() == null) {
         if (fbContext.getTypeStack().peek() instanceof HavingFilterBlock) {
           FilterBlockProcessorFactory.getHavingUnCorrelatedProcessor(
-              fbContext.getSubQStack().peek()
-                  .getASTNode().getType()).process(fbContext, this, context);
+              fbContext.getSubQStack().peek().getASTNode().getType()).process(fbContext, this,
+              context);
         }
         if (fbContext.getTypeStack().peek() instanceof WhereFilterBlock) {
-          FilterBlockProcessorFactory.getUnCorrelatedProcessor(fbContext.getSubQStack().peek()
-              .getASTNode()).process(fbContext, this, context);
+          FilterBlockProcessorFactory.getUnCorrelatedProcessor(
+              fbContext.getSubQStack().peek().getASTNode()).process(fbContext, this, context);
         }
       }
     }
@@ -121,10 +136,9 @@ public class QueryBlock extends BaseFilterBlock {
 
     // Did it's above subq been transformed? TPCH 20.sql
     if (!fbContext.getSubQStack().isEmpty() && !fbContext.getSubQStack().peek().hasTransformed()) {
-        this.setASTNode(this.getTransformedNode());
-        FilterBlockProcessorFactory.getUnCorrelatedProcessor(
-            fbContext.getSubQStack().peek().getASTNode()).process(fbContext,
-            this, context);
+      this.setASTNode(this.getTransformedNode());
+      FilterBlockProcessorFactory.getUnCorrelatedProcessor(
+          fbContext.getSubQStack().peek().getASTNode()).process(fbContext, this, context);
     }
 
     fbContext.getQueryStack().pop();
@@ -229,13 +243,15 @@ public class QueryBlock extends BaseFilterBlock {
   }
 
   /**
-   * record count(*) in query
+   * record count(*) in query<br>
    * CountAsterisk.
    *
    */
   public class CountAsterisk {
     private int position;
     private CommonTree selectItem;
+    // only one item count(*) in SELECT_LIST
+    boolean isOnlyAsterisk = false;
 
     public int getPosition() {
       return position;
@@ -251,6 +267,14 @@ public class QueryBlock extends BaseFilterBlock {
 
     public void setSelectItem(CommonTree selectItem) {
       this.selectItem = selectItem;
+    }
+
+    public boolean isOnlyAsterisk() {
+      return isOnlyAsterisk;
+    }
+
+    public void setOnlyAsterisk(boolean isOnlyAsterisk) {
+      this.isOnlyAsterisk = isOnlyAsterisk;
     }
 
   }

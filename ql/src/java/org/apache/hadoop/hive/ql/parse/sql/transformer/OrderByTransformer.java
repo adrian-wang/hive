@@ -23,14 +23,14 @@ import org.antlr33.runtime.tree.CommonTree;
 import org.apache.hadoop.hive.ql.parse.sql.SqlASTNode;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateUtil;
-import org.apache.hadoop.hive.ql.parse.sql.transformer.QueryInfo.Column;
 import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
+import org.apache.hadoop.hive.ql.parse.sql.transformer.QueryInfo.Column;
+import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.FilterBlockUtil;
 
 import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
 
 /**
- * support order by column number.
- * OrderByTransformer.
+ * support order by column number. OrderByTransformer.
  *
  */
 public class OrderByTransformer extends BaseSqlASTTransformer {
@@ -45,12 +45,12 @@ public class OrderByTransformer extends BaseSqlASTTransformer {
   public void transform(SqlASTNode tree, TranslateContext context) throws SqlXlateException {
     tf.transformAST(tree, context);
     for (QueryInfo qf : context.getqInfoList()) {
-      transformOrderBy(qf);
+      transformOrderBy(qf, context);
       // Assume no order by clause in subqueries.
     }
   }
 
-  private void transformOrderBy(QueryInfo qf) throws SqlXlateException {
+  private void transformOrderBy(QueryInfo qf, TranslateContext context) throws SqlXlateException {
     CommonTree select = qf.getSelectKeyForThisQ();
     CommonTree selectStatement = (CommonTree) select.getParent().getParent();
     CommonTree order = (CommonTree) selectStatement
@@ -63,22 +63,59 @@ public class OrderByTransformer extends BaseSqlASTTransformer {
         CommonTree ct = (CommonTree) orderByElements.getChild(i).getChild(0).getChild(0);
         if (ct.getType() == PantheraParser_PLSQLParser.UNSIGNED_INTEGER) {// order by column number
           CommonTree expr = (CommonTree) orderByElements.getChild(i).getChild(0);
+
           int seq = Integer.valueOf(ct.getText()) - 1;
-          Column column = null;
-          try {
-            column = selectRowInfo.get(seq);
-          } catch (IndexOutOfBoundsException e) {
-            throw new SqlXlateException("Invalid column number in order by clause.");
+          CommonTree selectList = (CommonTree) ((CommonTree) ((CommonTree) selectStatement
+              .getFirstChildWithType(PantheraParser_PLSQLParser.SUBQUERY))
+              .getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_SELECT))
+              .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST);
+          if (selectList == null) {// select *
+            Column column = null;
+            try {
+              column = selectRowInfo.get(seq);
+            } catch (IndexOutOfBoundsException e) {
+              throw new SqlXlateException("Invalid column number in order by clause.");
+            }
+            CommonTree cascatedElement = SqlXlateUtil.newSqlASTNode(
+                PantheraParser_PLSQLParser.CASCATED_ELEMENT, "CASCATED_ELEMENT");
+            CommonTree anyElement = SqlXlateUtil.newSqlASTNode(
+                PantheraParser_PLSQLParser.ANY_ELEMENT, "ANY_ELEMENT");
+            CommonTree col = SqlXlateUtil.newSqlASTNode(PantheraParser_PLSQLParser.ID, column
+                .getColAlias());
+            expr.deleteChild(0);
+            expr.addChild(cascatedElement);
+            cascatedElement.addChild(anyElement);
+            anyElement.addChild(col);
+          } else { // select SELECT_LIST
+            CommonTree item = (CommonTree) selectList.getChild(seq);
+            CommonTree alias = (CommonTree) item.getChild(1);
+            if (alias == null) {
+              // FIXME It should change output column name of result set.
+              alias = FilterBlockUtil.createSqlASTNode(PantheraParser_PLSQLParser.ALIAS, "ALIAS");
+              CommonTree aliasName = FilterBlockUtil.createSqlASTNode(
+                  PantheraParser_PLSQLParser.ID, "panthera_col_" + seq);
+              alias.addChild(aliasName);
+              item.addChild(alias);
+            }
+            CommonTree cascatedElement = SqlXlateUtil.newSqlASTNode(
+                PantheraParser_PLSQLParser.CASCATED_ELEMENT, "CASCATED_ELEMENT");
+            CommonTree anyElement = SqlXlateUtil.newSqlASTNode(
+                PantheraParser_PLSQLParser.ANY_ELEMENT, "ANY_ELEMENT");
+            CommonTree col = SqlXlateUtil.newSqlASTNode(PantheraParser_PLSQLParser.ID, alias
+                .getChild(0).getText());
+            cascatedElement.addChild(anyElement);
+            anyElement.addChild(col);
+            expr.deleteChild(0);
+            expr.addChild(cascatedElement);
           }
-          CommonTree cascatedElement = SqlXlateUtil.newSqlASTNode(
-              PantheraParser_PLSQLParser.CASCATED_ELEMENT, "CASCATED_ELEMENT");
-          CommonTree anyElement = SqlXlateUtil.newSqlASTNode(
-              PantheraParser_PLSQLParser.ANY_ELEMENT, "ANY_ELEMENT");
-          CommonTree col = SqlXlateUtil.newSqlASTNode(PantheraParser_PLSQLParser.ID, column.getColAlias());
-          expr.deleteChild(0);
-          expr.addChild(cascatedElement);
-          cascatedElement.addChild(anyElement);
-          anyElement.addChild(col);
+        }
+        // for alias
+        else {
+          CommonTree id = (CommonTree) ct.getChild(0).getChild(0);
+          String aliasStr = (String) context.getBallFromBasket(id.getText());
+          if (aliasStr != null) {
+            id.getToken().setText(aliasStr);
+          }
         }
       }
     }

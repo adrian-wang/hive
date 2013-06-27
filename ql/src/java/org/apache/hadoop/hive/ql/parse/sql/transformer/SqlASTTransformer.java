@@ -22,7 +22,8 @@ import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
 import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
 
 /**
- * Transformer interface.
+ * Transformer interface.<br>
+ * transformer instance is created as singleton, please keep it thread safety.<br>
  * SqlASTTransformer.
  *
  */

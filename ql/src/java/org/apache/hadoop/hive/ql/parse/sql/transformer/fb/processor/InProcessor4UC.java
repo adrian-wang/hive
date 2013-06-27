@@ -17,11 +17,10 @@
  */
 package org.apache.hadoop.hive.ql.parse.sql.transformer.fb.processor;
 
-import org.apache.hadoop.hive.ql.parse.sql.PantheraExpParser;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
-import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.FilterBlockUtil;
+
 /**
- * uncorrelated in processor
+ * uncorrelated in processor.<br>
  * InProcessor4UC.
  *
  */
@@ -29,7 +28,7 @@ public class InProcessor4UC extends CommonFilterBlockProcessor {
 
   @Override
   void processFB() throws SqlXlateException {
-    super.processInUC(FilterBlockUtil.createSqlASTNode(PantheraExpParser.LEFTSEMI_VK, "leftsemi"));
+    super.processInUC();
   }
 
 }

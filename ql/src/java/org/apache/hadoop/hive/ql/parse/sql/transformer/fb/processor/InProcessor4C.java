@@ -17,17 +17,18 @@
  */
 package org.apache.hadoop.hive.ql.parse.sql.transformer.fb.processor;
 
+import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
 
 /**
- * Process uncorrelated filter block node which subQ is GREATER_THAN type.<br>
- * CompareProcessor4UC.
+ * correlated in processor.<br>
+ * InProcessor4C.
  *
  */
-public class CompareProcessor4UC extends CommonFilterBlockProcessor {
+public class InProcessor4C extends CommonFilterBlockProcessor {
 
   @Override
-  public void processFB() {
-    super.processCompareUC();
+  void processFB() throws SqlXlateException {
+    super.processInC();
   }
 
 }

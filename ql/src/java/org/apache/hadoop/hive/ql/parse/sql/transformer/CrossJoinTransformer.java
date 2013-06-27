@@ -71,8 +71,8 @@ public class CrossJoinTransformer extends BaseSqlASTTransformer {
         return false;
       }
       JoinPair<T> otherPair = (JoinPair<T>) other;
-      return (first.equals(otherPair.first) && second.equals(otherPair.second)) ||
-          (first.equals(otherPair.second) && second.equals(otherPair.first));
+      return (first.equals(otherPair.first) && second.equals(otherPair.second))
+          || (first.equals(otherPair.second) && second.equals(otherPair.first));
     }
 
     @Override
@@ -103,15 +103,17 @@ public class CrossJoinTransformer extends BaseSqlASTTransformer {
     }
   }
 
-  private void transformQuery(TranslateContext context, QueryInfo qf, CommonTree node) throws SqlXlateException {
+  private void transformQuery(TranslateContext context, QueryInfo qf, CommonTree node)
+      throws SqlXlateException {
     if (node.getType() == PantheraParser_PLSQLParser.SQL92_RESERVED_SELECT) {
       CommonTree from = (CommonTree) node
           .getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_FROM);
       assert (from.getChildCount() == 1);
 
+      CommonTree join = (CommonTree) ((CommonTree) from.getChild(0))
+          .getFirstChildWithType(PantheraParser_PLSQLParser.JOIN_DEF);
       // Skip if there is no join operation in the from clause.
-      if (((CommonTree) from.getChild(0))
-          .getFirstChildWithType(PantheraParser_PLSQLParser.JOIN_DEF) != null) {
+      if (join != null) {
         JoinInfo joinInfo = new JoinInfo();
 
         //
@@ -140,18 +142,18 @@ public class CrossJoinTransformer extends BaseSqlASTTransformer {
     }
   }
 
-  private void transformWhereCondition(TranslateContext context, QueryInfo qf, CommonTree node, JoinInfo joinInfo)
-      throws SqlXlateException {
+  private void transformWhereCondition(TranslateContext context, QueryInfo qf, CommonTree node,
+      JoinInfo joinInfo) throws SqlXlateException {
     //
     // We can only transform equality expression between two columns whose ancesotors are all AND
     // operators
     // into JOIN on ...
     //
     if (node.getType() == PantheraParser_PLSQLParser.SQL92_RESERVED_AND) {
-      transformWhereCondition(context, qf, (CommonTree) node.getChild(0), joinInfo); // Transform the left
-                                                                            // child.
-      transformWhereCondition(context, qf, (CommonTree) node.getChild(1), joinInfo); // Transform the right
-                                                                            // child.
+      // Transform the left child.
+      transformWhereCondition(context, qf, (CommonTree) node.getChild(0), joinInfo);
+      // Transform the right child.
+      transformWhereCondition(context, qf, (CommonTree) node.getChild(1), joinInfo);
 
       CommonTree leftChild = (CommonTree) node.getChild(0);
       CommonTree rightChild = (CommonTree) node.getChild(1);
@@ -228,7 +230,8 @@ public class CrossJoinTransformer extends BaseSqlASTTransformer {
         if (srcTable != null) {
           referencedTables.add(srcTable);
         } else {
-          // If the condition refers to a table which is not in the from clause or refers to a column
+          // If the condition refers to a table which is not in the from clause or refers to a
+          // column
           // which is not existing, then skip this condition.
           return;
         }
@@ -259,8 +262,8 @@ public class CrossJoinTransformer extends BaseSqlASTTransformer {
   }
 
   private boolean IsColumnRef(Tree node) {
-    if (node.getType() == PantheraParser_PLSQLParser.CASCATED_ELEMENT &&
-        node.getChild(0).getType() == PantheraParser_PLSQLParser.ANY_ELEMENT) {
+    if (node.getType() == PantheraParser_PLSQLParser.CASCATED_ELEMENT
+        && node.getChild(0).getType() == PantheraParser_PLSQLParser.ANY_ELEMENT) {
       return true;
     } else {
       return false;
@@ -280,7 +283,7 @@ public class CrossJoinTransformer extends BaseSqlASTTransformer {
         table += ("." + anyElement.getChild(1).getText());
         // merge schema and table as HIVE does not support schema.table.column in where clause.
         anyElement.deleteChild(1);
-        ((CommonTree)anyElement.getChild(0)).getToken().setText(table);
+        ((CommonTree) anyElement.getChild(0)).getToken().setText(table);
       }
       //
       // Return null table name if it is not a src table.
@@ -290,8 +293,8 @@ public class CrossJoinTransformer extends BaseSqlASTTransformer {
       }
     } else {
       String columnName = anyElement.getChild(0).getText();
-      List<Column> fromRowInfo = qf.getRowInfo((CommonTree) currentSelect.getFirstChildWithType(
-                                               PantheraParser_PLSQLParser.SQL92_RESERVED_FROM));
+      List<Column> fromRowInfo = qf.getRowInfo((CommonTree) currentSelect
+          .getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_FROM));
       for (Column col : fromRowInfo) {
         if (col.getColAlias().equals(columnName)) {
           table = col.getTblAlias();
@@ -308,7 +311,8 @@ public class CrossJoinTransformer extends BaseSqlASTTransformer {
     return table;
   }
 
-  private void transformFromClause(QueryInfo qf, CommonTree oldFrom, JoinInfo joinInfo) throws SqlXlateException {
+  private void transformFromClause(QueryInfo qf, CommonTree oldFrom, JoinInfo joinInfo)
+      throws SqlXlateException {
     Set<String> alreadyJoinedTables = new HashSet<String>();
 
     CommonTree topTableRef = (CommonTree) oldFrom.getChild(0);
@@ -346,7 +350,7 @@ public class CrossJoinTransformer extends BaseSqlASTTransformer {
 
       List<CommonTree> joinFilters;
       if (i == 1) {
-        //need consider the join filter of the first table
+        // need consider the join filter of the first table
         joinFilters = joinInfo.joinFilterInfo.get(firstTable);
         if (joinFilters != null) {
           generateJoin(joinNode, joinFilters);
