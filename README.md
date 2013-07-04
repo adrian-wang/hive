@@ -19,7 +19,7 @@ Under "Project Panthera", we are building ASE, a new analytical SQL engine for H
 - ant package
 - cd build/dist/bin/
 - ./hive
-- hive>set hive.ql.mode=sql; (execute the command before every SQL statement)
+- hive>set hive.ql.mode=sql; (execute the command before every query(SELECT ... or EXPLAIN PLAN FOR SELECT ...))
 - hive>select a from x where b > (select max(c) from y);
 
 ---
