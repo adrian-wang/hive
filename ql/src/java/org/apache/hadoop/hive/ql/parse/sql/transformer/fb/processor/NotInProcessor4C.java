@@ -26,7 +26,7 @@ import org.apache.hadoop.hive.ql.parse.sql.SqlXlateUtil;
 import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.FilterBlockUtil;
 
 /**
- * correlated NOT IN processor<br>
+ * Process correlated NOT IN in WHERE subquery<br>
  * NotInProcessor4C.
  *
  */

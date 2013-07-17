@@ -116,6 +116,8 @@ public abstract class CommonFilterBlockProcessor extends BaseFilterBlockProcesso
     // needn't group after transformed.
     super.topQuery.setGroup(null);
 
+    super.topQuery.setHaving(true);
+
     // clone whole top select tree
     super.topSelect = super.topQuery.cloneWholeQuery();
   }
@@ -260,9 +262,10 @@ public abstract class CommonFilterBlockProcessor extends BaseFilterBlockProcesso
         .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST)).getChild(0));
 
     // on
-    CommonTree leftChild = compareElementAlias.getType() == PantheraParser_PLSQLParser.ID ? super
+    CommonTree leftChild = compareElementAlias.getType() == PantheraParser_PLSQLParser.ALIAS ? super
         .createCascatedElementWithTableName((CommonTree) topAlias.getChild(0),
-            (CommonTree) compareElementAlias.getChild(0)) : compareElementAlias;
+            (CommonTree) compareElementAlias.getChild(0))
+        : compareElementAlias;
     CommonTree on = super.buildOn(FilterBlockUtil.createSqlASTNode(
         PantheraParser_PLSQLParser.EQUALS_OP, "="), leftChild, super
         .createCascatedElementWithTableName((CommonTree) bottomAlias.getChild(0),

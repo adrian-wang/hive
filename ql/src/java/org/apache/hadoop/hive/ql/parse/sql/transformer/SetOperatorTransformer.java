@@ -88,7 +88,7 @@ public class SetOperatorTransformer extends BaseSqlASTTransformer {
     CommonTree subquery = FilterBlockUtil.makeSelectBranch(select, context);
     subquery.addChild(leftSelect);
     subquery.addChild(node);
-    CommonTree selectList = FilterBlockUtil.cloneSelectList((CommonTree) leftSelect
+    CommonTree selectList = FilterBlockUtil.cloneSelectListByAlias((CommonTree) leftSelect
         .getFirstChildWithType(PantheraExpParser.SELECT_LIST));
     if (all == null) {
       select.addChild(FilterBlockUtil.createSqlASTNode(PantheraExpParser.SQL92_RESERVED_DISTINCT,

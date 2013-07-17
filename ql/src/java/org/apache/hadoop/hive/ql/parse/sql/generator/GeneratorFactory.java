@@ -140,6 +140,7 @@ public class GeneratorFactory {
     genMap.put(PantheraParser_PLSQLParser.SQL92_RESERVED_DISTINCT, new NothingGenerator());
     genMap.put(PantheraParser_PLSQLParser.MODEL_EXPRESSION, new ModelExpressionGenerator());
     genMap.put(PantheraParser_PLSQLParser.SQL92_RESERVED_IN, new InGenerator());
+    genMap.put(PantheraParser_PLSQLParser.NOT_IN, new NotInGenerator());
     //
     // Just ignore EXTRACT_VK node because the first child of this node is the datetime field
     // (year | month | day | hour | minute | second) or time zone field (not supported yet. just

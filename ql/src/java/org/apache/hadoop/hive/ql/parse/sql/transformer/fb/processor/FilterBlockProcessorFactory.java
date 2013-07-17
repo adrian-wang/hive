@@ -56,7 +56,7 @@ public class FilterBlockProcessorFactory {
     case PantheraParser_PLSQLParser.SQL92_RESERVED_EXISTS:
       return new ExistsProcessor4UC();
     default:
-      throw new SqlXlateException("Unimplement uncorrelated sub query type:" + type);
+      throw new SqlXlateException("Unimplement uncorrelated subquery type:" + type);
     }
 
   }
@@ -74,7 +74,7 @@ public class FilterBlockProcessorFactory {
       if (rebuildCompareSubquery(subQ)) {
         return getCorrelatedProcessor(subQ);
       } else {
-        return new CompareOpProcessor4C();
+        return new CompareProcessor4C();
       }
     case PantheraParser_PLSQLParser.SQL92_RESERVED_EXISTS:
       return new ExistsProcessor4C();
@@ -83,17 +83,59 @@ public class FilterBlockProcessorFactory {
     case PantheraParser_PLSQLParser.NOT_IN:
       return new NotInProcessor4C();
     default:
-      throw new SqlXlateException("Unimplement correlated sub query type:" + type);
+      throw new SqlXlateException("Unimplement correlated subquery type:" + type);
     }
   }
 
-  public static FilterBlockProcessor getHavingUnCorrelatedProcessor(int type)
+  public static FilterBlockProcessor getHavingUnCorrelatedProcessor(CommonTree subQ)
       throws SqlXlateException {
+    int type = subQ.getType();
     switch (type) {
+    case PantheraParser_PLSQLParser.EQUALS_OP:
+    case PantheraParser_PLSQLParser.NOT_EQUAL_OP:
     case PantheraParser_PLSQLParser.GREATER_THAN_OP:
-      return new GreaterThanProcessor4HavingUC();
+    case PantheraParser_PLSQLParser.LESS_THAN_OP:
+    case PantheraParser_PLSQLParser.LESS_THAN_OR_EQUALS_OP:
+    case PantheraParser_PLSQLParser.GREATER_THAN_OR_EQUALS_OP:
+      if (rebuildCompareSubquery(subQ)) {
+        return getHavingUnCorrelatedProcessor(subQ);
+      } else {
+        return new CompareProcessor4HavingUC();
+      }
+    case PantheraParser_PLSQLParser.NOT_IN:
+      return new NotInProcessor4HavingUC();
+    case PantheraParser_PLSQLParser.SQL92_RESERVED_IN:
+      return new InProcessor4HavingUC();
+    case PantheraParser_PLSQLParser.SQL92_RESERVED_EXISTS:
+      return new ExistsProcessor4HavingUC();
     default:
-      throw new SqlXlateException("Unimplement sub query type:" + type);
+      throw new SqlXlateException("Unimplement uncorrelated having subquery type:" + type);
+    }
+  }
+
+  public static FilterBlockProcessor getHavingCorrelatedProcessor(CommonTree subQ)
+      throws SqlXlateException {
+    int type = subQ.getType();
+    switch (type) {
+    case PantheraParser_PLSQLParser.EQUALS_OP:
+    case PantheraParser_PLSQLParser.NOT_EQUAL_OP:
+    case PantheraParser_PLSQLParser.GREATER_THAN_OP:
+    case PantheraParser_PLSQLParser.LESS_THAN_OP:
+    case PantheraParser_PLSQLParser.LESS_THAN_OR_EQUALS_OP:
+    case PantheraParser_PLSQLParser.GREATER_THAN_OR_EQUALS_OP:
+      if (rebuildCompareSubquery(subQ)) {
+        return getHavingCorrelatedProcessor(subQ);
+      } else {
+        return new CompareProcessor4HavingC();
+      }
+    case PantheraParser_PLSQLParser.NOT_IN:
+      return new NotInProcessor4HavingC();
+    case PantheraParser_PLSQLParser.SQL92_RESERVED_IN:
+      return new InProcessor4HavingC();
+    case PantheraParser_PLSQLParser.SQL92_RESERVED_EXISTS:
+      return new ExistsProcessor4HavingC();
+    default:
+      throw new SqlXlateException("Unimplement correlated having subquery type:" + type);
     }
   }
 

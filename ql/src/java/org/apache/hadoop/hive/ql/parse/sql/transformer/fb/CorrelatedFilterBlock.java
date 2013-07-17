@@ -27,10 +27,16 @@ public class CorrelatedFilterBlock extends NormalFilterBlock {
   @Override
   public void process(FilterBlockContext fbContext, TranslateContext context)
       throws SqlXlateException {
-    FilterBlockProcessorFactory.getCorrelatedProcessor(
-        fbContext.getSubQStack().peek().getASTNode()).process(fbContext, this, context);
-
-//    super.processStackSubq(fbContext, context);
+    TypeFilterBlock type = fbContext.getTypeStack().pop();
+    if (fbContext.getTypeStack().peek() instanceof WhereFilterBlock) {
+      FilterBlockProcessorFactory.getCorrelatedProcessor(
+          fbContext.getSubQStack().peek().getASTNode()).process(fbContext, this, context);
+    }
+    if (fbContext.getTypeStack().peek() instanceof HavingFilterBlock) {
+      FilterBlockProcessorFactory.getHavingCorrelatedProcessor(
+          fbContext.getSubQStack().peek().getASTNode()).process(fbContext, this, context);
+    }
+    fbContext.getTypeStack().push(type);
   }
 
 

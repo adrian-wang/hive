@@ -17,17 +17,17 @@
  */
 package org.apache.hadoop.hive.ql.parse.sql.transformer.fb.processor;
 
+import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
 
 /**
- * Process uncorrelated compare operation in WHERE subquery.<br>
- * CompareProcessor4UC.
+ * Process Correlated compare operation > >= < <= = != in WHERE subquery.<br>
+ * CompareProcessor4C.
  *
  */
-public class CompareProcessor4UC extends CommonFilterBlockProcessor {
+public class CompareProcessor4C extends CommonFilterBlockProcessor {
 
   @Override
-  public void processFB() {
-    super.processCompareUC();
+  public void processFB() throws SqlXlateException {
+    super.processCompareC();
   }
-
 }

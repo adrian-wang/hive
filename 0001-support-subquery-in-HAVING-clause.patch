@@ -1,0 +1,1198 @@
+From 99a5e2c5b885d19cba2095c15259677a7a1a71fb Mon Sep 17 00:00:00 2001
+From: Li Zhihui <zhihui.li@intel.com>
+Date: Tue, 16 Jul 2013 08:44:00 +0800
+Subject: [PATCH] support subquery in HAVING clause
+
+---
+ .../hive/ql/parse/sql/PantheraExpParser.java       |   17 +++++
+ .../ql/parse/sql/generator/GeneratorFactory.java   |    1 +
+ .../ql/parse/sql/generator/NotInGenerator.java     |   38 ++++++++++
+ .../sql/transformer/SetOperatorTransformer.java    |    2 +-
+ .../sql/transformer/fb/CorrelatedFilterBlock.java  |   14 +++-
+ .../parse/sql/transformer/fb/FilterBlockUtil.java  |   50 ++++++++++++-
+ .../ql/parse/sql/transformer/fb/OrFilterBlock.java |    7 +-
+ .../transformer/fb/PLSQLFilterBlockFactory.java    |   79 +++++++++++---------
+ .../ql/parse/sql/transformer/fb/QueryBlock.java    |   46 ++++++++++--
+ .../transformer/fb/UnCorrelatedFilterBlock.java    |   59 ++++++++++-----
+ .../fb/processor/BaseFilterBlockProcessor.java     |   42 ++++++++---
+ .../fb/processor/CommonFilterBlockProcessor.java   |    7 +-
+ ...eOpProcessor4C.java => CompareProcessor4C.java} |    7 +-
+ .../fb/processor/CompareProcessor4HavingC.java     |   34 +++++++++
+ ...avingUC.java => CompareProcessor4HavingUC.java} |    6 +-
+ .../fb/processor/CompareProcessor4UC.java          |    2 +-
+ .../fb/processor/ExistsProcessor4C.java            |    2 +-
+ .../fb/processor/ExistsProcessor4HavingC.java      |   43 +++++++++++
+ .../fb/processor/ExistsProcessor4HavingUC.java     |   43 +++++++++++
+ .../fb/processor/ExistsProcessor4UC.java           |    2 +-
+ .../fb/processor/FilterBlockProcessorFactory.java  |   54 +++++++++++--
+ .../transformer/fb/processor/InProcessor4C.java    |    2 +-
+ .../fb/processor/InProcessor4HavingC.java          |   35 +++++++++
+ .../fb/processor/InProcessor4HavingUC.java         |   35 +++++++++
+ .../transformer/fb/processor/InProcessor4UC.java   |    2 +-
+ .../transformer/fb/processor/NotInProcessor4C.java |    2 +-
+ .../fb/processor/NotInProcessor4HavingC.java       |   35 +++++++++
+ .../fb/processor/NotInProcessor4HavingUC.java      |   35 +++++++++
+ .../fb/processor/NotInProcessor4UC.java            |    2 +-
+ 29 files changed, 595 insertions(+), 108 deletions(-)
+ create mode 100644 ql/src/java/org/apache/hadoop/hive/ql/parse/sql/generator/NotInGenerator.java
+ rename ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/{CompareOpProcessor4C.java => CompareProcessor4C.java} (84%)
+ create mode 100644 ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/CompareProcessor4HavingC.java
+ rename ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/{GreaterThanProcessor4HavingUC.java => CompareProcessor4HavingUC.java} (86%)
+ create mode 100644 ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/ExistsProcessor4HavingC.java
+ create mode 100644 ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/ExistsProcessor4HavingUC.java
+ create mode 100644 ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/InProcessor4HavingC.java
+ create mode 100644 ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/InProcessor4HavingUC.java
+ create mode 100644 ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/NotInProcessor4HavingC.java
+ create mode 100644 ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/NotInProcessor4HavingUC.java
+
+diff --git a/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/PantheraExpParser.java b/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/PantheraExpParser.java
+index 5eeac27..21c462c 100644
+--- a/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/PantheraExpParser.java
++++ b/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/PantheraExpParser.java
+@@ -1,3 +1,20 @@
++/*
++ * Licensed to the Apache Software Foundation (ASF) under one
++ * or more contributor license agreements.  See the NOTICE file
++ * distributed with this work for additional information
++ * regarding copyright ownership.  The ASF licenses this file
++ * to you under the Apache License, Version 2.0 (the
++ * "License"); you may not use this file except in compliance
++ * with the License.  You may obtain a copy of the License at
++ *
++ *     http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
+ package org.apache.hadoop.hive.ql.parse.sql;
+ 
+ import org.antlr33.runtime.TokenStream;
+diff --git a/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/generator/GeneratorFactory.java b/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/generator/GeneratorFactory.java
+index 3842c1c..aa3d692 100644
+--- a/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/generator/GeneratorFactory.java
++++ b/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/generator/GeneratorFactory.java
+@@ -140,6 +140,7 @@ public class GeneratorFactory {
+     genMap.put(PantheraParser_PLSQLParser.SQL92_RESERVED_DISTINCT, new NothingGenerator());
+     genMap.put(PantheraParser_PLSQLParser.MODEL_EXPRESSION, new ModelExpressionGenerator());
+     genMap.put(PantheraParser_PLSQLParser.SQL92_RESERVED_IN, new InGenerator());
++    genMap.put(PantheraParser_PLSQLParser.NOT_IN, new NotInGenerator());
+     //
+     // Just ignore EXTRACT_VK node because the first child of this node is the datetime field
+     // (year | month | day | hour | minute | second) or time zone field (not supported yet. just
+diff --git a/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/generator/NotInGenerator.java b/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/generator/NotInGenerator.java
+new file mode 100644
+index 0000000..617f646
+--- /dev/null
++++ b/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/generator/NotInGenerator.java
+@@ -0,0 +1,38 @@
++/*
++ * Licensed to the Apache Software Foundation (ASF) under one
++ * or more contributor license agreements.  See the NOTICE file
++ * distributed with this work for additional information
++ * regarding copyright ownership.  The ASF licenses this file
++ * to you under the Apache License, Version 2.0 (the
++ * "License"); you may not use this file except in compliance
++ * with the License.  You may obtain a copy of the License at
++ *
++ *     http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++package org.apache.hadoop.hive.ql.parse.sql.generator;
++
++import org.antlr33.runtime.tree.CommonTree;
++import org.apache.hadoop.hive.ql.parse.ASTNode;
++import org.apache.hadoop.hive.ql.parse.HiveParser;
++import org.apache.hadoop.hive.ql.parse.sql.PantheraExpParser;
++import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
++
++public class NotInGenerator extends BaseHiveASTGenerator {
++
++  @Override
++  public boolean generate(ASTNode hiveRoot, CommonTree sqlRoot, ASTNode currentHiveNode,
++      CommonTree currentSqlNode, TranslateContext context) throws Exception {
++    ASTNode not = super.newHiveASTNode(HiveParser.KW_NOT, "NOT");
++    super.attachHiveNode(hiveRoot, currentHiveNode, not);
++    currentHiveNode = not;
++    return GeneratorFactory.getGenerator(PantheraExpParser.SQL92_RESERVED_IN).generateHiveAST(
++        hiveRoot, sqlRoot, currentHiveNode, currentSqlNode, context);
++
++  }
++}
+diff --git a/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/SetOperatorTransformer.java b/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/SetOperatorTransformer.java
+index cc5712d..a06a054 100644
+--- a/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/SetOperatorTransformer.java
++++ b/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/SetOperatorTransformer.java
+@@ -88,7 +88,7 @@ public class SetOperatorTransformer extends BaseSqlASTTransformer {
+     CommonTree subquery = FilterBlockUtil.makeSelectBranch(select, context);
+     subquery.addChild(leftSelect);
+     subquery.addChild(node);
+-    CommonTree selectList = FilterBlockUtil.cloneSelectList((CommonTree) leftSelect
++    CommonTree selectList = FilterBlockUtil.cloneSelectListByAlias((CommonTree) leftSelect
+         .getFirstChildWithType(PantheraExpParser.SELECT_LIST));
+     if (all == null) {
+       select.addChild(FilterBlockUtil.createSqlASTNode(PantheraExpParser.SQL92_RESERVED_DISTINCT,
+diff --git a/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/CorrelatedFilterBlock.java b/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/CorrelatedFilterBlock.java
+index 99835b0..ad33a0c 100644
+--- a/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/CorrelatedFilterBlock.java
++++ b/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/CorrelatedFilterBlock.java
+@@ -27,10 +27,16 @@ public class CorrelatedFilterBlock extends NormalFilterBlock {
+   @Override
+   public void process(FilterBlockContext fbContext, TranslateContext context)
+       throws SqlXlateException {
+-    FilterBlockProcessorFactory.getCorrelatedProcessor(
+-        fbContext.getSubQStack().peek().getASTNode()).process(fbContext, this, context);
+-
+-//    super.processStackSubq(fbContext, context);
++    TypeFilterBlock type = fbContext.getTypeStack().pop();
++    if (fbContext.getTypeStack().peek() instanceof WhereFilterBlock) {
++      FilterBlockProcessorFactory.getCorrelatedProcessor(
++          fbContext.getSubQStack().peek().getASTNode()).process(fbContext, this, context);
++    }
++    if (fbContext.getTypeStack().peek() instanceof HavingFilterBlock) {
++      FilterBlockProcessorFactory.getHavingCorrelatedProcessor(
++          fbContext.getSubQStack().peek().getASTNode()).process(fbContext, this, context);
++    }
++    fbContext.getTypeStack().push(type);
+   }
+ 
+ 
+diff --git a/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/FilterBlockUtil.java b/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/FilterBlockUtil.java
+index 4f24ee3..0114ef0 100644
+--- a/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/FilterBlockUtil.java
++++ b/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/FilterBlockUtil.java
+@@ -36,6 +36,7 @@ import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
+ 
+ public class FilterBlockUtil {
+   private static final Log LOG = LogFactory.getLog(FilterBlockUtil.class);
++  public static final String PREFIX_COLUMN_ALIAS = "panthera_col_";
+ 
+   private FilterBlockUtil() {
+   }
+@@ -253,6 +254,7 @@ public class FilterBlockUtil {
+     case PantheraParser_PLSQLParser.LESS_THAN_OP:
+     case PantheraParser_PLSQLParser.LESS_THAN_OR_EQUALS_OP:
+     case PantheraParser_PLSQLParser.NOT_EQUAL_OP:
++    case PantheraExpParser.SQL92_RESERVED_LIKE:
+       return true;
+     default:
+       return false;
+@@ -349,6 +351,52 @@ public class FilterBlockUtil {
+     return selectList;
+   }
+ 
++  /**
++   * clone SELECT_LIST by SELECT_ITEM ALIAS
++   *
++   * @param originalSelectList
++   * @return
++   */
++  public static CommonTree cloneSelectListByAlias(CommonTree originalSelectList) {
++    CommonTree selectList;
++    if (originalSelectList != null) {
++      int selectNum = originalSelectList.getChildCount();
++      selectList = createSqlASTNode(PantheraExpParser.SELECT_LIST, "SELECT_LIST");
++      int count = 0;
++      for (int i = 0; i < selectNum; i++) {
++        CommonTree originalAlias = (CommonTree) originalSelectList.getChild(i).getChild(1);
++        CommonTree selectItem = createSqlASTNode(PantheraExpParser.SELECT_ITEM, "SELECT_ITEM");
++        CommonTree expr = createSqlASTNode(PantheraExpParser.EXPR, "EXPR");
++        selectItem.addChild(expr);
++        CommonTree cascatedElement = createSqlASTNode(PantheraExpParser.CASCATED_ELEMENT,
++            "CASCATED_ELEMENT");
++        expr.addChild(cascatedElement);
++        CommonTree anyElement = createSqlASTNode(PantheraExpParser.ANY_ELEMENT, "ANY_ELEMENT");
++        cascatedElement.addChild(anyElement);
++
++        String columnName;
++        if (originalAlias != null) {
++          columnName = originalAlias.getChild(0).getText();
++
++          CommonTree alias = createSqlASTNode(PantheraParser_PLSQLParser.ALIAS, "ALIAS");
++          String aliasStr = PREFIX_COLUMN_ALIAS + count++;
++          CommonTree aliasName = createSqlASTNode(PantheraParser_PLSQLParser.ID, aliasStr);
++          alias.addChild(aliasName);
++          selectItem.addChild(alias);
++        } else {
++          columnName = PREFIX_COLUMN_ALIAS + count++;
++
++        }
++        CommonTree columnId = createSqlASTNode(PantheraExpParser.ID, columnName);
++        anyElement.addChild(columnId);
++        selectList.addChild(selectItem);
++      }
++    } else {
++      selectList = FilterBlockUtil.createSqlASTNode(PantheraExpParser.ASTERISK, "*");
++    }
++    return selectList;
++  }
++
+   public static void removeTableNameFromSelectList(CommonTree selectList) {
+     for (int i = 0; i < selectList.getChildCount(); i++) {
+       CommonTree anyElement = (CommonTree) selectList.getChild(i).getChild(0).getChild(0).getChild(
+@@ -382,7 +430,7 @@ public class FilterBlockUtil {
+         }
+ 
+         CommonTree alias = createSqlASTNode(PantheraParser_PLSQLParser.ALIAS, "ALIAS");
+-        String aliasStr = "panthera_col_" + count++;
++        String aliasStr = PREFIX_COLUMN_ALIAS + count++;
+         CommonTree aliasName = createSqlASTNode(PantheraParser_PLSQLParser.ID, aliasStr);
+         alias.addChild(aliasName);
+         selectItem.addChild(alias);
+diff --git a/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/OrFilterBlock.java b/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/OrFilterBlock.java
+index c922cb3..8539da9 100644
+--- a/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/OrFilterBlock.java
++++ b/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/OrFilterBlock.java
+@@ -38,14 +38,9 @@ public class OrFilterBlock extends LogicFilterBlock {
+     CommonTree rightSelect = this.getChildren().get(1).getTransformedNode();
+     CommonTree topSelect = this.buildUnionSelect(leftSelect, rightSelect, context);
+ 
+-    // UNION transformer will process DISTINCT
+-    // CommonTree distinct = FilterBlockUtil.createSqlASTNode(
+-    // PantheraExpParser.SQL92_RESERVED_DISTINCT, "distinct");
+-    // topSelect.addChild(distinct);
+-
+     CommonTree leftSelectList = (CommonTree) leftSelect
+         .getFirstChildWithType(PantheraExpParser.SELECT_LIST);
+-    topSelect.addChild(FilterBlockUtil.cloneSelectList(leftSelectList));
++    topSelect.addChild(FilterBlockUtil.cloneSelectListByAlias(leftSelectList));
+     this.setTransformedNode(topSelect);
+   }
+ 
+diff --git a/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/PLSQLFilterBlockFactory.java b/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/PLSQLFilterBlockFactory.java
+index 678d9d9..9fea9f7 100644
+--- a/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/PLSQLFilterBlockFactory.java
++++ b/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/PLSQLFilterBlockFactory.java
+@@ -76,52 +76,57 @@ public class PLSQLFilterBlockFactory extends FilterBlockFactory {
+   @Override
+   public boolean isCorrelated(QueryInfo qInfo, Stack<CommonTree> selectStack, CommonTree branch)
+       throws SqlXlateException {
+-    if (branch.getType() == PantheraParser_PLSQLParser.CASCATED_ELEMENT) {
+-      CommonTree child = (CommonTree) branch.getChild(0);
+-      if (child.getType() == PantheraParser_PLSQLParser.ANY_ELEMENT) {
+-        if (selectStack.size() <= 1) {
++    if (branch.getType() != PantheraParser_PLSQLParser.CASCATED_ELEMENT) {
++      branch = FilterBlockUtil.findOnlyNode(branch, PantheraParser_PLSQLParser.CASCATED_ELEMENT);
++      if (branch == null) {
++        return false;
++      }
++    }
++    CommonTree child = (CommonTree) branch.getChild(0);
++    if (child.getType() == PantheraParser_PLSQLParser.ANY_ELEMENT) {
++      if (selectStack.size() <= 1) {
++        return false;
++      }
++      if (child.getChildCount() == 2) {// tableName.columnName
++
++        if (SqlXlateUtil.containTableName(child.getChild(0).getText(), (CommonTree) selectStack
++            .peek().getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_FROM))) {
+           return false;
+         }
+-        if (child.getChildCount() == 2) {// tableName.columnName
+-
+-          if (SqlXlateUtil.containTableName(child.getChild(0).getText(), (CommonTree) selectStack
+-              .peek().getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_FROM))) {
++        CommonTree temp = selectStack.pop();
++        boolean correlated = SqlXlateUtil.containTableName(child.getChild(0).getText(),
++            (CommonTree) selectStack.peek().getFirstChildWithType(
++                PantheraParser_PLSQLParser.SQL92_RESERVED_FROM));
++        selectStack.push(temp);
++        if (correlated) {
++          return true;
++        }
++        throw new SqlXlateException("Correlated level is more than 2");
++      } else {// only columnName
++        String columnName = child.getChild(0).getText();
++        CommonTree bottomSelect = selectStack.pop();
++        CommonTree topSelect = selectStack.peek();
++        selectStack.push(bottomSelect);
++        CommonTree bottomFrom = (CommonTree) bottomSelect
++            .getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_FROM);
++        CommonTree topFrom = (CommonTree) topSelect
++            .getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_FROM);
++        List<Column> bottomColumnList = qInfo.getRowInfo(bottomFrom);
++        for (Column column : bottomColumnList) {
++          if (columnName.equals(column.getColAlias())) {
+             return false;
+           }
+-          CommonTree temp = selectStack.pop();
+-          boolean correlated = SqlXlateUtil.containTableName(child.getChild(0).getText(),
+-              (CommonTree) selectStack.peek().getFirstChildWithType(
+-                  PantheraParser_PLSQLParser.SQL92_RESERVED_FROM));
+-          selectStack.push(temp);
+-          if (correlated) {
++        }
++        List<Column> topColumnList = qInfo.getRowInfo(topFrom);
++        for (Column column : topColumnList) {
++          if (columnName.equals(column.getColAlias())) {
+             return true;
+           }
+-          throw new SqlXlateException("Correlated level is more than 2");
+-        } else {// only columnName
+-          String columnName = child.getChild(0).getText();
+-          CommonTree bottomSelect = selectStack.pop();
+-          CommonTree topSelect = selectStack.peek();
+-          selectStack.push(bottomSelect);
+-          CommonTree bottomFrom = (CommonTree) bottomSelect
+-              .getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_FROM);
+-          CommonTree topFrom = (CommonTree) topSelect
+-              .getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_FROM);
+-          List<Column> bottomColumnList = qInfo.getRowInfo(bottomFrom);
+-          for (Column column : bottomColumnList) {
+-            if (columnName.equals(column.getColAlias())) {
+-              return false;
+-            }
+-          }
+-          List<Column> topColumnList = qInfo.getRowInfo(topFrom);
+-          for (Column column : topColumnList) {
+-            if (columnName.equals(column.getColAlias())) {
+-              return true;
+-            }
+-          }
+-          throw new SqlXlateException("Correlated level is more than 2");
+         }
++        throw new SqlXlateException("Correlated level is more than 2");
+       }
+     }
++
+     return false;
+   }
+ 
+diff --git a/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/QueryBlock.java b/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/QueryBlock.java
+index 985456d..c31884e 100644
+--- a/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/QueryBlock.java
++++ b/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/QueryBlock.java
+@@ -41,6 +41,7 @@ public class QueryBlock extends BaseFilterBlock {
+   private CommonTree group;
+   private CommonTree order;
+   private CommonTree limit;
++  private boolean isHaving;
+   private final CountAsterisk countAsterisk = new CountAsterisk();
+ 
+   @Override
+@@ -52,7 +53,24 @@ public class QueryBlock extends BaseFilterBlock {
+     // TODO should process having firstly?(because of group processing...)
+     super.processChildren(fbContext, context);
+ 
+-    FilterBlock childFb = this.getChildren().size() == 0 ? null : this.getChildren().get(0);
++    // both WHERE & HAVING
++    // TODO other situations?
++    int childrenNum = this.getChildren().size();
++    FilterBlock childFb = null;
++    if (childrenNum == 1) {
++      childFb = this.getChildren().get(0);
++    }
++    if (childrenNum == 2) {
++      FilterBlock left = this.getChildren().get(0);
++      if (left instanceof WhereFilterBlock) {
++        // simple WHERE
++        if (left.getChildren().get(0) instanceof UnCorrelatedFilterBlock) {
++          childFb = this.getChildren().get(1);
++        }
++        // TODO complex WHERE
++      }
++    }
++
+     // has child filter block & transformed tree
+     if (childFb != null && childFb.getTransformedNode() != null) {
+       // restore aggregation function
+@@ -97,8 +115,12 @@ public class QueryBlock extends BaseFilterBlock {
+           SqlXlateUtil.addCommonTreeChild(select, position, selectList);
+ 
+         }
+-        SqlXlateUtil.addCommonTreeChild(selectList, countAsterisk.getPosition(), countAsterisk
+-            .getSelectItem());
++        // count(*) was removed, retrieve it.
++        if (!isHaving) {
++          SqlXlateUtil.addCommonTreeChild(selectList, countAsterisk.getPosition(), countAsterisk
++              .getSelectItem());
++        }
++
+       }
+       this.setTransformedNode(select);
+     }
+@@ -119,8 +141,7 @@ public class QueryBlock extends BaseFilterBlock {
+       if (this.getTransformedNode() == null) {
+         if (fbContext.getTypeStack().peek() instanceof HavingFilterBlock) {
+           FilterBlockProcessorFactory.getHavingUnCorrelatedProcessor(
+-              fbContext.getSubQStack().peek().getASTNode().getType()).process(fbContext, this,
+-              context);
++              fbContext.getSubQStack().peek().getASTNode()).process(fbContext, this, context);
+         }
+         if (fbContext.getTypeStack().peek() instanceof WhereFilterBlock) {
+           FilterBlockProcessorFactory.getUnCorrelatedProcessor(
+@@ -137,8 +158,14 @@ public class QueryBlock extends BaseFilterBlock {
+     // Did it's above subq been transformed? TPCH 20.sql
+     if (!fbContext.getSubQStack().isEmpty() && !fbContext.getSubQStack().peek().hasTransformed()) {
+       this.setASTNode(this.getTransformedNode());
+-      FilterBlockProcessorFactory.getUnCorrelatedProcessor(
+-          fbContext.getSubQStack().peek().getASTNode()).process(fbContext, this, context);
++      if (fbContext.getTypeStack().peek() instanceof HavingFilterBlock) {
++        FilterBlockProcessorFactory.getHavingUnCorrelatedProcessor(
++            fbContext.getSubQStack().peek().getASTNode()).process(fbContext, this, context);
++      }
++      if (fbContext.getTypeStack().peek() instanceof WhereFilterBlock) {
++        FilterBlockProcessorFactory.getUnCorrelatedProcessor(
++            fbContext.getSubQStack().peek().getASTNode()).process(fbContext, this, context);
++      }
+     }
+ 
+     fbContext.getQueryStack().pop();
+@@ -283,4 +310,9 @@ public class QueryBlock extends BaseFilterBlock {
+     this.queryForTransfer = queryForTransfer;
+   }
+ 
++
++  public void setHaving(boolean isHaving) {
++    this.isHaving = isHaving;
++  }
++
+ }
+diff --git a/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/UnCorrelatedFilterBlock.java b/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/UnCorrelatedFilterBlock.java
+index f943da9..1badddd 100644
+--- a/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/UnCorrelatedFilterBlock.java
++++ b/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/UnCorrelatedFilterBlock.java
+@@ -30,30 +30,51 @@ public class UnCorrelatedFilterBlock extends NormalFilterBlock {
+   public void process(FilterBlockContext fbContext, TranslateContext context)
+       throws SqlXlateException {
+ 
+-    // If SubQFB is empty and QueryBlock stack only has one element, it ¡s the outer-most query
+-    // TODO I forget something.
+-    if ((fbContext.getSubQStack().size() == 0)
+-        && (fbContext.getQueryStack().size() == 1)) {
+-
+-//       FilterBlockProcessorFactory.getSimpleProcessor().process(fbContext, this, context);
+ 
+ 
+-      CommonTree topSelect = fbContext.getQueryStack().peek().cloneSimpleQuery();
++    // If SubQFB is empty and QueryBlock stack only has one element, it ¡s the outer-most query
++    // TODO I forget something.
++    if ((fbContext.getSubQStack().size() == 0) && (fbContext.getQueryStack().size() == 1)) {
++      TypeFilterBlock typeFB = fbContext.getTypeStack().peek();
+       CommonTree condition = this.getASTNode();
+-
+-      CommonTree where = FilterBlockUtil.createSqlASTNode(PantheraExpParser.SQL92_RESERVED_WHERE, "where");
+-      topSelect.addChild(where);
+-      CommonTree logicExpr = FilterBlockUtil.createSqlASTNode(PantheraExpParser.LOGIC_EXPR,
+-          "LOGIC_EXPR");
+-      where.addChild(logicExpr);
+-      logicExpr.addChild(condition);
+-
+-      this.setTransformedNode(topSelect);
++      if (typeFB instanceof WhereFilterBlock) {
++        CommonTree topSelect = fbContext.getQueryStack().peek().cloneSimpleQuery();
++        CommonTree where = FilterBlockUtil.createSqlASTNode(PantheraExpParser.SQL92_RESERVED_WHERE,
++            "where");
++        topSelect.addChild(where);
++        CommonTree logicExpr = FilterBlockUtil.createSqlASTNode(PantheraExpParser.LOGIC_EXPR,
++            "LOGIC_EXPR");
++        where.addChild(logicExpr);
++        logicExpr.addChild(condition);
++        this.setTransformedNode(topSelect);
++      }
++      if (typeFB instanceof HavingFilterBlock) {
++        CommonTree topSelect = fbContext.getQueryStack().peek().cloneWholeQuery();
++        if (topSelect.getFirstChildWithType(PantheraExpParser.SQL92_RESERVED_ORDER) != null) {
++          topSelect.deleteChild(topSelect.getFirstChildWithType(
++              PantheraExpParser.SQL92_RESERVED_ORDER).getChildIndex());
++        }
++        CommonTree group = (CommonTree) topSelect
++            .getFirstChildWithType(PantheraExpParser.SQL92_RESERVED_GROUP);
++        CommonTree having = (CommonTree) group
++            .getFirstChildWithType(PantheraExpParser.SQL92_RESERVED_HAVING);
++        CommonTree logicExpr = (CommonTree) having
++            .getFirstChildWithType(PantheraExpParser.LOGIC_EXPR);
++        logicExpr.deleteChild(0);
++        logicExpr.addChild(condition);
++        this.setTransformedNode(topSelect);
++      }
+       return;
+     }
+-    FilterBlockProcessorFactory.getUnCorrelatedProcessor(
+-        fbContext.getSubQStack().peek().getASTNode()).process(fbContext, this, context);
+-//    super.processStackSubq(fbContext, context);
++    TypeFilterBlock typeFB = fbContext.getTypeStack().get(fbContext.getTypeStack().size() - 2);
++    if (typeFB instanceof WhereFilterBlock) {
++      FilterBlockProcessorFactory.getUnCorrelatedProcessor(
++          fbContext.getSubQStack().peek().getASTNode()).process(fbContext, this, context);
++    }
++    if (typeFB instanceof HavingFilterBlock) {
++      FilterBlockProcessorFactory.getHavingUnCorrelatedProcessor(
++          fbContext.getSubQStack().peek().getASTNode()).process(fbContext, this, context);
++    }
+   }
+ 
+ 
+diff --git a/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/BaseFilterBlockProcessor.java b/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/BaseFilterBlockProcessor.java
+index 35d7f81..6a9697d 100644
+--- a/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/BaseFilterBlockProcessor.java
++++ b/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/BaseFilterBlockProcessor.java
+@@ -253,7 +253,8 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
+       CommonTree child = (CommonTree) filterOp.getChild(i);
+       if (!PLSQLFilterBlockFactory.getInstance().isCorrelated(this.fbContext.getqInfo(),
+           selectStack, child)) {
+-        if (child.getType() == PantheraParser_PLSQLParser.CASCATED_ELEMENT) {
++        if (child.getType() == PantheraParser_PLSQLParser.CASCATED_ELEMENT
++            || FilterBlockUtil.findOnlyNode(child, PantheraExpParser.CASCATED_ELEMENT) != null) {
+           List<CommonTree> uncorrelatedList = result.get(false);
+           if (uncorrelatedList == null) {
+             uncorrelatedList = new ArrayList<CommonTree>();
+@@ -261,10 +262,7 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
+           }
+           uncorrelatedList.add(child);
+         }
+-      }
+-
+-      if (PLSQLFilterBlockFactory.getInstance().isCorrelated(this.fbContext.getqInfo(),
+-          selectStack, child)) {
++      } else {
+         List<CommonTree> correlatedList = result.get(true);
+         if (correlatedList == null) {
+           correlatedList = new ArrayList<CommonTree>();
+@@ -523,13 +521,22 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
+   void rebuildSubQOpElement(CommonTree subQOpElement, CommonTree columnAlias) {
+     CommonTree anyElement = FilterBlockUtil.findOnlyNode(subQOpElement,
+         PantheraParser_PLSQLParser.ANY_ELEMENT);
+-    int count = anyElement.getChildCount();
+-    for (int i = 0; i < count; i++) {
+-      anyElement.deleteChild(0);
++    if (anyElement == null) {// count(*)
++      anyElement = FilterBlockUtil.createSqlASTNode(PantheraExpParser.ANY_ELEMENT, "ANY_ELEMENT");
++    } else {
++      int count = anyElement.getChildCount();
++      for (int i = 0; i < count; i++) {
++        anyElement.deleteChild(0);
++      }
+     }
+     FilterBlockUtil.attachChild(anyElement, FilterBlockUtil.cloneTree((CommonTree) columnAlias
+         .getChild(0)));
+     CommonTree cascatedElement = (CommonTree) anyElement.getParent();
++    if (cascatedElement == null) {// count(*)
++      cascatedElement = FilterBlockUtil.createSqlASTNode(PantheraExpParser.CASCATED_ELEMENT,
++          "CASCATED_ELEMENT");
++      cascatedElement.addChild(anyElement);
++    }
+     int index = subQOpElement.childIndex;
+     subQNode.deleteChild(index);
+     SqlXlateUtil.addCommonTreeChild(subQNode, index, cascatedElement);
+@@ -750,6 +757,7 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
+       if (bottomKeys != null) {
+         for (CommonTree bottomKey : bottomKeys) {
+           String selectKey;
++          // FIXME when bottomKey is not CASCATED_ELEMENT
+           selectKey = bottomKey.getChild(0).getChildCount() == 2 ? bottomKey.getChild(0)
+               .getChild(1).getText() : bottomKey.getChild(0).getChild(0).getText();
+           if (needGroup && !selectKeySet.contains(selectKey)) {
+@@ -762,7 +770,8 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
+               .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST), FilterBlockUtil
+               .cloneTree(bottomKey));
+           // modify filter to alias
+-          CommonTree anyElement = (CommonTree) bottomKey.getChild(0);
++          CommonTree anyElement = FilterBlockUtil.findOnlyNode(bottomKey,
++              PantheraExpParser.ANY_ELEMENT);
+           if (anyElement.getChildCount() == 2) {
+             ((CommonTree) anyElement.getChild(0)).getToken().setText(
+                 joinSubAlias.getChild(0).getText());
+@@ -787,6 +796,7 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
+             context.putBallToBasket(isNull, true);
+             this.fb.setASTNode(and);
+           }
++          rebuildWhereKey4rebuildSelectListByFilter(bottomKey, anyElement);
+         }
+       }
+ 
+@@ -798,7 +808,7 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
+             .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST), FilterBlockUtil
+             .cloneTree(topKey));
+         // modify filter to alias
+-        CommonTree anyElement = (CommonTree) topKey.getChild(0);
++        CommonTree anyElement = FilterBlockUtil.findOnlyNode(topKey, PantheraExpParser.ANY_ELEMENT);
+         if (anyElement.getChildCount() == 2) {
+           ((CommonTree) anyElement.getChild(0)).getToken().setText(topAlias.getChild(0).getText());
+           ((CommonTree) anyElement.getChild(1)).getToken().setText(
+@@ -807,11 +817,21 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
+           ((CommonTree) anyElement.getChild(0)).getToken().setText(
+               joinKeyAlias.getChild(0).getText());
+         }
+-
++        rebuildWhereKey4rebuildSelectListByFilter(topKey, anyElement);
+       }
+     }
+   }
+ 
++  private void rebuildWhereKey4rebuildSelectListByFilter(CommonTree bottomKey, CommonTree anyElement) {
++    if (bottomKey.getType() != PantheraExpParser.CASCATED_ELEMENT) {
++      CommonTree cascatedElement = (CommonTree) anyElement.getParent();
++      int index = bottomKey.childIndex;
++      CommonTree whereOp = (CommonTree) bottomKey.getParent();
++      whereOp.deleteChild(index);
++      SqlXlateUtil.addCommonTreeChild(whereOp, index, cascatedElement);
++    }
++  }
++
+   CommonTree buildWhereByFB(CommonTree subQCondition, CommonTree compareKeyAlias1,
+       CommonTree compareKeyAlias2) {
+     FilterBlockUtil.deleteBranch(bottomSelect, PantheraParser_PLSQLParser.SQL92_RESERVED_WHERE);
+diff --git a/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/CommonFilterBlockProcessor.java b/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/CommonFilterBlockProcessor.java
+index adce9c5..498a128 100644
+--- a/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/CommonFilterBlockProcessor.java
++++ b/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/CommonFilterBlockProcessor.java
+@@ -116,6 +116,8 @@ public abstract class CommonFilterBlockProcessor extends BaseFilterBlockProcesso
+     // needn't group after transformed.
+     super.topQuery.setGroup(null);
+ 
++    super.topQuery.setHaving(true);
++
+     // clone whole top select tree
+     super.topSelect = super.topQuery.cloneWholeQuery();
+   }
+@@ -260,9 +262,10 @@ public abstract class CommonFilterBlockProcessor extends BaseFilterBlockProcesso
+         .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST)).getChild(0));
+ 
+     // on
+-    CommonTree leftChild = compareElementAlias.getType() == PantheraParser_PLSQLParser.ID ? super
++    CommonTree leftChild = compareElementAlias.getType() == PantheraParser_PLSQLParser.ALIAS ? super
+         .createCascatedElementWithTableName((CommonTree) topAlias.getChild(0),
+-            (CommonTree) compareElementAlias.getChild(0)) : compareElementAlias;
++            (CommonTree) compareElementAlias.getChild(0))
++        : compareElementAlias;
+     CommonTree on = super.buildOn(FilterBlockUtil.createSqlASTNode(
+         PantheraParser_PLSQLParser.EQUALS_OP, "="), leftChild, super
+         .createCascatedElementWithTableName((CommonTree) bottomAlias.getChild(0),
+diff --git a/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/CompareOpProcessor4C.java b/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/CompareProcessor4C.java
+similarity index 84%
+rename from ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/CompareOpProcessor4C.java
+rename to ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/CompareProcessor4C.java
+index 3bf0f5b..1e21ee4 100644
+--- a/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/CompareOpProcessor4C.java
++++ b/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/CompareProcessor4C.java
+@@ -20,15 +20,14 @@ package org.apache.hadoop.hive.ql.parse.sql.transformer.fb.processor;
+ import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
+ 
+ /**
+- * Correlated FilterBlock processor for all compare operator include > >= < <= = != <br>
+- * CompareOpProcessor4C.
++ * Process Correlated compare operation > >= < <= = != in WHERE subquery.<br>
++ * CompareProcessor4C.
+  *
+  */
+-public class CompareOpProcessor4C extends CommonFilterBlockProcessor {
++public class CompareProcessor4C extends CommonFilterBlockProcessor {
+ 
+   @Override
+   public void processFB() throws SqlXlateException {
+     super.processCompareC();
+-
+   }
+ }
+diff --git a/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/CompareProcessor4HavingC.java b/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/CompareProcessor4HavingC.java
+new file mode 100644
+index 0000000..c4eb4a0
+--- /dev/null
++++ b/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/CompareProcessor4HavingC.java
+@@ -0,0 +1,34 @@
++/*
++ * Licensed to the Apache Software Foundation (ASF) under one
++ * or more contributor license agreements.  See the NOTICE file
++ * distributed with this work for additional information
++ * regarding copyright ownership.  The ASF licenses this file
++ * to you under the Apache License, Version 2.0 (the
++ * "License"); you may not use this file except in compliance
++ * with the License.  You may obtain a copy of the License at
++ *
++ *     http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++package org.apache.hadoop.hive.ql.parse.sql.transformer.fb.processor;
++
++import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
++
++/**
++ * Process correlated compare operation in HAVING subquery.<br>
++ * CompareProcessor4HavingC.
++ *
++ */
++public class CompareProcessor4HavingC extends CommonFilterBlockProcessor {
++
++  @Override
++  void processFB() throws SqlXlateException {
++    rebuildTopQuery4Having();
++    processCompareC();
++  }
++}
+diff --git a/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/GreaterThanProcessor4HavingUC.java b/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/CompareProcessor4HavingUC.java
+similarity index 86%
+rename from ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/GreaterThanProcessor4HavingUC.java
+rename to ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/CompareProcessor4HavingUC.java
+index f8b090b..e4bbfe4 100644
+--- a/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/GreaterThanProcessor4HavingUC.java
++++ b/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/CompareProcessor4HavingUC.java
+@@ -20,11 +20,11 @@ package org.apache.hadoop.hive.ql.parse.sql.transformer.fb.processor;
+ import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
+ 
+ /**
+- * uncorrelated greater than in having processor.<br>
+- * GreaterThanProcessor4HavingUC.
++ * Process uncorrelated compare operation in HAVING subquery.<br>
++ * CompareProcessor4HavingUC.
+  *
+  */
+-public class GreaterThanProcessor4HavingUC extends CommonFilterBlockProcessor {
++public class CompareProcessor4HavingUC extends CommonFilterBlockProcessor {
+ 
+   @Override
+   void processFB() throws SqlXlateException {
+diff --git a/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/CompareProcessor4UC.java b/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/CompareProcessor4UC.java
+index 15e9380..071489e 100644
+--- a/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/CompareProcessor4UC.java
++++ b/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/CompareProcessor4UC.java
+@@ -19,7 +19,7 @@ package org.apache.hadoop.hive.ql.parse.sql.transformer.fb.processor;
+ 
+ 
+ /**
+- * Process uncorrelated filter block node which subQ is GREATER_THAN type.<br>
++ * Process uncorrelated compare operation in WHERE subquery.<br>
+  * CompareProcessor4UC.
+  *
+  */
+diff --git a/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/ExistsProcessor4C.java b/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/ExistsProcessor4C.java
+index 67bfeb1..512da29 100644
+--- a/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/ExistsProcessor4C.java
++++ b/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/ExistsProcessor4C.java
+@@ -22,7 +22,7 @@ import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
+ import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
+ 
+ /**
+- * correlated exists processor.<br>
++ * Process correlated EXISTS in WHERE subquery.<br>
+  * ExistsProcessor4C.
+  *
+  */
+diff --git a/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/ExistsProcessor4HavingC.java b/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/ExistsProcessor4HavingC.java
+new file mode 100644
+index 0000000..818027e
+--- /dev/null
++++ b/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/ExistsProcessor4HavingC.java
+@@ -0,0 +1,43 @@
++/*
++ * Licensed to the Apache Software Foundation (ASF) under one
++ * or more contributor license agreements.  See the NOTICE file
++ * distributed with this work for additional information
++ * regarding copyright ownership.  The ASF licenses this file
++ * to you under the Apache License, Version 2.0 (the
++ * "License"); you may not use this file except in compliance
++ * with the License.  You may obtain a copy of the License at
++ *
++ *     http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++package org.apache.hadoop.hive.ql.parse.sql.transformer.fb.processor;
++
++import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
++
++import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
++
++/**
++ * Process correlated EXISTS in HAVING subquery.<br>
++ * ExistsProcessor4HavingC.
++ * 
++ */
++public class ExistsProcessor4HavingC extends CommonFilterBlockProcessor {
++
++  @Override
++  void processFB() throws SqlXlateException {
++    rebuildTopQuery4Having();
++    boolean isNot = super.subQNode.getParent().getType() == PantheraParser_PLSQLParser.SQL92_RESERVED_NOT ? true
++        : false;
++    if (isNot) {
++      super.processNotExistsCByLeftJoin();
++    } else {
++      super.processExistsC();
++    }
++  }
++
++}
+diff --git a/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/ExistsProcessor4HavingUC.java b/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/ExistsProcessor4HavingUC.java
+new file mode 100644
+index 0000000..e3a810d
+--- /dev/null
++++ b/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/ExistsProcessor4HavingUC.java
+@@ -0,0 +1,43 @@
++/*
++ * Licensed to the Apache Software Foundation (ASF) under one
++ * or more contributor license agreements.  See the NOTICE file
++ * distributed with this work for additional information
++ * regarding copyright ownership.  The ASF licenses this file
++ * to you under the Apache License, Version 2.0 (the
++ * "License"); you may not use this file except in compliance
++ * with the License.  You may obtain a copy of the License at
++ *
++ *     http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++package org.apache.hadoop.hive.ql.parse.sql.transformer.fb.processor;
++
++import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
++
++import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
++
++/**
++ * Process uncorrelated EXISTS in HAVING subquery.<br>
++ * ExistsProcessor4HavingUC.
++ *
++ */
++public class ExistsProcessor4HavingUC extends CommonFilterBlockProcessor {
++
++  @Override
++  void processFB() throws SqlXlateException {
++    rebuildTopQuery4Having();
++    boolean isNot = super.subQNode.getParent().getType() == PantheraParser_PLSQLParser.SQL92_RESERVED_NOT ? true
++        : false;
++    if (isNot) {
++      super.processNotExistsUC();
++    } else {
++      super.processExistsUC();
++    }
++  }
++
++}
+diff --git a/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/ExistsProcessor4UC.java b/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/ExistsProcessor4UC.java
+index a997e4c..4e5f817 100644
+--- a/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/ExistsProcessor4UC.java
++++ b/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/ExistsProcessor4UC.java
+@@ -22,7 +22,7 @@ import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
+ import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
+ 
+ /**
+- * Uncorrelated EXISTS subquery processor.<br>
++ * Process uncorrelated EXISTS in WHERE subquery.<br>
+  * ExistsProcessor4UC.
+  *
+  */
+diff --git a/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/FilterBlockProcessorFactory.java b/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/FilterBlockProcessorFactory.java
+index 5a4400c..3a482b4 100644
+--- a/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/FilterBlockProcessorFactory.java
++++ b/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/FilterBlockProcessorFactory.java
+@@ -56,7 +56,7 @@ public class FilterBlockProcessorFactory {
+     case PantheraParser_PLSQLParser.SQL92_RESERVED_EXISTS:
+       return new ExistsProcessor4UC();
+     default:
+-      throw new SqlXlateException("Unimplement uncorrelated sub query type:" + type);
++      throw new SqlXlateException("Unimplement uncorrelated subquery type:" + type);
+     }
+ 
+   }
+@@ -74,7 +74,7 @@ public class FilterBlockProcessorFactory {
+       if (rebuildCompareSubquery(subQ)) {
+         return getCorrelatedProcessor(subQ);
+       } else {
+-        return new CompareOpProcessor4C();
++        return new CompareProcessor4C();
+       }
+     case PantheraParser_PLSQLParser.SQL92_RESERVED_EXISTS:
+       return new ExistsProcessor4C();
+@@ -83,17 +83,59 @@ public class FilterBlockProcessorFactory {
+     case PantheraParser_PLSQLParser.NOT_IN:
+       return new NotInProcessor4C();
+     default:
+-      throw new SqlXlateException("Unimplement correlated sub query type:" + type);
++      throw new SqlXlateException("Unimplement correlated subquery type:" + type);
+     }
+   }
+ 
+-  public static FilterBlockProcessor getHavingUnCorrelatedProcessor(int type)
++  public static FilterBlockProcessor getHavingUnCorrelatedProcessor(CommonTree subQ)
+       throws SqlXlateException {
++    int type = subQ.getType();
+     switch (type) {
++    case PantheraParser_PLSQLParser.EQUALS_OP:
++    case PantheraParser_PLSQLParser.NOT_EQUAL_OP:
+     case PantheraParser_PLSQLParser.GREATER_THAN_OP:
+-      return new GreaterThanProcessor4HavingUC();
++    case PantheraParser_PLSQLParser.LESS_THAN_OP:
++    case PantheraParser_PLSQLParser.LESS_THAN_OR_EQUALS_OP:
++    case PantheraParser_PLSQLParser.GREATER_THAN_OR_EQUALS_OP:
++      if (rebuildCompareSubquery(subQ)) {
++        return getHavingUnCorrelatedProcessor(subQ);
++      } else {
++        return new CompareProcessor4HavingUC();
++      }
++    case PantheraParser_PLSQLParser.NOT_IN:
++      return new NotInProcessor4HavingUC();
++    case PantheraParser_PLSQLParser.SQL92_RESERVED_IN:
++      return new InProcessor4HavingUC();
++    case PantheraParser_PLSQLParser.SQL92_RESERVED_EXISTS:
++      return new ExistsProcessor4HavingUC();
++    default:
++      throw new SqlXlateException("Unimplement uncorrelated having subquery type:" + type);
++    }
++  }
++
++  public static FilterBlockProcessor getHavingCorrelatedProcessor(CommonTree subQ)
++      throws SqlXlateException {
++    int type = subQ.getType();
++    switch (type) {
++    case PantheraParser_PLSQLParser.EQUALS_OP:
++    case PantheraParser_PLSQLParser.NOT_EQUAL_OP:
++    case PantheraParser_PLSQLParser.GREATER_THAN_OP:
++    case PantheraParser_PLSQLParser.LESS_THAN_OP:
++    case PantheraParser_PLSQLParser.LESS_THAN_OR_EQUALS_OP:
++    case PantheraParser_PLSQLParser.GREATER_THAN_OR_EQUALS_OP:
++      if (rebuildCompareSubquery(subQ)) {
++        return getHavingCorrelatedProcessor(subQ);
++      } else {
++        return new CompareProcessor4HavingC();
++      }
++    case PantheraParser_PLSQLParser.NOT_IN:
++      return new NotInProcessor4HavingC();
++    case PantheraParser_PLSQLParser.SQL92_RESERVED_IN:
++      return new InProcessor4HavingC();
++    case PantheraParser_PLSQLParser.SQL92_RESERVED_EXISTS:
++      return new ExistsProcessor4HavingC();
+     default:
+-      throw new SqlXlateException("Unimplement sub query type:" + type);
++      throw new SqlXlateException("Unimplement correlated having subquery type:" + type);
+     }
+   }
+ 
+diff --git a/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/InProcessor4C.java b/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/InProcessor4C.java
+index 8357c4c..9654fa6 100644
+--- a/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/InProcessor4C.java
++++ b/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/InProcessor4C.java
+@@ -20,7 +20,7 @@ package org.apache.hadoop.hive.ql.parse.sql.transformer.fb.processor;
+ import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
+ 
+ /**
+- * correlated in processor.<br>
++ * Process correlated IN in WHERE subquery.<br>
+  * InProcessor4C.
+  *
+  */
+diff --git a/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/InProcessor4HavingC.java b/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/InProcessor4HavingC.java
+new file mode 100644
+index 0000000..1266760
+--- /dev/null
++++ b/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/InProcessor4HavingC.java
+@@ -0,0 +1,35 @@
++/*
++ * Licensed to the Apache Software Foundation (ASF) under one
++ * or more contributor license agreements.  See the NOTICE file
++ * distributed with this work for additional information
++ * regarding copyright ownership.  The ASF licenses this file
++ * to you under the Apache License, Version 2.0 (the
++ * "License"); you may not use this file except in compliance
++ * with the License.  You may obtain a copy of the License at
++ *
++ *     http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++package org.apache.hadoop.hive.ql.parse.sql.transformer.fb.processor;
++
++import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
++
++/**
++ * Process correlated IN in HAVING subquery.<br>
++ * InProcessor4HavingC.
++ *
++ */
++public class InProcessor4HavingC extends CommonFilterBlockProcessor {
++
++  @Override
++  void processFB() throws SqlXlateException {
++    rebuildTopQuery4Having();
++    super.processInC();
++  }
++
++}
+diff --git a/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/InProcessor4HavingUC.java b/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/InProcessor4HavingUC.java
+new file mode 100644
+index 0000000..020a21b
+--- /dev/null
++++ b/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/InProcessor4HavingUC.java
+@@ -0,0 +1,35 @@
++/*
++ * Licensed to the Apache Software Foundation (ASF) under one
++ * or more contributor license agreements.  See the NOTICE file
++ * distributed with this work for additional information
++ * regarding copyright ownership.  The ASF licenses this file
++ * to you under the Apache License, Version 2.0 (the
++ * "License"); you may not use this file except in compliance
++ * with the License.  You may obtain a copy of the License at
++ *
++ *     http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++package org.apache.hadoop.hive.ql.parse.sql.transformer.fb.processor;
++
++import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
++
++/**
++ * Process uncorrelated IN in HAVING subquery.<br>
++ * InProcessor4HavingUC.
++ *
++ */
++public class InProcessor4HavingUC extends CommonFilterBlockProcessor {
++
++  @Override
++  void processFB() throws SqlXlateException {
++    rebuildTopQuery4Having();
++    super.processInUC();
++  }
++
++}
+diff --git a/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/InProcessor4UC.java b/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/InProcessor4UC.java
+index 9844275..a8e82ae 100644
+--- a/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/InProcessor4UC.java
++++ b/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/InProcessor4UC.java
+@@ -20,7 +20,7 @@ package org.apache.hadoop.hive.ql.parse.sql.transformer.fb.processor;
+ import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
+ 
+ /**
+- * uncorrelated in processor.<br>
++ * Process uncorrelated IN in WHERE subquery.<br>
+  * InProcessor4UC.
+  *
+  */
+diff --git a/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/NotInProcessor4C.java b/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/NotInProcessor4C.java
+index a5fb65d..1ce8ea9 100644
+--- a/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/NotInProcessor4C.java
++++ b/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/NotInProcessor4C.java
+@@ -26,7 +26,7 @@ import org.apache.hadoop.hive.ql.parse.sql.SqlXlateUtil;
+ import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.FilterBlockUtil;
+ 
+ /**
+- * correlated NOT IN processor<br>
++ * Process correlated NOT IN in WHERE subquery<br>
+  * NotInProcessor4C.
+  *
+  */
+diff --git a/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/NotInProcessor4HavingC.java b/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/NotInProcessor4HavingC.java
+new file mode 100644
+index 0000000..5aa575e
+--- /dev/null
++++ b/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/NotInProcessor4HavingC.java
+@@ -0,0 +1,35 @@
++/*
++ * Licensed to the Apache Software Foundation (ASF) under one
++ * or more contributor license agreements.  See the NOTICE file
++ * distributed with this work for additional information
++ * regarding copyright ownership.  The ASF licenses this file
++ * to you under the Apache License, Version 2.0 (the
++ * "License"); you may not use this file except in compliance
++ * with the License.  You may obtain a copy of the License at
++ *
++ *     http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++package org.apache.hadoop.hive.ql.parse.sql.transformer.fb.processor;
++
++import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
++
++/**
++ * Process correlated NOT IN in HAVING subquery<br>
++ * NotInProcessor4HavingC.
++ *
++ */
++public class NotInProcessor4HavingC extends NotInProcessor4C {
++
++  @Override
++  void processFB() throws SqlXlateException {
++    rebuildTopQuery4Having();
++    super.processFB();
++  }
++
++}
+diff --git a/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/NotInProcessor4HavingUC.java b/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/NotInProcessor4HavingUC.java
+new file mode 100644
+index 0000000..72dcde4
+--- /dev/null
++++ b/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/NotInProcessor4HavingUC.java
+@@ -0,0 +1,35 @@
++/*
++ * Licensed to the Apache Software Foundation (ASF) under one
++ * or more contributor license agreements.  See the NOTICE file
++ * distributed with this work for additional information
++ * regarding copyright ownership.  The ASF licenses this file
++ * to you under the Apache License, Version 2.0 (the
++ * "License"); you may not use this file except in compliance
++ * with the License.  You may obtain a copy of the License at
++ *
++ *     http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++package org.apache.hadoop.hive.ql.parse.sql.transformer.fb.processor;
++
++import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
++
++/**
++ * Process uncorrelated NOT IN in HAVING subquery.<br>
++ * NotInProcessor4HavingUC.
++ *
++ */
++public class NotInProcessor4HavingUC extends CommonFilterBlockProcessor {
++
++  @Override
++  void processFB() throws SqlXlateException {
++    rebuildTopQuery4Having();
++    super.processNotInUC();
++  }
++
++}
+diff --git a/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/NotInProcessor4UC.java b/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/NotInProcessor4UC.java
+index eb889db..78396f4 100644
+--- a/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/NotInProcessor4UC.java
++++ b/ql/src/java/org/apache/hadoop/hive/ql/parse/sql/transformer/fb/processor/NotInProcessor4UC.java
+@@ -20,7 +20,7 @@ package org.apache.hadoop.hive.ql.parse.sql.transformer.fb.processor;
+ import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
+ 
+ /**
+- * uncorrelated not in processor.<br>
++ * Process uncorrelated NOT IN in WHERE subquery.<br>
+  * NotInProcessor4UC.
+  *
+  */
+-- 
+1.7.9.5
+

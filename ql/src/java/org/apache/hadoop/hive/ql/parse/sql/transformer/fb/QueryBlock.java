@@ -41,6 +41,7 @@ public class QueryBlock extends BaseFilterBlock {
   private CommonTree group;
   private CommonTree order;
   private CommonTree limit;
+  private boolean isHaving;
   private final CountAsterisk countAsterisk = new CountAsterisk();
 
   @Override
@@ -52,7 +53,24 @@ public class QueryBlock extends BaseFilterBlock {
     // TODO should process having firstly?(because of group processing...)
     super.processChildren(fbContext, context);
 
-    FilterBlock childFb = this.getChildren().size() == 0 ? null : this.getChildren().get(0);
+    // both WHERE & HAVING
+    // TODO other situations?
+    int childrenNum = this.getChildren().size();
+    FilterBlock childFb = null;
+    if (childrenNum == 1) {
+      childFb = this.getChildren().get(0);
+    }
+    if (childrenNum == 2) {
+      FilterBlock left = this.getChildren().get(0);
+      if (left instanceof WhereFilterBlock) {
+        // simple WHERE
+        if (left.getChildren().get(0) instanceof UnCorrelatedFilterBlock) {
+          childFb = this.getChildren().get(1);
+        }
+        // TODO complex WHERE
+      }
+    }
+
     // has child filter block & transformed tree
     if (childFb != null && childFb.getTransformedNode() != null) {
       // restore aggregation function
@@ -97,8 +115,12 @@ public class QueryBlock extends BaseFilterBlock {
           SqlXlateUtil.addCommonTreeChild(select, position, selectList);
 
         }
-        SqlXlateUtil.addCommonTreeChild(selectList, countAsterisk.getPosition(), countAsterisk
-            .getSelectItem());
+        // count(*) was removed, retrieve it.
+        if (!isHaving) {
+          SqlXlateUtil.addCommonTreeChild(selectList, countAsterisk.getPosition(), countAsterisk
+              .getSelectItem());
+        }
+
       }
       this.setTransformedNode(select);
     }
@@ -119,8 +141,7 @@ public class QueryBlock extends BaseFilterBlock {
       if (this.getTransformedNode() == null) {
         if (fbContext.getTypeStack().peek() instanceof HavingFilterBlock) {
           FilterBlockProcessorFactory.getHavingUnCorrelatedProcessor(
-              fbContext.getSubQStack().peek().getASTNode().getType()).process(fbContext, this,
-              context);
+              fbContext.getSubQStack().peek().getASTNode()).process(fbContext, this, context);
         }
         if (fbContext.getTypeStack().peek() instanceof WhereFilterBlock) {
           FilterBlockProcessorFactory.getUnCorrelatedProcessor(
@@ -137,8 +158,14 @@ public class QueryBlock extends BaseFilterBlock {
     // Did it's above subq been transformed? TPCH 20.sql
     if (!fbContext.getSubQStack().isEmpty() && !fbContext.getSubQStack().peek().hasTransformed()) {
       this.setASTNode(this.getTransformedNode());
-      FilterBlockProcessorFactory.getUnCorrelatedProcessor(
-          fbContext.getSubQStack().peek().getASTNode()).process(fbContext, this, context);
+      if (fbContext.getTypeStack().peek() instanceof HavingFilterBlock) {
+        FilterBlockProcessorFactory.getHavingUnCorrelatedProcessor(
+            fbContext.getSubQStack().peek().getASTNode()).process(fbContext, this, context);
+      }
+      if (fbContext.getTypeStack().peek() instanceof WhereFilterBlock) {
+        FilterBlockProcessorFactory.getUnCorrelatedProcessor(
+            fbContext.getSubQStack().peek().getASTNode()).process(fbContext, this, context);
+      }
     }
 
     fbContext.getQueryStack().pop();
@@ -281,6 +308,11 @@ public class QueryBlock extends BaseFilterBlock {
 
   public void setQueryForTransfer(CommonTree queryForTransfer) {
     this.queryForTransfer = queryForTransfer;
+  }
+
+
+  public void setHaving(boolean isHaving) {
+    this.isHaving = isHaving;
   }
 
 }

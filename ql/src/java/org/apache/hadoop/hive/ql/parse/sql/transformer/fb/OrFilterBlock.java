@@ -38,14 +38,9 @@ public class OrFilterBlock extends LogicFilterBlock {
     CommonTree rightSelect = this.getChildren().get(1).getTransformedNode();
     CommonTree topSelect = this.buildUnionSelect(leftSelect, rightSelect, context);
 
-    // UNION transformer will process DISTINCT
-    // CommonTree distinct = FilterBlockUtil.createSqlASTNode(
-    // PantheraExpParser.SQL92_RESERVED_DISTINCT, "distinct");
-    // topSelect.addChild(distinct);
-
     CommonTree leftSelectList = (CommonTree) leftSelect
         .getFirstChildWithType(PantheraExpParser.SELECT_LIST);
-    topSelect.addChild(FilterBlockUtil.cloneSelectList(leftSelectList));
+    topSelect.addChild(FilterBlockUtil.cloneSelectListByAlias(leftSelectList));
     this.setTransformedNode(topSelect);
   }
 

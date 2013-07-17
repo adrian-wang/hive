@@ -20,15 +20,16 @@ package org.apache.hadoop.hive.ql.parse.sql.transformer.fb.processor;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
 
 /**
- * uncorrelated greater than in having processor.<br>
- * GreaterThanProcessor4HavingUC.
+ * Process correlated IN in HAVING subquery.<br>
+ * InProcessor4HavingC.
  *
  */
-public class GreaterThanProcessor4HavingUC extends CommonFilterBlockProcessor {
+public class InProcessor4HavingC extends CommonFilterBlockProcessor {
 
   @Override
   void processFB() throws SqlXlateException {
     rebuildTopQuery4Having();
-    processCompareUC();
+    super.processInC();
   }
+
 }

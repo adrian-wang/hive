@@ -22,7 +22,7 @@ import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
 import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
 
 /**
- * correlated exists processor.<br>
+ * Process correlated EXISTS in WHERE subquery.<br>
  * ExistsProcessor4C.
  *
  */

@@ -253,7 +253,8 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
       CommonTree child = (CommonTree) filterOp.getChild(i);
       if (!PLSQLFilterBlockFactory.getInstance().isCorrelated(this.fbContext.getqInfo(),
           selectStack, child)) {
-        if (child.getType() == PantheraParser_PLSQLParser.CASCATED_ELEMENT) {
+        if (child.getType() == PantheraParser_PLSQLParser.CASCATED_ELEMENT
+            || FilterBlockUtil.findOnlyNode(child, PantheraExpParser.CASCATED_ELEMENT) != null) {
           List<CommonTree> uncorrelatedList = result.get(false);
           if (uncorrelatedList == null) {
             uncorrelatedList = new ArrayList<CommonTree>();
@@ -261,10 +262,7 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
           }
           uncorrelatedList.add(child);
         }
-      }
-
-      if (PLSQLFilterBlockFactory.getInstance().isCorrelated(this.fbContext.getqInfo(),
-          selectStack, child)) {
+      } else {
         List<CommonTree> correlatedList = result.get(true);
         if (correlatedList == null) {
           correlatedList = new ArrayList<CommonTree>();
@@ -523,13 +521,22 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
   void rebuildSubQOpElement(CommonTree subQOpElement, CommonTree columnAlias) {
     CommonTree anyElement = FilterBlockUtil.findOnlyNode(subQOpElement,
         PantheraParser_PLSQLParser.ANY_ELEMENT);
-    int count = anyElement.getChildCount();
-    for (int i = 0; i < count; i++) {
-      anyElement.deleteChild(0);
+    if (anyElement == null) {// count(*)
+      anyElement = FilterBlockUtil.createSqlASTNode(PantheraExpParser.ANY_ELEMENT, "ANY_ELEMENT");
+    } else {
+      int count = anyElement.getChildCount();
+      for (int i = 0; i < count; i++) {
+        anyElement.deleteChild(0);
+      }
     }
     FilterBlockUtil.attachChild(anyElement, FilterBlockUtil.cloneTree((CommonTree) columnAlias
         .getChild(0)));
     CommonTree cascatedElement = (CommonTree) anyElement.getParent();
+    if (cascatedElement == null) {// count(*)
+      cascatedElement = FilterBlockUtil.createSqlASTNode(PantheraExpParser.CASCATED_ELEMENT,
+          "CASCATED_ELEMENT");
+      cascatedElement.addChild(anyElement);
+    }
     int index = subQOpElement.childIndex;
     subQNode.deleteChild(index);
     SqlXlateUtil.addCommonTreeChild(subQNode, index, cascatedElement);
@@ -750,6 +757,7 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
       if (bottomKeys != null) {
         for (CommonTree bottomKey : bottomKeys) {
           String selectKey;
+          // FIXME when bottomKey is not CASCATED_ELEMENT
           selectKey = bottomKey.getChild(0).getChildCount() == 2 ? bottomKey.getChild(0)
               .getChild(1).getText() : bottomKey.getChild(0).getChild(0).getText();
           if (needGroup && !selectKeySet.contains(selectKey)) {
@@ -762,7 +770,8 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
               .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST), FilterBlockUtil
               .cloneTree(bottomKey));
           // modify filter to alias
-          CommonTree anyElement = (CommonTree) bottomKey.getChild(0);
+          CommonTree anyElement = FilterBlockUtil.findOnlyNode(bottomKey,
+              PantheraExpParser.ANY_ELEMENT);
           if (anyElement.getChildCount() == 2) {
             ((CommonTree) anyElement.getChild(0)).getToken().setText(
                 joinSubAlias.getChild(0).getText());
@@ -787,6 +796,7 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
             context.putBallToBasket(isNull, true);
             this.fb.setASTNode(and);
           }
+          rebuildWhereKey4rebuildSelectListByFilter(bottomKey, anyElement);
         }
       }
 
@@ -798,7 +808,7 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
             .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST), FilterBlockUtil
             .cloneTree(topKey));
         // modify filter to alias
-        CommonTree anyElement = (CommonTree) topKey.getChild(0);
+        CommonTree anyElement = FilterBlockUtil.findOnlyNode(topKey, PantheraExpParser.ANY_ELEMENT);
         if (anyElement.getChildCount() == 2) {
           ((CommonTree) anyElement.getChild(0)).getToken().setText(topAlias.getChild(0).getText());
           ((CommonTree) anyElement.getChild(1)).getToken().setText(
@@ -807,8 +817,18 @@ public abstract class BaseFilterBlockProcessor implements FilterBlockProcessor {
           ((CommonTree) anyElement.getChild(0)).getToken().setText(
               joinKeyAlias.getChild(0).getText());
         }
-
+        rebuildWhereKey4rebuildSelectListByFilter(topKey, anyElement);
       }
+    }
+  }
+
+  private void rebuildWhereKey4rebuildSelectListByFilter(CommonTree bottomKey, CommonTree anyElement) {
+    if (bottomKey.getType() != PantheraExpParser.CASCATED_ELEMENT) {
+      CommonTree cascatedElement = (CommonTree) anyElement.getParent();
+      int index = bottomKey.childIndex;
+      CommonTree whereOp = (CommonTree) bottomKey.getParent();
+      whereOp.deleteChild(index);
+      SqlXlateUtil.addCommonTreeChild(whereOp, index, cascatedElement);
     }
   }
 

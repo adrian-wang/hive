@@ -76,52 +76,57 @@ public class PLSQLFilterBlockFactory extends FilterBlockFactory {
   @Override
   public boolean isCorrelated(QueryInfo qInfo, Stack<CommonTree> selectStack, CommonTree branch)
       throws SqlXlateException {
-    if (branch.getType() == PantheraParser_PLSQLParser.CASCATED_ELEMENT) {
-      CommonTree child = (CommonTree) branch.getChild(0);
-      if (child.getType() == PantheraParser_PLSQLParser.ANY_ELEMENT) {
-        if (selectStack.size() <= 1) {
-          return false;
-        }
-        if (child.getChildCount() == 2) {// tableName.columnName
-
-          if (SqlXlateUtil.containTableName(child.getChild(0).getText(), (CommonTree) selectStack
-              .peek().getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_FROM))) {
-            return false;
-          }
-          CommonTree temp = selectStack.pop();
-          boolean correlated = SqlXlateUtil.containTableName(child.getChild(0).getText(),
-              (CommonTree) selectStack.peek().getFirstChildWithType(
-                  PantheraParser_PLSQLParser.SQL92_RESERVED_FROM));
-          selectStack.push(temp);
-          if (correlated) {
-            return true;
-          }
-          throw new SqlXlateException("Correlated level is more than 2");
-        } else {// only columnName
-          String columnName = child.getChild(0).getText();
-          CommonTree bottomSelect = selectStack.pop();
-          CommonTree topSelect = selectStack.peek();
-          selectStack.push(bottomSelect);
-          CommonTree bottomFrom = (CommonTree) bottomSelect
-              .getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_FROM);
-          CommonTree topFrom = (CommonTree) topSelect
-              .getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_FROM);
-          List<Column> bottomColumnList = qInfo.getRowInfo(bottomFrom);
-          for (Column column : bottomColumnList) {
-            if (columnName.equals(column.getColAlias())) {
-              return false;
-            }
-          }
-          List<Column> topColumnList = qInfo.getRowInfo(topFrom);
-          for (Column column : topColumnList) {
-            if (columnName.equals(column.getColAlias())) {
-              return true;
-            }
-          }
-          throw new SqlXlateException("Correlated level is more than 2");
-        }
+    if (branch.getType() != PantheraParser_PLSQLParser.CASCATED_ELEMENT) {
+      branch = FilterBlockUtil.findOnlyNode(branch, PantheraParser_PLSQLParser.CASCATED_ELEMENT);
+      if (branch == null) {
+        return false;
       }
     }
+    CommonTree child = (CommonTree) branch.getChild(0);
+    if (child.getType() == PantheraParser_PLSQLParser.ANY_ELEMENT) {
+      if (selectStack.size() <= 1) {
+        return false;
+      }
+      if (child.getChildCount() == 2) {// tableName.columnName
+
+        if (SqlXlateUtil.containTableName(child.getChild(0).getText(), (CommonTree) selectStack
+            .peek().getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_FROM))) {
+          return false;
+        }
+        CommonTree temp = selectStack.pop();
+        boolean correlated = SqlXlateUtil.containTableName(child.getChild(0).getText(),
+            (CommonTree) selectStack.peek().getFirstChildWithType(
+                PantheraParser_PLSQLParser.SQL92_RESERVED_FROM));
+        selectStack.push(temp);
+        if (correlated) {
+          return true;
+        }
+        throw new SqlXlateException("Correlated level is more than 2");
+      } else {// only columnName
+        String columnName = child.getChild(0).getText();
+        CommonTree bottomSelect = selectStack.pop();
+        CommonTree topSelect = selectStack.peek();
+        selectStack.push(bottomSelect);
+        CommonTree bottomFrom = (CommonTree) bottomSelect
+            .getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_FROM);
+        CommonTree topFrom = (CommonTree) topSelect
+            .getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_FROM);
+        List<Column> bottomColumnList = qInfo.getRowInfo(bottomFrom);
+        for (Column column : bottomColumnList) {
+          if (columnName.equals(column.getColAlias())) {
+            return false;
+          }
+        }
+        List<Column> topColumnList = qInfo.getRowInfo(topFrom);
+        for (Column column : topColumnList) {
+          if (columnName.equals(column.getColAlias())) {
+            return true;
+          }
+        }
+        throw new SqlXlateException("Correlated level is more than 2");
+      }
+    }
+
     return false;
   }
 

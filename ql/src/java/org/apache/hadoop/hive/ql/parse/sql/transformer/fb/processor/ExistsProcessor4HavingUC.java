@@ -17,17 +17,27 @@
  */
 package org.apache.hadoop.hive.ql.parse.sql.transformer.fb.processor;
 
+import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
+
+import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
 
 /**
- * Process uncorrelated compare operation in WHERE subquery.<br>
- * CompareProcessor4UC.
+ * Process uncorrelated EXISTS in HAVING subquery.<br>
+ * ExistsProcessor4HavingUC.
  *
  */
-public class CompareProcessor4UC extends CommonFilterBlockProcessor {
+public class ExistsProcessor4HavingUC extends CommonFilterBlockProcessor {
 
   @Override
-  public void processFB() {
-    super.processCompareUC();
+  void processFB() throws SqlXlateException {
+    rebuildTopQuery4Having();
+    boolean isNot = super.subQNode.getParent().getType() == PantheraParser_PLSQLParser.SQL92_RESERVED_NOT ? true
+        : false;
+    if (isNot) {
+      super.processNotExistsUC();
+    } else {
+      super.processExistsUC();
+    }
   }
 
 }
