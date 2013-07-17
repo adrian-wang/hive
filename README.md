@@ -41,7 +41,12 @@ Under "Project Panthera", we are building ASE, a new analytical SQL engine for H
    <tr>
       <td>Subquery in WHERE clause</td>
       <td>Not support non-equal joint condition </td>
-      <td>select a from x where exits (select * from y) </td>
+      <td>select a from x where a = (select max(c) from y) </td>
+   </tr>
+   <tr>
+      <td>Subquery in HAVING clause</td>
+      <td>Not support non-equal joint condition </td>
+      <td>select max(a) from x group by b having max(a) = (select max(c) from y) </td>
    </tr>
    <tr>
       <td>Order by column position</td>
