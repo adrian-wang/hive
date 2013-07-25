@@ -1,0 +1,443 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<!--
+Copyright 2004-2013 H2 Group. Multiple-Licensed under the H2 License, Version 1.0,
+and under the Eclipse Public License, Version 1.0
+(http://h2database.com/html/license.html).
+Initial Developer: H2 Group
+-->
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head><meta http-equiv="Content-Type" content="text/html;charset=utf-8" /><title>
+ASE SQL Grammar
+</title><link rel="stylesheet" type="text/css" href="stylesheetGoodLook.css" />
+</head><body>
+
+<div class="pageTitle">ASE SQL Grammar</div>
+<!-- syntax-start
+<p class="notranslate">
+
+    <a href="#explain">EXPLAIN</a><br />
+
+    <a href="#select">SELECT</a><br />
+
+    <a href="#simple_select_expression">Simple Select Expression</a><br />
+
+    <a href="#table_expression">Table Expression</a><br />
+
+    <a href="#join_clause">Join Clause</a><br />
+
+    <a href="#inner_join_clause">Inner Join Clause</a><br />
+
+    <a href="#outer_join_clause">Outer Join Clause</a><br />
+
+    <a href="#outer_join_type">Outer Join Type</a><br />
+
+    <a href="#group_by_expression">Group By Expression</a><br />
+
+    <a href="#order_by_expression">Order By Expression</a><br />
+
+    <a href="#position">Position</a><br />
+
+    <a href="#expression">Expression</a><br />
+
+    <a href="#and_condition">And Condition</a><br />
+
+    <a href="#condition">Condition</a><br />
+
+    <a href="#condition_right_hand_side">Condition Right Hand Side</a><br />
+
+    <a href="#compare">Compare</a><br />
+
+    <a href="#operand">Operand</a><br />
+
+    <a href="#factor">Factor</a><br />
+
+    <a href="#term">Term</a><br />
+
+    <a href="#name">Name</a><br />
+
+    <a href="#alias">Alias</a><br />
+
+    <a href="#int">Int</a><br />
+
+    <a href="#number">Number</a><br />
+</p>
+syntax-end -->
+<!-- railroad-start -->
+<table class="notranslate index">
+    <tr>
+        <td class="index">
+            
+                <a href="#explain" >EXPLAIN</a><br />          
+
+                    </td><td class="index">
+
+                <a href="#select" >SELECT</a><br />
+
+                    </td><td class="index">
+
+                    </td>
+    </tr>
+</table>
+<!-- railroad-end -->
+
+
+
+
+<h3 id="explain" class="notranslate">EXPLAIN</h3>
+<!-- railroad-start -->
+<table class="railroad"><tr class="railroad"><td class="d"><code class="c">EXPLAIN PLAN FOR <a href="index.html#select">select</a></code></td></tr></table>
+<!-- railroad-end -->
+<!-- syntax-start
+<pre>
+EXPLAIN PLAN FOR <a href="index.html#select">select</a>
+</pre>
+syntax-end -->
+<p>Shows the execution plan for a statement.  Only a select statement for which the execution plan is generated can be specified.</p>
+<p>Example:</p>
+<p class="notranslate">
+EXPLAIN PLAN FOR SELECT * FROM TEST WHERE ID=1</p>
+
+
+<h3 id="select" class="notranslate">SELECT</h3>
+<!-- railroad-start -->
+<table class="railroad"><tr class="railroad"><td class="d"><code class="c">SELECT</code></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d"><code class="c">ALL</code></td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><code class="c">DISTINCT</code></td><td class="le"></td></tr></table></td><td class="le"></td></tr></table></td><td class="d"><code class="c"><a href="index.html#simple_select_expression">simpleSelectExpression</a></code></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><code class="c">, ...</code></td><td class="le"></td></tr></table></td></tr></table><br /><table class="railroad"><tr class="railroad"><td class="d"><code class="c">FROM <a href="index.html#table_expression">tableExpression</a></code></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><code class="c">, ...</code></td><td class="le"></td></tr></table></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><code class="c">WHERE <a href="index.html#expression">expression</a></code></td></tr></table></td><td class="le"></td></tr></table></td></tr></table><br /><table class="railroad"><tr class="railroad"><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><code class="c">GROUP BY <a href="index.html#group_by_expression">groupByExpression</a></code></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><code class="c">, ...</code></td><td class="le"></td></tr></table></td></tr></table></td><td class="le"></td></tr></table></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><code class="c">HAVING <a href="index.html#expression">expression</a></code></td></tr></table></td><td class="le"></td></tr></table></td></tr></table><br /><table class="railroad"><tr class="railroad"><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><code class="c">UNION</code></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><code class="c">ALL</code></td><td class="le"></td></tr></table></td><td class="d"><code class="c"><a href="index.html#select">select</a></code></td></tr></table></td><td class="le"></td></tr></table></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><code class="c">ORDER BY <a href="index.html#order_by_expression">orderByExpression</a></code></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><code class="c">, ...</code></td><td class="le"></td></tr></table></td></tr></table></td><td class="le"></td></tr></table></td></tr></table>
+<!-- railroad-end -->
+<!-- syntax-start
+<pre>
+SELECT [ ALL | DISTINCT ] <a href="index.html#simple_select_expression">simpleSelectExpression</a> [,...] 
+FROM <a href="index.html#table_expression">tableExpression</a> [,...] [ WHERE <a href="index.html#expression">expression</a> ]
+[ GROUP BY <a href="index.html#group_by_expression">groupByExpression</a> [,...] ] [ HAVING <a href="index.html#expression">expression</a> ]
+[ { UNION [ ALL ] } <a href="index.html#select">select</a> ] [ ORDER BY <a href="index.html#order_by_expression">orderByExpression</a> [,...] ]
+</pre>
+syntax-end -->
+<p>Selects data from a table or multiple tables.</p><p>DISTINCT filters out duplicate results, while ALL, the default, includes all results.</p><p>FROM identifies the table being queried.</p><p>GROUP BY groups the the result by the given expression(s).</p><p>HAVING filter rows after grouping.</p><p>ORDER BY sorts the result by the given column(s) or expression(s).</p><p>UNION combines the result of this query with the results of another query.</p>
+<p>Example:</p>
+<p class="notranslate">
+SELECT EMPNUM, CITY FROM STAFF UNION SELECT PTYPE, CITY FROM PROJ;<br /><br />SELECT * FROM ( SELECT C_NAME, C_CUSTKEY, O_ORDERKEY, O_ORDERDATE, O_TOTALPRICE, SUM(L_QUANTITY) FROM CUSTOMER, ORDERS, LINEITEM WHERE O_ORDERKEY IN ( SELECT L_ORDERKEY FROM LINEITEM GROUP BY L_ORDERKEY HAVING SUM(L_QUANTITY) &gt; 300 ) AND C_CUSTKEY = O_CUSTKEY AND O_ORDERKEY = L_ORDERKEY GROUP BY C_NAME, C_CUSTKEY, O_ORDERKEY, O_ORDERDATE, O_TOTALPRICE ORDER BY O_TOTALPRICE DESC, O_ORDERDATE ) WHERE ROWNUM &lt;= 100;</p>
+
+
+<h3 id="simple_select_expression" class="notranslate">Simple Select Expression</h3>
+<!-- railroad-start -->
+<table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><code class="c"><a href="index.html#name">tableName</a> .</code></td></tr></table></td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><code class="c"><a href="index.html#alias">tableAlias</a> .</code></td></tr></table></td><td class="le"></td></tr></table></td><td class="le"></td></tr></table></td><td class="d"><code class="c">*</code></td></tr></table></td><td class="te"></td></tr><tr class="railroad"><td class="ks"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><code class="c"><a href="index.html#name">columnName</a></code></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><code class="c">AS</code></td><td class="le"></td></tr></table></td><td class="d"><code class="c"><a href="index.html#alias">columnAlias</a></code></td></tr></table></td><td class="le"></td></tr></table></td></tr></table></td><td class="ke"></td></tr><tr class="railroad"><td class="ks"></td><td class="d"><code class="c">VALUE</code></td><td class="ke"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><code class="c">FUNCTION</code></td><td class="le"></td></tr></table>
+<!-- railroad-end -->
+<!-- syntax-start
+<pre>
+{ [ <a href="index.html#name">tableName</a>. | <a href="index.html#alias">tableAlias</a>.] * | <a href="index.html#name">columnName</a> [ [ AS ] <a href="index.html#alias">columnAlias</a> ] | VALUE | FUNCTION }
+</pre>
+syntax-end -->
+<p>An expression in a SELECT statement, which lets you specify the columns you want to retrieve from the database. All columns in a table may be selected using *. A column alias can be specified for the column name or column expression. ASE will use this alias in the column heading of the result set. The AS keyword is optional.The column alias can be used in the orderByExpression but not other places in the query.</p><p>VALUE is a constant value, such as a number, or a string, which can be quoted by two single quotes. FUNCTION can be any kind of functions.</p>
+<p>Example:</p>
+<p class="notranslate">
+*<br />cf.*<br />ID AS VALUE<br />AVG(grade)<br />&#39;abc&#39;<br />2</p>
+
+
+<h3 id="table_expression" class="notranslate">Table Expression</h3>
+<!-- railroad-start -->
+<table class="railroad"><tr class="railroad"><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><code class="c"><a href="index.html#name">schemaName</a> .</code></td></tr></table></td><td class="le"></td></tr></table></td><td class="d"><code class="c"><a href="index.html#name">tableName</a></code></td></tr></table></td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><code class="c">( <a href="index.html#select">select</a> )</code></td></tr></table></td><td class="le"></td></tr></table></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><code class="c"><a href="index.html#alias">tableAlias</a></code></td><td class="le"></td></tr></table></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><code class="c"><a href="index.html#join_clause">joinClause</a></code></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><code class="c">, ...</code></td><td class="le"></td></tr></table></td></tr></table></td><td class="le"></td></tr></table></td></tr></table>
+<!-- railroad-end -->
+<!-- syntax-start
+<pre>
+{ [ <a href="index.html#name">schemaName</a>. ] <a href="index.html#name">tableName</a> | ( <a href="index.html#select">select</a> ) } [ <a href="index.html#alias">tableAlias</a> ] [ <a href="index.html#join_clause">joinClause</a> [,...] ]
+</pre>
+syntax-end -->
+<p>Specify the object from which data is selected.The object can be a table,a SELECT query, multiple tables or a joined table. A table alias can be specified for the table itself. Once the table alias is specified, the original table name cannot be used in other places in the query. A table can join with other tables into one new table.</p>
+<p>Example:</p>
+<p class="notranslate">
+TABLE1 T1 LEFT JOIN TABLE2 T2 ON T1.ID = T2.ID</p>
+
+
+<h3 id="join_clause" class="notranslate">Join Clause</h3>
+<!-- railroad-start -->
+<table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d"><code class="c"><a href="index.html#inner_join_clause">innerJoinClause</a></code></td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><code class="c"><a href="index.html#outer_join_clause">outerJoinClause</a></code></td><td class="le"></td></tr></table>
+<!-- railroad-end -->
+<!-- syntax-start
+<pre>
+<a href="index.html#inner_join_clause">innerJoinClause</a> | <a href="index.html#outer_join_clause">outerJoinClause</a>
+</pre>
+syntax-end -->
+<p>Joins a table.Both inner join and outer join are supported. The innerJoinClause lets you specify an inner or cross join. The outerJoinClause lets you specify an outer join.</p>
+<p>Example:</p>
+<p class="notranslate">
+TABLE1 JOIN TABLE2 ON T1.ID=T2.ID</p>
+
+
+<h3 id="inner_join_clause" class="notranslate">Inner Join Clause</h3>
+<!-- railroad-start -->
+<table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><code class="c">INNER</code></td><td class="le"></td></tr></table></td><td class="d"><code class="c">JOIN <a href="index.html#table_expression">tableExpression</a> ON <a href="index.html#expression">onExpression</a></code></td></tr></table></td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d"><code class="c">CROSS</code></td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><code class="c">NATURAL</code></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><code class="c">INNER</code></td><td class="le"></td></tr></table></td></tr></table></td><td class="le"></td></tr></table></td><td class="d"><code class="c">JOIN <a href="index.html#table_expression">tableExpression</a></code></td></tr></table></td><td class="le"></td></tr></table>
+<!-- railroad-end -->
+<!-- syntax-start
+<pre>
+{ [ INNER ] JOIN <a href="index.html#table_expression">tableExpression</a> { ON <a href="index.html#expression">onExpression</a> } }
+| { { CROSS | NATURAL [ INNER ] } JOIN <a href="index.html#table_expression">tableExpression</a> }
+</pre>
+syntax-end -->
+<p>Inner joins return only those rows that satisfy the join condition. Specify INNER to explicitly specify an inner join. Use ON keyword to specify a join condition. Also you can use CROSS join an NATURAL join.</p>
+<p>Example:</p>
+<p class="notranslate">
+a INNER JOIN on a.ID = b.ID<br />a CROSS JOIN b<br />a NATURAL JOIN B</p>
+
+
+<h3 id="outer_join_clause" class="notranslate">Outer Join Clause</h3>
+<!-- railroad-start -->
+<table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><code class="c"><a href="index.html#outer_join_type">outerJoinType</a> JOIN <a href="index.html#table_expression">tableExpression</a> ON <a href="index.html#expression">expression</a></code></td></tr></table></td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><code class="c">NATURAL</code></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><code class="c"><a href="index.html#outer_join_type">outerJoinType</a></code></td><td class="le"></td></tr></table></td><td class="d"><code class="c">JOIN <a href="index.html#table_expression">tableExpression</a></code></td></tr></table></td><td class="le"></td></tr></table>
+<!-- railroad-end -->
+<!-- syntax-start
+<pre>
+{ <a href="index.html#outer_join_type">outerJoinType</a> JOIN <a href="index.html#table_expression">tableExpression</a> ON <a href="index.html#expression">expression</a> }
+| { NATURAL [ <a href="index.html#outer_join_type">outerJoinType</a> ] JOIN <a href="index.html#table_expression">tableExpression</a> }
+</pre>
+syntax-end -->
+<p>Outer joins return all rows that satisfy the join condition and also returns some or  all of those rows from one table for which no rows from the other satisfy the join condition. Specify outerJoinType to specify different types of outer joins. NATURAL keyword together with outerJoinType indicates a NATURAL outer join.</p>
+<p>Example:</p>
+<p class="notranslate">
+a NATURAL LEFT JOIN b<br />a LEFT JOIN b ON a.ID = b.ID</p>
+
+
+<h3 id="outer_join_type" class="notranslate">Outer Join Type</h3>
+<!-- railroad-start -->
+<table class="railroad"><tr class="railroad"><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d"><code class="c">RIGHT</code></td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><code class="c">LEFT</code></td><td class="le"></td></tr></table></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><code class="c">OUTER</code></td><td class="le"></td></tr></table></td></tr></table>
+<!-- railroad-end -->
+<!-- syntax-start
+<pre>
+{ RIGHT | LEFT } [OUTER]
+</pre>
+syntax-end -->
+<p>The outer join type indicates the kind of outer join being performed. RIGHT indicates a right outer join. LEFT indicates a left outer join. OUTER keyword is optional to specify an outer join.</p>
+<p>Example:</p>
+<p class="notranslate">
+a RIGHT OUTER JOIN b</p>
+
+
+<h3 id="group_by_expression" class="notranslate">Group By Expression</h3>
+<!-- railroad-start -->
+<table class="railroad"><tr class="railroad"><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><code class="c"><a href="index.html#name">tableName</a> .</code></td></tr></table></td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><code class="c"><a href="index.html#alias">tableAlias</a> .</code></td></tr></table></td><td class="le"></td></tr></table></td><td class="le"></td></tr></table></td><td class="d"><code class="c"><a href="index.html#name">columnName</a></code></td></tr></table>
+<!-- railroad-end -->
+<!-- syntax-start
+<pre>
+[ <a href="index.html#name">tableName</a>. | <a href="index.html#alias">tableAlias</a>. ] <a href="index.html#name">columnName</a>
+</pre>
+syntax-end -->
+<p>The GROUP BY expression specify how the rows are grouped. The columnName should in the GROUP BY expression should  be the same with the ones in simpleSelectExpression.</p>
+<p>Example:</p>
+<p class="notranslate">
+GROUP BY COL2, COL1</p>
+
+
+<h3 id="order_by_expression" class="notranslate">Order By Expression</h3>
+<!-- railroad-start -->
+<table class="railroad"><tr class="railroad"><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d"><code class="c"><a href="index.html#position">position</a></code></td><td class="te"></td></tr><tr class="railroad"><td class="ks"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><code class="c"><a href="index.html#name">tableName</a> .</code></td></tr></table></td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><code class="c"><a href="index.html#alias">tableAlias</a> .</code></td></tr></table></td><td class="le"></td></tr></table></td><td class="le"></td></tr></table></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d"><code class="c"><a href="index.html#name">columnName</a></code></td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><code class="c"><a href="index.html#alias">columnAlias</a></code></td><td class="le"></td></tr></table></td></tr></table></td><td class="ke"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><code class="c">FUNCTION</code></td><td class="le"></td></tr></table></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d"><code class="c">ASC</code></td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><code class="c">DESC</code></td><td class="le"></td></tr></table></td><td class="le"></td></tr></table></td></tr></table>
+<!-- railroad-end -->
+<!-- syntax-start
+<pre>
+{ <a href="index.html#position">position</a> | [ <a href="index.html#name">tableName</a>. | <a href="index.html#alias">tableAlias</a>. ] { <a href="index.html#name">columnName</a> | <a href="index.html#alias">columnAlias</a> } | FUNCTION } [ ASC | DESC ]
+</pre>
+syntax-end -->
+<p>Sorts the result by an expression. The expression can composed of position, columnName or columnAlias, FUNCTION.</p>
+<p>Example:</p>
+<p class="notranslate">
+ORDER BY COL1<br />ORDER BY 2<br />ORDER BY AVG(COL2) DESC</p>
+
+
+<h3 id="position" class="notranslate">Position</h3>
+<!-- railroad-start -->
+<code class="c"><a href="index.html#int">int</a></code>
+<!-- railroad-end -->
+<!-- syntax-start
+<pre>
+<a href="index.html#int">int</a>
+</pre>
+syntax-end -->
+<p>must be an integer corresponding to the column order in Select expression</p>
+<p>Example:</p>
+<p class="notranslate">
+1,2<br />2</p>
+
+
+<h3 id="expression" class="notranslate">Expression</h3>
+<!-- railroad-start -->
+<table class="railroad"><tr class="railroad"><td class="d"><code class="c"><a href="index.html#and_condition">andCondition</a></code></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><code class="c">OR <a href="index.html#and_condition">andCondition</a></code></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><code class="c">...</code></td><td class="le"></td></tr></table></td></tr></table></td><td class="le"></td></tr></table></td></tr></table>
+<!-- railroad-end -->
+<!-- syntax-start
+<pre>
+<a href="index.html#and_condition">andCondition</a> [ { OR <a href="index.html#and_condition">andCondition</a> } [...] ]
+</pre>
+syntax-end -->
+<p>Value or condition.</p>
+<p>Example:</p>
+<p class="notranslate">
+ID=1 OR NAME=&#39;Hi&#39;<br />COL1 IN (SELECT COL2 FROM TAB2)</p>
+
+
+<h3 id="and_condition" class="notranslate">And Condition</h3>
+<!-- railroad-start -->
+<table class="railroad"><tr class="railroad"><td class="d"><code class="c"><a href="index.html#condition">condition</a></code></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><code class="c">AND <a href="index.html#condition">condition</a></code></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><code class="c">...</code></td><td class="le"></td></tr></table></td></tr></table></td><td class="le"></td></tr></table></td></tr></table>
+<!-- railroad-end -->
+<!-- syntax-start
+<pre>
+<a href="index.html#condition">condition</a> [ { AND <a href="index.html#condition">condition</a> } [...] ]
+</pre>
+syntax-end -->
+<p>Value or condition.</p>
+<p>Example:</p>
+<p class="notranslate">
+ID=1 AND NAME=&#39;Hi&#39;</p>
+
+
+<h3 id="condition" class="notranslate">Condition</h3>
+<!-- railroad-start -->
+<table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><code class="c"><a href="index.html#operand">operand</a></code></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><code class="c"><a href="index.html#condition_right_hand_side">conditionRightHandSide</a></code></td><td class="le"></td></tr></table></td></tr></table></td><td class="te"></td></tr><tr class="railroad"><td class="ks"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><code class="c">NOT <a href="index.html#condition">condition</a></code></td></tr></table></td><td class="ke"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><code class="c">EXISTS ( <a href="index.html#select">select</a> )</code></td></tr></table></td><td class="le"></td></tr></table>
+<!-- railroad-end -->
+<!-- syntax-start
+<pre>
+<a href="index.html#operand">operand</a> [ <a href="index.html#condition_right_hand_side">conditionRightHandSide</a> ] | NOT <a href="index.html#condition">condition</a> | EXISTS ( <a href="index.html#select">select</a> )
+</pre>
+syntax-end -->
+<p>Boolean value or condition.</p>
+<p>Example:</p>
+<p class="notranslate">
+ID&lt;&gt;2<br />NOT (ID IN (SELECT ID FROM TAB1))</p>
+
+
+<h3 id="condition_right_hand_side" class="notranslate">Condition Right Hand Side</h3>
+<!-- railroad-start -->
+<table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><code class="c"><a href="index.html#compare">compare</a></code></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><code class="c">( <a href="index.html#select">singleRowSelect</a> )</code></td></tr></table></td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><code class="c"><a href="index.html#operand">operand</a></code></td><td class="le"></td></tr></table></td></tr></table></td><td class="te"></td></tr><tr class="railroad"><td class="ks"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><code class="c">IS</code></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><code class="c">NOT</code></td><td class="le"></td></tr></table></td><td class="d"><code class="c">NULL</code></td></tr></table></td><td class="ke"></td></tr><tr class="railroad"><td class="ks"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><code class="c">IS</code></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><code class="c">NOT</code></td><td class="le"></td></tr></table></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><code class="c">DISTINCT FROM</code></td></tr></table></td><td class="le"></td></tr></table></td><td class="d"><code class="c"><a href="index.html#operand">operand</a></code></td></tr></table></td><td class="ke"></td></tr><tr class="railroad"><td class="ks"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><code class="c">BETWEEN <a href="index.html#operand">operand</a> AND <a href="index.html#operand">operand</a></code></td></tr></table></td><td class="ke"></td></tr><tr class="railroad"><td class="ks"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><code class="c">IN (</code></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d"><code class="c"><a href="index.html#select">select</a></code></td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><code class="c"><a href="index.html#expression">expression</a></code></td><td class="le"></td></tr></table></td><td class="d"><code class="c">)</code></td></tr></table></td><td class="ke"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><code class="c">NOT</code></td><td class="le"></td></tr></table></td><td class="d"><code class="c">LIKE <a href="index.html#operand">operand</a></code></td></tr></table></td><td class="le"></td></tr></table>
+<!-- railroad-end -->
+<!-- syntax-start
+<pre>
+<a href="index.html#compare">compare</a> { { ( <a href="index.html#select">singleRowSelect</a> ) } | <a href="index.html#operand">operand</a> }
+| IS [ NOT ] NULL
+| IS [ NOT ] [ DISTINCT FROM ] <a href="index.html#operand">operand</a>
+| BETWEEN <a href="index.html#operand">operand</a> AND <a href="index.html#operand">operand</a>
+| IN ( { <a href="index.html#select">select</a> | <a href="index.html#expression">expression</a> } )
+| [ NOT ] LIKE <a href="index.html#operand">operand</a>
+</pre>
+syntax-end -->
+<p>The right hand side of a condition.</p><p>singleRowSelect is a SELECT query which only has one row result, that means  an aggregate function must be used and only aggregate functions can be used in selectExpression. The aggregate functions are AVG, MAX, SUM, MIN, COUNT.</p><p>The conditions &quot;IS [ NOT ]&quot; and &quot;IS [ NOT ] DISTINCT FROM&quot; are null-safe, meaning NULL is considered the same as NULL, and the condition never evaluates to NULL.</p><p>When comparing with LIKE, the wildcards characters are &quot;_&quot; (any one character) and &quot;%&quot; (any characters). The database uses an index when comparing with LIKE except if the operand starts with a wildcard. To search for the characters &quot;%&quot; and &quot;_&quot;, the characters need to be escaped. The default escape character is &quot; \ &quot; (backslash).</p><p>At most one escape character is allowed. Each character that follows the escape character in the pattern needs to match exactly.</p>
+<p>Example:</p>
+<p class="notranslate">
+LIKE &#39;Jo%&#39;<br />&gt; SELECT AVG(ID) FROM TAB1<br />IN (SELECT COL1 FROM TAB1)<br />IS NULL</p>
+
+
+<h3 id="compare" class="notranslate">Compare</h3>
+<!-- railroad-start -->
+<table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><code class="c">&lt; &gt;</code></td></tr></table></td><td class="te"></td></tr><tr class="railroad"><td class="ks"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><code class="c">&lt; =</code></td></tr></table></td><td class="ke"></td></tr><tr class="railroad"><td class="ks"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><code class="c">&gt; =</code></td></tr></table></td><td class="ke"></td></tr><tr class="railroad"><td class="ks"></td><td class="d"><code class="c">=</code></td><td class="ke"></td></tr><tr class="railroad"><td class="ks"></td><td class="d"><code class="c">&lt;</code></td><td class="ke"></td></tr><tr class="railroad"><td class="ks"></td><td class="d"><code class="c">&gt;</code></td><td class="ke"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><code class="c">! =</code></td></tr></table></td><td class="le"></td></tr></table>
+<!-- railroad-end -->
+<!-- syntax-start
+<pre>
+&lt;&gt; | &lt;= | &gt;= | = | &lt; | &gt; | !=
+</pre>
+syntax-end -->
+<p>Comparison operator. The operator != is the same as &lt;&gt;.</p>
+<p>Example:</p>
+<p class="notranslate">
+&lt;&gt;</p>
+
+
+<h3 id="operand" class="notranslate">Operand</h3>
+<!-- railroad-start -->
+<table class="railroad"><tr class="railroad"><td class="d"><code class="c"><a href="index.html#factor">factor</a></code></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d"><code class="c">+</code></td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><code class="c">-</code></td><td class="le"></td></tr></table></td><td class="d"><code class="c"><a href="index.html#factor">factor</a></code></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><code class="c">...</code></td><td class="le"></td></tr></table></td></tr></table></td><td class="le"></td></tr></table></td></tr></table>
+<!-- railroad-end -->
+<!-- syntax-start
+<pre>
+<a href="index.html#factor">factor</a> [ { + | - } <a href="index.html#factor">factor</a> [...] ]
+</pre>
+syntax-end -->
+<p>An addition or subtraction of numeric or date type values</p>
+<p>Example:</p>
+<p class="notranslate">
+a + b<br />a - b</p>
+
+
+<h3 id="factor" class="notranslate">Factor</h3>
+<!-- railroad-start -->
+<table class="railroad"><tr class="railroad"><td class="d"><code class="c"><a href="index.html#term">term</a></code></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d"><code class="c">*</code></td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><code class="c">/</code></td><td class="le"></td></tr></table></td><td class="d"><code class="c"><a href="index.html#term">term</a></code></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><code class="c">...</code></td><td class="le"></td></tr></table></td></tr></table></td><td class="le"></td></tr></table></td></tr></table>
+<!-- railroad-end -->
+<!-- syntax-start
+<pre>
+<a href="index.html#term">term</a> [ { * | / } <a href="index.html#term">term</a> [...] ]
+</pre>
+syntax-end -->
+<p>A multiplication or division.</p>
+<p>Example:</p>
+<p class="notranslate">
+c * d<br />e / 5</p>
+
+
+<h3 id="term" class="notranslate">Term</h3>
+<!-- railroad-start -->
+<table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d"><code class="c">VALUE</code></td><td class="te"></td></tr><tr class="railroad"><td class="ks"></td><td class="d"><code class="c">FUNCTION</code></td><td class="ke"></td></tr><tr class="railroad"><td class="ks"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><code class="c">( <a href="index.html#operand">operand</a> )</code></td></tr></table></td><td class="ke"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><code class="c"><a href="index.html#name">tableName</a> .</code></td></tr></table></td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><code class="c"><a href="index.html#alias">tableAlias</a> .</code></td></tr></table></td><td class="le"></td></tr></table></td><td class="le"></td></tr></table></td><td class="d"><code class="c"><a href="index.html#name">columnName</a></code></td></tr></table></td><td class="le"></td></tr></table>
+<!-- railroad-end -->
+<!-- syntax-start
+<pre>
+VALUE
+| FUNCTION
+| ( <a href="index.html#operand">operand</a> )
+| [ <a href="index.html#name">tableName</a>. | <a href="index.html#alias">tableAlias</a>. ] <a href="index.html#name">columnName</a>
+</pre>
+syntax-end -->
+<p>a Term can be a VALUE, a FUNCTION, or an expression. VALUE is a constant, such as a number, or a string, which can be quoted by two single quotes. FUNCTION can be any kind of functions, like aggregate functions, string functions etc.</p>
+<p>Example:</p>
+<p class="notranslate">
+&#39;Hello&#39;<br />2<br />AVG(grade)<br />TAB1.COL2</p>
+
+
+<h3 id="name" class="notranslate">Name</h3>
+<!-- railroad-start -->
+<table class="railroad"><tr class="railroad"><td class="d"><code class="c">A-Z | _</code></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><table class="railroad"><tr class="railroad"><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d"><code class="c">A-Z | _</code></td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><code class="c"><a href="index.html#number">number</a></code></td><td class="le"></td></tr></table></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><code class="c">...</code></td><td class="le"></td></tr></table></td></tr></table></td><td class="le"></td></tr></table></td></tr></table>
+<!-- railroad-end -->
+<!-- syntax-start
+<pre>
+{ A-Z|_  } [ { A-Z|_| <a href="index.html#number">number</a> } [...] ]
+</pre>
+syntax-end -->
+<p>Unquoted names are not case sensitive. There is no maximum name length.</p>
+<p>Example:</p>
+<p class="notranslate">
+my_column</p>
+
+
+<h3 id="alias" class="notranslate">Alias</h3>
+<!-- railroad-start -->
+<code class="c"><a href="index.html#name">name</a></code>
+<!-- railroad-end -->
+<!-- syntax-start
+<pre>
+<a href="index.html#name">name</a>
+</pre>
+syntax-end -->
+<p>An alias is a name that is only valid in the context of the statement.</p>
+<p>Example:</p>
+<p class="notranslate">
+A</p>
+
+
+<h3 id="int" class="notranslate">Int</h3>
+<!-- railroad-start -->
+<table class="railroad"><tr class="railroad"><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><code class="c">-</code></td><td class="le"></td></tr></table></td><td class="d"><code class="c"><a href="index.html#number">number</a></code></td></tr></table>
+<!-- railroad-end -->
+<!-- syntax-start
+<pre>
+[ - ] <a href="index.html#number">number</a>
+</pre>
+syntax-end -->
+<p>The maximum integer number is 2147483647, the minimum is -2147483648.</p>
+<p>Example:</p>
+<p class="notranslate">
+10</p>
+
+
+<h3 id="number" class="notranslate">Number</h3>
+<!-- railroad-start -->
+<table class="railroad"><tr class="railroad"><td class="d"><code class="c">0-9</code></td><td class="d"><table class="railroad"><tr class="railroad"><td class="ts"></td><td class="d">&nbsp;</td><td class="te"></td></tr><tr class="railroad"><td class="ls"></td><td class="d"><code class="c">...</code></td><td class="le"></td></tr></table></td></tr></table>
+<!-- railroad-end -->
+<!-- syntax-start
+<pre>
+0-9 [...]
+</pre>
+syntax-end -->
+<p>The maximum length of the number depends on the data type used.</p>
+<p>Example:</p>
+<p class="notranslate">
+100</p>
+
+</body></html>
