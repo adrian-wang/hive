@@ -49,7 +49,7 @@ public class UnCorrelatedFilterBlock extends NormalFilterBlock {
         this.setTransformedNode(topSelect);
       }
       if (typeFB instanceof HavingFilterBlock) {
-        CommonTree topSelect = fbContext.getQueryStack().peek().cloneWholeQuery();
+        CommonTree topSelect = fbContext.getQueryStack().peek().cloneTransformedQuery();
         if (topSelect.getFirstChildWithType(PantheraExpParser.SQL92_RESERVED_ORDER) != null) {
           topSelect.deleteChild(topSelect.getFirstChildWithType(
               PantheraExpParser.SQL92_RESERVED_ORDER).getChildIndex());

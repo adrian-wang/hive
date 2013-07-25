@@ -169,8 +169,8 @@ public final class SqlXlateUtil {
 
   public static boolean isLogicalOp(SqlASTNode op) {
     int type = op.getType();
-    return (type == PantheraParser_PLSQLParser.SQL92_RESERVED_AND ||
-        type == PantheraParser_PLSQLParser.SQL92_RESERVED_OR || type == PantheraParser_PLSQLParser.SQL92_RESERVED_NOT);
+    return (type == PantheraParser_PLSQLParser.SQL92_RESERVED_AND
+        || type == PantheraParser_PLSQLParser.SQL92_RESERVED_OR || type == PantheraParser_PLSQLParser.SQL92_RESERVED_NOT);
   }
 
   /**
@@ -181,26 +181,25 @@ public final class SqlXlateUtil {
    */
   public static boolean isRelationalOperator(SqlASTNode op) {
     int type = op.getType();
-    return (type == PantheraParser_PLSQLParser.EQUALS_OP ||
-        type == PantheraParser_PLSQLParser.NOT_EQUAL_OP ||
-        type == PantheraParser_PLSQLParser.LESS_THAN_OR_EQUALS_OP ||
-        type == PantheraParser_PLSQLParser.LESS_THAN_OP ||
-        type == PantheraParser_PLSQLParser.GREATER_THAN_OR_EQUALS_OP || type == PantheraParser_PLSQLParser.GREATER_THAN_OP);
+    return (type == PantheraParser_PLSQLParser.EQUALS_OP
+        || type == PantheraParser_PLSQLParser.NOT_EQUAL_OP
+        || type == PantheraParser_PLSQLParser.LESS_THAN_OR_EQUALS_OP
+        || type == PantheraParser_PLSQLParser.LESS_THAN_OP
+        || type == PantheraParser_PLSQLParser.GREATER_THAN_OR_EQUALS_OP || type == PantheraParser_PLSQLParser.GREATER_THAN_OP);
   }
 
   public static boolean isLiteral(SqlASTNode node) {
     int type = node.getType();
-    return (type == PantheraParser_PLSQLParser.CHAR_STRING_PERL ||
-            type == PantheraParser_PLSQLParser.CHAR_STRING ||
-            type == PantheraParser_PLSQLParser.EXACT_NUM_LIT ||
-            type == PantheraParser_PLSQLParser.UNSIGNED_INTEGER ||
-            type == PantheraParser_PLSQLParser.NATIONAL_CHAR_STRING_LIT ||
-            type == PantheraParser_PLSQLParser.APPROXIMATE_NUM_LIT ||
-            type == PantheraParser_PLSQLParser.SQL92_RESERVED_NULL ||
-            type == PantheraParser_PLSQLParser.SQL92_RESERVED_TRUE ||
-            type == PantheraParser_PLSQLParser.SQL92_RESERVED_FALSE || (type == PantheraParser_PLSQLParser.ID && (node
-        .getText()
-        .startsWith("'") || node.getText().startsWith("\""))));
+    return (type == PantheraParser_PLSQLParser.CHAR_STRING_PERL
+        || type == PantheraParser_PLSQLParser.CHAR_STRING
+        || type == PantheraParser_PLSQLParser.EXACT_NUM_LIT
+        || type == PantheraParser_PLSQLParser.UNSIGNED_INTEGER
+        || type == PantheraParser_PLSQLParser.NATIONAL_CHAR_STRING_LIT
+        || type == PantheraParser_PLSQLParser.APPROXIMATE_NUM_LIT
+        || type == PantheraParser_PLSQLParser.SQL92_RESERVED_NULL
+        || type == PantheraParser_PLSQLParser.SQL92_RESERVED_TRUE
+        || type == PantheraParser_PLSQLParser.SQL92_RESERVED_FALSE || (type == PantheraParser_PLSQLParser.ID && (node
+        .getText().startsWith("'") || node.getText().startsWith("\""))));
 
   }
 
@@ -260,12 +259,11 @@ public final class SqlXlateUtil {
    *
    * Note that src table name and aliase within any sub-query won't be included.
    *
-   * If a table name has an alias, return the <alias, name> pair.
-   * If only table name, then return <name, name> pair.
-   * For a sub-query, return<alias, null> pair.
+   * If a table name has an alias, return the <alias, name> pair. If only table name, then return
+   * <name, name> pair. For a sub-query, return<alias, null> pair.
    *
-   * Note that when this function is called, QueryInfo must have been prepared so that
-   * sub-quries in from clause have alias node generated if it is not existing.
+   * Note that when this function is called, QueryInfo must have been prepared so that sub-quries in
+   * from clause have alias node generated if it is not existing.
    *
    * @param n
    *          root of SQL AST subtree
@@ -366,8 +364,7 @@ public final class SqlXlateUtil {
   }
 
   /**
-   * Collect all table names and aliases referred (normally in filter
-   * and select items)
+   * Collect all table names and aliases referred (normally in filter and select items)
    *
    * @param n
    *          root of SQL AST subtree
@@ -465,9 +462,9 @@ public final class SqlXlateUtil {
       return false;
     }
     ASTNode functiondi = (ASTNode) selexpr.getChild(0);
-    if (functiondi.getChildCount() == 1 &&
-        functiondi.getChild(0).getType() == HiveParser.Identifier &&
-        functiondi.getChild(0).getText() == "count") {
+    if (functiondi.getChildCount() == 1
+        && functiondi.getChild(0).getType() == HiveParser.Identifier
+        && functiondi.getChild(0).getText() == "count") {
       return true;
     }
 
@@ -532,8 +529,7 @@ public final class SqlXlateUtil {
   }
 
   /**
-   * Check if it is position order by clause
-   * e.g. order by 1
+   * Check if it is position order by clause e.g. order by 1
    *
    * @param orderby
    * @return
@@ -625,12 +621,10 @@ public final class SqlXlateUtil {
     if (!tabAlias.isEmpty()) {
       ASTNode dot = SqlXlateUtil.newASTNode(HiveParser.DOT, ".");
       SqlXlateUtil.attachChild(dot, item);
-      SqlXlateUtil.attachChild(item, SqlXlateUtil.newASTNode(HiveParser.Identifier,
-          tabAlias));
+      SqlXlateUtil.attachChild(item, SqlXlateUtil.newASTNode(HiveParser.Identifier, tabAlias));
       item = dot;
     }
-    SqlXlateUtil.attachChild(item, SqlXlateUtil
-        .newASTNode(HiveParser.Identifier, colAlias));
+    SqlXlateUtil.attachChild(item, SqlXlateUtil.newASTNode(HiveParser.Identifier, colAlias));
     return item;
   }
 
@@ -830,9 +824,9 @@ public final class SqlXlateUtil {
             // add fields into row resolver
             // TODO in colInfo we now only add table name as tab alias,
             // fix it later
-            rr.put(alias, fields.get(i).getName(), new ColumnInfo(fields
-                .get(i).getName(), TypeInfoUtils.getTypeInfoFromTypeString(fields.get(i)
-                .getType()), tab.getTableName(), false));
+            rr.put(alias, fields.get(i).getName(), new ColumnInfo(fields.get(i).getName(),
+                TypeInfoUtils.getTypeInfoFromTypeString(fields.get(i).getType()), tab
+                    .getTableName(), false));
           }
           return rr;
         }
@@ -840,18 +834,17 @@ public final class SqlXlateUtil {
         if (tab.getDeserializer() == null) {
           return null;
         }
-        StructObjectInspector rowObjectInspector = (StructObjectInspector) tab
-            .getDeserializer().getObjectInspector();
-        List<? extends StructField> fields = rowObjectInspector
-            .getAllStructFieldRefs();
+        StructObjectInspector rowObjectInspector = (StructObjectInspector) tab.getDeserializer()
+            .getObjectInspector();
+        List<? extends StructField> fields = rowObjectInspector.getAllStructFieldRefs();
         for (int i = 0; i < fields.size(); i++) {
           // add fields into row resolver
           // TODO in colInfo we now only add table name as tab alias,
           // fix it later
-          rr.put(alias, fields.get(i).getFieldName(), new ColumnInfo(fields
-              .get(i).getFieldName(), TypeInfoUtils
-              .getTypeInfoFromObjectInspector(fields.get(i)
-                  .getFieldObjectInspector()), tab.getTableName(), false));
+          rr.put(alias, fields.get(i).getFieldName(),
+              new ColumnInfo(fields.get(i).getFieldName(), TypeInfoUtils
+                  .getTypeInfoFromObjectInspector(fields.get(i).getFieldObjectInspector()), tab
+                  .getTableName(), false));
         }
       } catch (SerDeException e) {
         throw new RuntimeException(e);
@@ -869,12 +862,11 @@ public final class SqlXlateUtil {
   }
 
   public static boolean isJoinOp(ASTNode op) {
-    if (op.getType() == HiveParser.TOK_JOIN ||
-        op.getType() == HiveParser.TOK_CROSSJOIN ||
-        op.getType() == HiveParser.TOK_LEFTOUTERJOIN ||
-        op.getType() == HiveParser.TOK_RIGHTOUTERJOIN ||
-        op.getType() == HiveParser.TOK_FULLOUTERJOIN ||
-        op.getType() == HiveParser.TOK_LEFTSEMIJOIN) {
+    if (op.getType() == HiveParser.TOK_JOIN || op.getType() == HiveParser.TOK_CROSSJOIN
+        || op.getType() == HiveParser.TOK_LEFTOUTERJOIN
+        || op.getType() == HiveParser.TOK_RIGHTOUTERJOIN
+        || op.getType() == HiveParser.TOK_FULLOUTERJOIN
+        || op.getType() == HiveParser.TOK_LEFTSEMIJOIN) {
       return true;
     } else {
       return false;
@@ -945,6 +937,13 @@ public final class SqlXlateUtil {
 
   }
 
+  /**
+   * add CommonTree node to parent's index position
+   *
+   * @param parent
+   * @param index
+   * @param child
+   */
   public static void addCommonTreeChild(CommonTree parent, int index, CommonTree child) {
     if (parent == null || child == null) {
       return;
@@ -955,13 +954,16 @@ public final class SqlXlateUtil {
       parent.getChildren().add(index, child);
       child.setParent(parent);
       child.setChildIndex(index);
+      for (int i = index + 1; i < parent.getChildCount(); i++) {
+        parent.getChild(i).setChildIndex(parent.getChild(i).getChildIndex() + 1);
+      }
     }
   }
-  
-  public static int getASTNodeChildIndex(ASTNode parent,ASTNode child){
+
+  public static int getASTNodeChildIndex(ASTNode parent, ASTNode child) {
     List<Node> children = parent.getChildren();
-    for(int i=0;i<children.size();i++){
-      if(child==children.get(i)){
+    for (int i = 0; i < children.size(); i++) {
+      if (child == children.get(i)) {
         return i;
       }
     }

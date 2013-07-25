@@ -20,7 +20,6 @@ package org.apache.hadoop.hive.ql.parse.sql.transformer;
 import java.util.List;
 
 import org.antlr33.runtime.tree.CommonTree;
-import org.apache.hadoop.hive.ql.parse.sql.SqlASTNode;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateUtil;
 import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
@@ -42,7 +41,7 @@ public class OrderByTransformer extends BaseSqlASTTransformer {
   }
 
   @Override
-  public void transform(SqlASTNode tree, TranslateContext context) throws SqlXlateException {
+  public void transform(CommonTree tree, TranslateContext context) throws SqlXlateException {
     tf.transformAST(tree, context);
     for (QueryInfo qf : context.getqInfoList()) {
       transformOrderBy(qf, context);

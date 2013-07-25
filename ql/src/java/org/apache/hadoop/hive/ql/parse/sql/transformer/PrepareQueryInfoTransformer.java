@@ -27,7 +27,6 @@ import org.apache.hadoop.hive.ql.exec.ColumnInfo;
 import org.apache.hadoop.hive.ql.parse.ASTNode;
 import org.apache.hadoop.hive.ql.parse.HiveParser;
 import org.apache.hadoop.hive.ql.parse.RowResolver;
-import org.apache.hadoop.hive.ql.parse.sql.SqlASTNode;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateUtil;
 import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
@@ -46,7 +45,7 @@ public class PrepareQueryInfoTransformer extends BaseSqlASTTransformer {
   private final SqlXlateUtil.AliasGenerator aliasGen = new SqlXlateUtil.AliasGenerator();
 
   @Override
-  public void transform(SqlASTNode tree, TranslateContext context) throws SqlXlateException {
+  public void transform(CommonTree tree, TranslateContext context) throws SqlXlateException {
     this.tf.transformAST(tree, context);
     prepareQueryInfo(tree, context);
 
@@ -56,7 +55,7 @@ public class PrepareQueryInfoTransformer extends BaseSqlASTTransformer {
     this.tf = tf;
   }
 
-  void prepareQueryInfo(SqlASTNode tree, TranslateContext context) throws SqlXlateException {
+  void prepareQueryInfo(CommonTree tree, TranslateContext context) throws SqlXlateException {
     Stack<Integer> stack = new Stack<Integer>();
     stack.push(-999);// for first peek;
     List<QueryInfo> qInfoList = new ArrayList<QueryInfo>();
@@ -242,7 +241,7 @@ public class PrepareQueryInfoTransformer extends BaseSqlASTTransformer {
           aliasNode = SqlXlateUtil.newASTNode(HiveParser.Identifier, aliasGen
               .generateAliasName());
           // Create a new SqlASTNode for alias for convinient processing later.
-          SqlASTNode sqlAliasNode = SqlXlateUtil.newSqlASTNode(PantheraParser_PLSQLParser.ALIAS, "ALIAS");
+          CommonTree sqlAliasNode = SqlXlateUtil.newSqlASTNode(PantheraParser_PLSQLParser.ALIAS, "ALIAS");
           sqlAliasNode.addChild(SqlXlateUtil.newSqlASTNode(PantheraParser_PLSQLParser.ID, aliasNode.getText()));
           // Attach it to the TABLE_REF_ELEMENT node as the first child.
           assert(src.getChildCount() == 1);

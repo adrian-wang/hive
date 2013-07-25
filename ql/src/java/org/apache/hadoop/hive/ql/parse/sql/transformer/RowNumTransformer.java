@@ -21,7 +21,6 @@ import java.util.Stack;
 
 import org.antlr33.runtime.tree.CommonTree;
 import org.apache.hadoop.hive.ql.parse.sql.PantheraExpParser;
-import org.apache.hadoop.hive.ql.parse.sql.SqlASTNode;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateUtil;
 import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
@@ -47,7 +46,7 @@ public class RowNumTransformer  extends BaseSqlASTTransformer  {
   }
 
   @Override
-  public void transform(SqlASTNode tree, TranslateContext context) throws SqlXlateException {
+  public void transform(CommonTree tree, TranslateContext context) throws SqlXlateException {
     tf.transformAST(tree, context);
 
     Stack<CommonTree> stack = new Stack<CommonTree>();
@@ -62,9 +61,9 @@ public class RowNumTransformer  extends BaseSqlASTTransformer  {
       // If this select has where clause, and the where clause has only one condition: rownum (< | <=) <int>,
       // then transform it to limit.
       //
-      SqlASTNode where = (SqlASTNode) node.getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_WHERE);
+      CommonTree where = (CommonTree) node.getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_WHERE);
       if (where != null) {
-        SqlASTNode operator = (SqlASTNode) where.getChild(0).getChild(0);
+        CommonTree operator = (CommonTree) where.getChild(0).getChild(0);
         int operatorType = operator.getType();
         if (operatorType == PantheraParser_PLSQLParser.LESS_THAN_OP ||
             operatorType == PantheraParser_PLSQLParser.LESS_THAN_OR_EQUALS_OP) {
@@ -81,12 +80,12 @@ public class RowNumTransformer  extends BaseSqlASTTransformer  {
             //
             // Create a limit token and attach it to the select node as the last child.
             //
-            SqlASTNode limit = SqlXlateUtil.newSqlASTNode(PantheraExpParser.LIMIT_VK, "limit");
+            CommonTree limit = SqlXlateUtil.newSqlASTNode(PantheraExpParser.LIMIT_VK, "limit");
             node.addChild(limit);
             //
             // Create a UNSIGNED_INTEGER token and attach it to the limit token.
             //
-            SqlASTNode limitNum = SqlXlateUtil.newSqlASTNode(PantheraExpParser.UNSIGNED_INTEGER, Integer.toString(rownum));
+            CommonTree limitNum = SqlXlateUtil.newSqlASTNode(PantheraExpParser.UNSIGNED_INTEGER, Integer.toString(rownum));
             limit.addChild(limitNum);
             //
             // Delete the where child.
@@ -118,7 +117,7 @@ public class RowNumTransformer  extends BaseSqlASTTransformer  {
       if (parentSelect == null || parentSelect.getChildCount() > 3) {
         return;
       }
-      SqlASTNode parentFrom = (SqlASTNode) parentSelect.getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_FROM);
+      CommonTree parentFrom = (CommonTree) parentSelect.getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_FROM);
       if (parentFrom.getChildCount() != 1 || parentFrom.getChild(0).getChildCount() != 1) {
         return;
       }
@@ -139,7 +138,7 @@ public class RowNumTransformer  extends BaseSqlASTTransformer  {
         return;
       }
       if (parentSelect.getChildCount() == 3) {
-        SqlASTNode limitParent = (SqlASTNode) parentSelect.getFirstChildWithType(PantheraExpParser.LIMIT_VK);
+        CommonTree limitParent = (CommonTree) parentSelect.getFirstChildWithType(PantheraExpParser.LIMIT_VK);
         if (limitParent == null) {
           return;
         }
@@ -147,19 +146,19 @@ public class RowNumTransformer  extends BaseSqlASTTransformer  {
         // Move down the limit token of the parent query to this query. If this query also has a limit,
         // then choose the min limit.
         //
-        SqlASTNode limitThis = (SqlASTNode) node.getFirstChildWithType(PantheraExpParser.LIMIT_VK);
+        CommonTree limitThis = (CommonTree) node.getFirstChildWithType(PantheraExpParser.LIMIT_VK);
         if (limitThis == null) {
           node.addChild(limitParent);
         } else {
           int limit1 = Integer.parseInt(limitParent.getChild(0).getText());
           int limit2 = Integer.parseInt(limitThis.getChild(0).getText());
-          ((SqlASTNode) limitThis.getChild(0)).getToken().setText(Integer.toString(limit1 < limit2 ? limit1 : limit2));
+          ((CommonTree) limitThis.getChild(0)).getToken().setText(Integer.toString(limit1 < limit2 ? limit1 : limit2));
         }
       }
       //
       // Replace the parent select statement node with the current select statement node (in case missing order by).
       //
-      SqlASTNode parentSelectStatement = (SqlASTNode) parentSelect.getParent().getParent();
+      CommonTree parentSelectStatement = (CommonTree) parentSelect.getParent().getParent();
       parentSelectStatement.getParent().setChild(parentSelectStatement.getChildIndex(), node.getParent().getParent());
       stack.pop();
       stack.push(node);

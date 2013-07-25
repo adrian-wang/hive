@@ -42,7 +42,8 @@ public class TransformerBuilder {
       new PrepareQueryInfoTransformer(
       new NaturalJoinTransformer(
       new RowNumTransformer(
-      new NothingTransformer())))))))))))))));
+      new BetweenTransformer(
+      new NothingTransformer()))))))))))))))));
 
   private TransformerBuilder() {
   }

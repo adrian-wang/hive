@@ -29,7 +29,6 @@ import java.util.Set;
 import org.antlr33.runtime.tree.CommonTree;
 import org.antlr33.runtime.tree.Tree;
 import org.apache.hadoop.hive.ql.parse.sql.PantheraExpParser;
-import org.apache.hadoop.hive.ql.parse.sql.SqlASTNode;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateUtil;
 import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
@@ -93,7 +92,7 @@ public class CrossJoinTransformer extends BaseSqlASTTransformer {
   }
 
   @Override
-  public void transform(SqlASTNode tree, TranslateContext context) throws SqlXlateException {
+  public void transform(CommonTree tree, TranslateContext context) throws SqlXlateException {
     tf.transformAST(tree, context);
     for (QueryInfo qf : context.getqInfoList()) {
       transformQuery(context, qf, qf.getSelectKeyForThisQ());
@@ -204,7 +203,7 @@ public class CrossJoinTransformer extends BaseSqlASTTransformer {
           //
           // Create a new TRUE node and replace the current node with this new node.
           //
-          SqlASTNode trueNode = SqlXlateUtil.newSqlASTNode(
+          CommonTree trueNode = SqlXlateUtil.newSqlASTNode(
               PantheraParser_PLSQLParser.SQL92_RESERVED_TRUE, "true");
           node.getParent().setChild(node.getChildIndex(), trueNode);
           return;
@@ -254,7 +253,7 @@ public class CrossJoinTransformer extends BaseSqlASTTransformer {
         //
         // Create a new TRUE node and replace the current node with this new node.
         //
-        SqlASTNode trueNode = SqlXlateUtil.newSqlASTNode(
+        CommonTree trueNode = SqlXlateUtil.newSqlASTNode(
             PantheraParser_PLSQLParser.SQL92_RESERVED_TRUE, "true");
         node.getParent().setChild(node.getChildIndex(), trueNode);
       }
@@ -299,7 +298,7 @@ public class CrossJoinTransformer extends BaseSqlASTTransformer {
         if (col.getColAlias().equals(columnName)) {
           table = col.getTblAlias();
           // Add table leaf node because HIVE needs table name for join operation.
-          SqlASTNode tableNameNode = SqlXlateUtil.newSqlASTNode(PantheraParser_PLSQLParser.ID,
+          CommonTree tableNameNode = SqlXlateUtil.newSqlASTNode(PantheraParser_PLSQLParser.ID,
               table);
           CommonTree columnNode = (CommonTree) anyElement.getChild(0);
           anyElement.setChild(0, tableNameNode);
@@ -384,7 +383,7 @@ public class CrossJoinTransformer extends BaseSqlASTTransformer {
       //
       // Generate the join condition sub-tree.
       //
-      SqlASTNode newOnNode = SqlXlateUtil.newSqlASTNode(
+     CommonTree newOnNode = SqlXlateUtil.newSqlASTNode(
           PantheraParser_PLSQLParser.SQL92_RESERVED_ON, "on");
       logicExprNode = SqlXlateUtil.newSqlASTNode(PantheraParser_PLSQLParser.LOGIC_EXPR,
           "LOGIC_EXPR");

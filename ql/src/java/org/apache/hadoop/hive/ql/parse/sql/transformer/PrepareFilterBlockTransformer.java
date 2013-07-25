@@ -23,7 +23,6 @@ import java.util.Stack;
 
 import org.antlr33.runtime.tree.CommonTree;
 import org.antlr33.runtime.tree.Tree;
-import org.apache.hadoop.hive.ql.parse.sql.SqlASTNode;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
 import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
 import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.FilterBlock;
@@ -44,7 +43,7 @@ public class PrepareFilterBlockTransformer extends BaseSqlASTTransformer {
   }
 
   @Override
-  public void transform(SqlASTNode tree, TranslateContext context) throws SqlXlateException {
+  public void transform(CommonTree tree, TranslateContext context) throws SqlXlateException {
     tf.transformAST(tree, context);
     for (QueryInfo qf : context.getqInfoList()) {
       this.buildFilterBlockTree(qf, context);

@@ -28,7 +28,7 @@ import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
 import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
 
 /**
- * transform AND to JOIN(by rebuilding left select)
+ * transform AND to JOIN(by rebuilding left select).<br>
  * AndFilterBlock.
  *
  */
@@ -47,6 +47,7 @@ public class AndFilterBlock extends LogicFilterBlock {
     FilterBlock leftFB = this.getChildren().get(0);
     leftFB.process(fbContext, context);
     fbContext.getQueryStack().peek().setQueryForTransfer(leftFB.getTransformedNode());
+    fbContext.getQueryStack().peek().setRebuildQueryForTransferWithAnd();
     FilterBlock rightFB = this.getChildren().get(1);
     rightFB.process(fbContext, context);
     CommonTree logicTopSelect = fbContext.getLogicTopSelect();

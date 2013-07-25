@@ -37,6 +37,7 @@ public class QueryBlock extends BaseFilterBlock {
 
   private Set<String> tableNameSet;
   private CommonTree queryForTransfer;
+  private boolean hadRebuildQueryForTransferWithAnd;// for AND in HAVING subquery.
   private List<CommonTree> aggregationList;
   private CommonTree group;
   private CommonTree order;
@@ -224,6 +225,14 @@ public class QueryBlock extends BaseFilterBlock {
     return FilterBlockUtil.cloneTree(queryForTransfer);
   }
 
+
+  public CommonTree cloneTransformedQuery() {
+    if (this.hadRebuildQueryForTransferWithAnd) {
+      return FilterBlockUtil.cloneTree(queryForTransfer);
+    }
+    return FilterBlockUtil.cloneTree(this.getASTNode());
+  }
+
   /**
    * clone QueryBlock's query tree
    *
@@ -313,6 +322,10 @@ public class QueryBlock extends BaseFilterBlock {
 
   public void setHaving(boolean isHaving) {
     this.isHaving = isHaving;
+  }
+
+  public void setRebuildQueryForTransferWithAnd() {
+    this.hadRebuildQueryForTransferWithAnd = true;
   }
 
 }

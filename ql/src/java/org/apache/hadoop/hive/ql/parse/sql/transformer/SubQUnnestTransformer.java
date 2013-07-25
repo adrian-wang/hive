@@ -25,7 +25,6 @@ import java.util.Set;
 import org.antlr33.runtime.tree.CommonTree;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hive.ql.parse.sql.SqlASTNode;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
 import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
 import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.FilterBlock;
@@ -52,7 +51,7 @@ public class SubQUnnestTransformer extends BaseSqlASTTransformer {
   }
 
   @Override
-  public void transform(SqlASTNode tree, TranslateContext context) throws SqlXlateException {
+  public void transform(CommonTree tree, TranslateContext context) throws SqlXlateException {
     tf.transformAST(tree, context);
     // this.transformQInfo(tree, context);
     this.transformQInfoDeepFirst(tree, context);
@@ -71,7 +70,7 @@ public class SubQUnnestTransformer extends BaseSqlASTTransformer {
    *
    */
   @Deprecated
-  void transformQInfo(SqlASTNode tree, TranslateContext context) throws SqlXlateException {
+  void transformQInfo(CommonTree tree, TranslateContext context) throws SqlXlateException {
     for (QueryInfo qf : context.getqInfoList()) {
       this.transformFilterBlock(qf, context);
     }
@@ -84,7 +83,7 @@ public class SubQUnnestTransformer extends BaseSqlASTTransformer {
    * @param context
    * @throws SqlXlateException
    */
-  void transformQInfoDeepFirst(SqlASTNode tree, TranslateContext context) throws SqlXlateException {
+  void transformQInfoDeepFirst(CommonTree tree, TranslateContext context) throws SqlXlateException {
 
     QueryInfo qInfo = context.getQInfoRoot();
     transformQInfoDeepFirst(qInfo, context);

@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hive.ql.parse.sql.transformer;
 
-import org.apache.hadoop.hive.ql.parse.sql.SqlASTNode;
+import org.antlr33.runtime.tree.CommonTree;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
 import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
 
@@ -30,7 +30,7 @@ import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
 public class NothingTransformer implements SqlASTTransformer {
 
   @Override
-  public void transformAST(SqlASTNode tree, TranslateContext context) throws SqlXlateException {
+  public void transformAST(CommonTree tree, TranslateContext context) throws SqlXlateException {
     // just do nothing.
 
   }

@@ -25,7 +25,6 @@ import java.util.Map.Entry;
 
 import org.antlr33.runtime.tree.CommonTree;
 import org.apache.hadoop.hive.ql.parse.sql.PantheraExpParser;
-import org.apache.hadoop.hive.ql.parse.sql.SqlASTNode;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
 import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
 import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.FilterBlockUtil;
@@ -46,12 +45,12 @@ public class NotEqualJoinTransformer extends BaseSqlASTTransformer {
   }
 
   @Override
-  public void transform(SqlASTNode tree, TranslateContext context) throws SqlXlateException {
+  public void transform(CommonTree tree, TranslateContext context) throws SqlXlateException {
     tf.transformAST(tree, context);
     this.transformNotEqualJoin(tree, context);
   }
 
-  private void transformNotEqualJoin(SqlASTNode tree, TranslateContext context)
+  private void transformNotEqualJoin(CommonTree tree, TranslateContext context)
       throws SqlXlateException {
     Map<CommonTree, List<CommonTree>> joinMap = (Map<CommonTree, List<CommonTree>>) context
         .getBallFromBasket(TranslateContext.JOIN_TYPE_NODE_BALL);

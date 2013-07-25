@@ -119,7 +119,8 @@ public abstract class CommonFilterBlockProcessor extends BaseFilterBlockProcesso
     super.topQuery.setHaving(true);
 
     // clone whole top select tree
-    super.topSelect = super.topQuery.cloneWholeQuery();
+    super.topSelect = super.topQuery.cloneTransformedQuery();
+    fbContext.setLogicTopSelect(topSelect);
   }
 
   /**

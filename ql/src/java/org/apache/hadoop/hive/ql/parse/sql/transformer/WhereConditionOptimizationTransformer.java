@@ -22,7 +22,6 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.antlr33.runtime.tree.CommonTree;
-import org.apache.hadoop.hive.ql.parse.sql.SqlASTNode;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateUtil;
 import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
@@ -43,7 +42,7 @@ public class WhereConditionOptimizationTransformer extends BaseSqlASTTransformer
   }
 
   @Override
-  public void transform(SqlASTNode tree, TranslateContext context) throws SqlXlateException {
+  public void transform(CommonTree tree, TranslateContext context) throws SqlXlateException {
     tf.transformAST(tree, context);
     for (QueryInfo qf : context.getqInfoList()) {
       transformQuery(qf, qf.getSelectKeyForThisQ());
@@ -52,9 +51,9 @@ public class WhereConditionOptimizationTransformer extends BaseSqlASTTransformer
 
  private void transformQuery(QueryInfo qf, CommonTree node) throws SqlXlateException {
     if(node.getType() == PantheraParser_PLSQLParser.SQL92_RESERVED_SELECT){
-      SqlASTNode where = (SqlASTNode) node.getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_WHERE);
+      CommonTree where = (CommonTree) node.getFirstChildWithType(PantheraParser_PLSQLParser.SQL92_RESERVED_WHERE);
       if (where != null) {
-        transformWhereCondition((SqlASTNode) where.getChild(0).getChild(0), null);
+        transformWhereCondition((CommonTree) where.getChild(0).getChild(0), null);
       }
     }
 
@@ -69,31 +68,31 @@ public class WhereConditionOptimizationTransformer extends BaseSqlASTTransformer
     }
   }
 
-  private void transformWhereCondition(SqlASTNode node, List<SqlASTNode> andConditionList) throws SqlXlateException {
+  private void transformWhereCondition(CommonTree node, List<CommonTree> andConditionList) throws SqlXlateException {
     // For a AND node, colllect the and conditions below it.
     if (node.getType() == PantheraParser_PLSQLParser.SQL92_RESERVED_AND) {
       // Transform the left child.
-      transformWhereCondition((SqlASTNode) node.getChild(0), andConditionList);
+      transformWhereCondition((CommonTree) node.getChild(0), andConditionList);
       // Transform the right child.
-      transformWhereCondition((SqlASTNode) node.getChild(1), andConditionList);
+      transformWhereCondition((CommonTree) node.getChild(1), andConditionList);
     } else if (node.getType() == PantheraParser_PLSQLParser.SQL92_RESERVED_OR) {
       // For a OR node, create a new AND condition list for each child.
-      ArrayList<SqlASTNode> leftList = new ArrayList<SqlASTNode>();
-      ArrayList<SqlASTNode> rightList = new ArrayList<SqlASTNode>();
+      ArrayList<CommonTree> leftList = new ArrayList<CommonTree>();
+      ArrayList<CommonTree> rightList = new ArrayList<CommonTree>();
       // Transform the left child.
-      transformWhereCondition((SqlASTNode) node.getChild(0), leftList);
+      transformWhereCondition((CommonTree) node.getChild(0), leftList);
       // Transform the right child.
-      transformWhereCondition((SqlASTNode) node.getChild(1), rightList);
+      transformWhereCondition((CommonTree) node.getChild(1), rightList);
 
       // Extract common conditions from the two child.
-      ArrayList<SqlASTNode> commonConditions = new ArrayList<SqlASTNode>();
-      Iterator<SqlASTNode> leftIterator = leftList.iterator();
+      ArrayList<CommonTree> commonConditions = new ArrayList<CommonTree>();
+      Iterator<CommonTree> leftIterator = leftList.iterator();
       boolean orAlwaysTrue = false;
       while (!orAlwaysTrue && leftIterator.hasNext()) {
-        SqlASTNode leftCondition = leftIterator.next();
-        Iterator<SqlASTNode> rightIterator = rightList.iterator();
+        CommonTree leftCondition = leftIterator.next();
+        Iterator<CommonTree> rightIterator = rightList.iterator();
         while (rightIterator.hasNext()) {
-          SqlASTNode rightCondition = rightIterator.next();
+          CommonTree rightCondition = rightIterator.next();
           if (compareCondition(leftCondition, rightCondition)) {
             commonConditions.add(leftCondition);
             // Remove the common condition from its original position.
@@ -111,19 +110,19 @@ public class WhereConditionOptimizationTransformer extends BaseSqlASTTransformer
 
       // Generate AND nodes per the common conditions.
       if (!commonConditions.isEmpty()) {
-        SqlASTNode parent = (SqlASTNode) node.getParent();
+        CommonTree parent = (CommonTree) node.getParent();
         int childIndex = node.getChildIndex();
-        SqlASTNode root;
-        Iterator<SqlASTNode> iterator = commonConditions.iterator();
+        CommonTree root;
+        Iterator<CommonTree> iterator = commonConditions.iterator();
         if (orAlwaysTrue) {
           root = iterator.next();
         } else {
           root = node;
         }
         while (iterator.hasNext()) {
-          SqlASTNode andNode = SqlXlateUtil.newSqlASTNode(PantheraParser_PLSQLParser.SQL92_RESERVED_AND, "and");
+          CommonTree andNode = SqlXlateUtil.newSqlASTNode(PantheraParser_PLSQLParser.SQL92_RESERVED_AND, "and");
           andNode.addChild(root);
-          SqlASTNode commonCondition = iterator.next();
+          CommonTree commonCondition = iterator.next();
           andNode.addChild(commonCondition);
           root = andNode;
           // Add the new AND condition into the parent's AND condition list.
@@ -142,7 +141,7 @@ public class WhereConditionOptimizationTransformer extends BaseSqlASTTransformer
     }
   }
 
-  private boolean compareCondition(SqlASTNode condition1, SqlASTNode condition2) {
+  private boolean compareCondition(CommonTree condition1, CommonTree condition2) {
     if (condition1.getType() != condition2.getType() || !condition1.getText().equals(condition2.getText())) {
       return false;
     }
@@ -150,15 +149,15 @@ public class WhereConditionOptimizationTransformer extends BaseSqlASTTransformer
       return false;
     }
     for (int i = 0; i < condition1.getChildCount(); i++) {
-      if (!compareCondition((SqlASTNode) condition1.getChild(i), (SqlASTNode) condition2.getChild(i))) {
+      if (!compareCondition((CommonTree) condition1.getChild(i), (CommonTree) condition2.getChild(i))) {
         return false;
       }
     }
     return true;
   }
 
-  private boolean removeCondition(SqlASTNode root, SqlASTNode condition) {
-    if ((SqlASTNode) condition.getParent() == root) {
+  private boolean removeCondition(CommonTree root, CommonTree condition) {
+    if ((CommonTree) condition.getParent() == root) {
       return true;
     }
 

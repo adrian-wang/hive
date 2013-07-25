@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hive.ql.parse.sql.transformer;
 
+import org.antlr33.runtime.tree.CommonTree;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hive.ql.parse.sql.SqlASTNode;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateUtil;
 import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
@@ -34,7 +34,7 @@ public abstract class BaseSqlASTTransformer implements SqlASTTransformer {
 
 
   @Override
-  public void transformAST(SqlASTNode tree, TranslateContext context) throws SqlXlateException {
+  public void transformAST(CommonTree tree, TranslateContext context) throws SqlXlateException {
     String myself = this.getClass().getSimpleName();
     long begin = System.currentTimeMillis();
 
@@ -57,7 +57,7 @@ public abstract class BaseSqlASTTransformer implements SqlASTTransformer {
         + (qf == null ? "null" : qf.toFilterBlockStringTree().replace('(', '[').replace(')', ']')));
   }
 
-  protected abstract void transform(SqlASTNode tree, TranslateContext context)
+  protected abstract void transform(CommonTree tree, TranslateContext context)
       throws SqlXlateException;
 
 }
