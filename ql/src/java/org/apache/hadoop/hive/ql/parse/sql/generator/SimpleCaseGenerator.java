@@ -65,7 +65,7 @@ public class SimpleCaseGenerator extends BaseHiveASTGenerator {
       } else {
         //when-then clause
         ASTNode equal = SqlXlateUtil.newASTNode(HiveParser.EQUAL, "=");
-        SqlXlateUtil.attachChild(ret, equal);
+        ret.addChild(equal);
         HiveASTGenerator generatorL = GeneratorFactory.getGenerator((CommonTree) currentSqlNode.getChild(0));
         if (generatorL == null) {
           throw new SqlParseException("illegal sql AST node:" + currentSqlNode.getChild(0));

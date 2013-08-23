@@ -20,8 +20,8 @@ package org.apache.hadoop.hive.ql.parse.sql.transformer;
 import org.antlr33.runtime.tree.CommonTree;
 import org.antlr33.runtime.tree.Tree;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
-import org.apache.hadoop.hive.ql.parse.sql.SqlXlateUtil;
 import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
+import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.FilterBlockUtil;
 
 import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
 
@@ -75,12 +75,13 @@ public class MultipleTableSelectTransformer extends BaseSqlASTTransformer {
     //
     // Create a Join node and attach it to the tableRef node as the last child.
     //
-    CommonTree joinNode = SqlXlateUtil.newSqlASTNode(PantheraParser_PLSQLParser.JOIN_DEF, "join");
+    CommonTree joinNode = FilterBlockUtil.createSqlASTNode((CommonTree) tableRef, PantheraParser_PLSQLParser.JOIN_DEF, "join");
+    //better set at comma, but comma missing in AST
     tableRef.addChild(joinNode);
     //
     // Create a Cross node and attach it to the join node as the first child.
     //
-    CommonTree crossNode = SqlXlateUtil.newSqlASTNode(PantheraParser_PLSQLParser.CROSS_VK, "cross");
+    CommonTree crossNode = FilterBlockUtil.createSqlASTNode(joinNode, PantheraParser_PLSQLParser.CROSS_VK, "cross");
     joinNode.addChild(crossNode);
     //
     // Move the table ref element tree of the nextTableRef node to be the second child of the join node.

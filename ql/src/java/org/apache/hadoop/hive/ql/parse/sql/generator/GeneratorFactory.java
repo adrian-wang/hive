@@ -178,21 +178,17 @@ public class GeneratorFactory {
   private GeneratorFactory() {
   }
 
-  public static HiveASTGenerator getGenerator(int type) throws SqlXlateException {
+  public static HiveASTGenerator getGenerator(CommonTree node, int type) throws SqlXlateException {
     HiveASTGenerator generator = genMap.get(type);
     if (generator == null) {
-      throw new SqlXlateException("Undefine generator for SQL AST node type:" + type);
+      throw new SqlXlateException(node, "Undefine generator for SQL AST node type:" + node.getType()
+          + " node text:" + node.getText());
     }
     return generator;
   }
 
   public static HiveASTGenerator getGenerator(CommonTree node) throws SqlXlateException {
-    HiveASTGenerator generator = genMap.get(node.getType());
-    if (generator == null) {
-      throw new SqlXlateException("Undefine generator for SQL AST node type:" + node.getType()
-          + " node text:" + node.getText());
-    }
-    return generator;
+    return getGenerator(node, node.getType());
   }
 
 }

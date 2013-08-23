@@ -37,7 +37,7 @@ public class UnaryOperatorGenerator extends BaseHiveASTGenerator {
       return super.baseProcess(HiveParser.MINUS, currentSqlNode.getText(), hiveRoot, sqlRoot,
           currentHiveNode, currentSqlNode, context);
     }
-    throw new SqlXlateException("Unsupportd unary operator:" + operator);
+    throw new SqlXlateException(currentSqlNode, "Unsupportd unary operator:" + operator);
   }
 
 }

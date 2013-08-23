@@ -109,7 +109,8 @@ public class NaturalJoinTransformer extends BaseSqlASTTransformer {
         String column = anyElement.getChild(0).getText();
         String tableAlias = findTableAlias(column, columnSetMap);
         if (tableAlias != null) {
-          anyElement.addChild(FilterBlockUtil.createSqlASTNode(PantheraExpParser.ID, tableAlias));
+          anyElement.addChild(FilterBlockUtil.createSqlASTNode(
+              (CommonTree) anyElement.getChild(0),PantheraExpParser.ID, tableAlias));
           SqlXlateUtil.exchangeChildrenPosition(anyElement);
         }
       }
@@ -149,17 +150,18 @@ public class NaturalJoinTransformer extends BaseSqlASTTransformer {
             .getFirstChildWithType(PantheraExpParser.TABLE_REF_ELEMENT);
         String alias = FilterBlockUtil.addTableAlias(tableRefElement, context);
         Set<String> columnSet = getColumnSet(tableRefElement, context);
-        makeOn(alias, child, columnSet, columnSetMap);
+        makeOn((CommonTree) node.getChild(1), alias, child, columnSet, columnSetMap);
         columnSetMap.put(alias, columnSet);
       }
     }
     return columnSetMap;
   }
 
-  private void makeOn(String thisTable, CommonTree join, Set<String> thisColumnSet,
+  private void makeOn(CommonTree njoin,String thisTable, CommonTree join, Set<String> thisColumnSet,
       Map<String, Set<String>> columnSetMap) {
-    CommonTree on = FilterBlockUtil.createSqlASTNode(PantheraExpParser.SQL92_RESERVED_ON, "on");
-    CommonTree logicExpr = FilterBlockUtil.createSqlASTNode(PantheraExpParser.LOGIC_EXPR,
+    CommonTree on = FilterBlockUtil.createSqlASTNode((CommonTree) njoin.getChild(0),
+        PantheraExpParser.SQL92_RESERVED_ON, "on");//njoin.getChild(0) is natural_vk
+    CommonTree logicExpr = FilterBlockUtil.createSqlASTNode(on, PantheraExpParser.LOGIC_EXPR,
         "LOGIC_EXPR");
     on.addChild(logicExpr);
     boolean hasCondition = false;
@@ -169,11 +171,11 @@ public class NaturalJoinTransformer extends BaseSqlASTTransformer {
         String tableAlias = entry.getKey();
         if (preColumnSet.contains(column)) {
           hasCondition = true;
-          CommonTree equal = makeEqualCondition(thisTable, tableAlias, column);
+          CommonTree equal = makeEqualCondition(on, thisTable, tableAlias, column);
           if (logicExpr.getChildCount() == 0) {
             logicExpr.addChild(equal);
           } else {
-            CommonTree and = FilterBlockUtil.createSqlASTNode(PantheraExpParser.SQL92_RESERVED_AND,
+            CommonTree and = FilterBlockUtil.createSqlASTNode(on, PantheraExpParser.SQL92_RESERVED_AND,
                 "and");
             CommonTree leftChild = (CommonTree) logicExpr.deleteChild(0);
             and.addChild(leftChild);
@@ -189,10 +191,10 @@ public class NaturalJoinTransformer extends BaseSqlASTTransformer {
     }
   }
 
-  private CommonTree makeEqualCondition(String leftTable, String rightTable, String column) {
-    CommonTree equal = FilterBlockUtil.createSqlASTNode(PantheraExpParser.EQUALS_OP, "=");
-    equal.addChild(FilterBlockUtil.createCascatedElementBranch(leftTable, column));
-    equal.addChild(FilterBlockUtil.createCascatedElementBranch(rightTable, column));
+  private CommonTree makeEqualCondition(CommonTree on, String leftTable, String rightTable, String column) {
+    CommonTree equal = FilterBlockUtil.createSqlASTNode(on, PantheraExpParser.EQUALS_OP, "=");
+    equal.addChild(FilterBlockUtil.createCascatedElementBranch(equal, leftTable, column));
+    equal.addChild(FilterBlockUtil.createCascatedElementBranch(equal, rightTable, column));
     return equal;
 
   }
@@ -214,14 +216,18 @@ public class NaturalJoinTransformer extends BaseSqlASTTransformer {
     if (tableViewName != null) {
       RowResolver rr = null;
       if (tableViewName.getChildCount() == 1) {
+        try{
         rr = context.getMeta().getRRForTbl(tableViewName.getChild(0).getText());
+        } catch (SqlXlateException e) {
+          throw new SqlXlateException((CommonTree) tableViewName.getChild(0), "HiveException thrown : " + e);
+        }
       }
       if (tableViewName.getChildCount() == 2) {
         rr = context.getMeta().getRRForTbl(tableViewName.getChild(0).getText(),
             tableViewName.getChild(1).getText());
       }
       if (rr == null) {
-        throw new SqlXlateException("unknow table name!");
+        throw new SqlXlateException((CommonTree) tableViewName.getChild(0),"unknow table name!");
       }
       for (ColumnInfo ci : rr.getColumnInfos()) {
         result.add(ci.getInternalName());

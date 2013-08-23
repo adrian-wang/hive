@@ -79,19 +79,19 @@ public abstract class CommonFilterBlockProcessor extends BaseFilterBlockProcesso
    */
   private void makeJoin(CommonTree joinType) {
     // join
-    join = super.createJoin(closingSelect);
+    join = super.createJoin(joinType, closingSelect);
     bottomAlias = super.buildJoin(joinType, join, bottomSelect);
   }
 
   /**
    * make branch for whole sub tree
+   * @throws SqlXlateException
    */
-  private void makeEnd() {
+  private void makeEnd() throws SqlXlateException {
     // closing select list
-    CommonTree selectList = super.createSelectListForClosingSelect(topAliasList);
+    CommonTree selectList = super.createSelectListForClosingSelect(closingSelect, topAliasList);
     if (selectList.getChildCount() == 0) {
-      selectList = FilterBlockUtil.cloneSelectList((CommonTree) topSelect
-          .getFirstChildWithType(PantheraExpParser.SELECT_LIST));
+      selectList = FilterBlockUtil.cloneSelectListFromSelect((CommonTree) topSelect);
       for (int i = 0; i < selectList.getChildCount(); i++) {
         CommonTree selectItem = (CommonTree) selectList.getChild(i);
         CommonTree expr = (CommonTree) selectItem.getChild(0);
@@ -100,7 +100,7 @@ public abstract class CommonFilterBlockProcessor extends BaseFilterBlockProcesso
             .getChild(1).getChild(0))));
       }
     }
-    FilterBlockUtil.attachChild(closingSelect, selectList);
+    closingSelect.addChild(selectList);
 
     // set closing select to top select
     topSelect = closingSelect;
@@ -132,7 +132,7 @@ public abstract class CommonFilterBlockProcessor extends BaseFilterBlockProcesso
   void processCompareC() throws SqlXlateException {
 
     this.makeTop();
-    this.makeJoin(FilterBlockUtil.createSqlASTNode(PantheraParser_PLSQLParser.CROSS_VK, "cross"));
+    this.makeJoin(FilterBlockUtil.createSqlASTNode(subQNode, PantheraParser_PLSQLParser.CROSS_VK, "cross"));
 
     CommonTree compareKeyAlias1 = super.addSelectItem((CommonTree) topSelect
         .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST), (CommonTree) this.subQNode
@@ -161,7 +161,7 @@ public abstract class CommonFilterBlockProcessor extends BaseFilterBlockProcesso
     this.makeTop();
 
 
-    this.makeJoin(FilterBlockUtil.createSqlASTNode(PantheraParser_PLSQLParser.CROSS_VK,
+    this.makeJoin(FilterBlockUtil.createSqlASTNode(subQNode, PantheraParser_PLSQLParser.CROSS_VK,
         PantheraExpParser.LEFTSEMI_STR));
 
 
@@ -176,7 +176,7 @@ public abstract class CommonFilterBlockProcessor extends BaseFilterBlockProcesso
       join.deleteChild(0);
       // add distinct
       SqlXlateUtil.addCommonTreeChild(this.closingSelect, 1, FilterBlockUtil.createSqlASTNode(
-          PantheraParser_PLSQLParser.SQL92_RESERVED_DISTINCT, "distinct"));
+          subQNode, PantheraParser_PLSQLParser.SQL92_RESERVED_DISTINCT, "distinct"));
     }
   }
 
@@ -184,14 +184,15 @@ public abstract class CommonFilterBlockProcessor extends BaseFilterBlockProcesso
    * process compare operator with uncorrelated
    *
    * @param joinType
+   * @throws SqlXlateException
    */
-  void processCompareUC() {
+  void processCompareUC() throws SqlXlateException {
 
     // must have aggregation function in sub query
     this.processAggregationCompareUC();
   }
 
-  private void processAggregationCompareUC() {
+  private void processAggregationCompareUC() throws SqlXlateException {
 
     this.makeTop();
 
@@ -203,7 +204,7 @@ public abstract class CommonFilterBlockProcessor extends BaseFilterBlockProcesso
         .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST), cloneCompareElement);
     super.rebuildSubQOpElement(compareElement, compareElementAlias);
 
-    this.makeJoin(FilterBlockUtil.createSqlASTNode(PantheraParser_PLSQLParser.CROSS_VK, "cross"));
+    this.makeJoin(FilterBlockUtil.createSqlASTNode(subQNode, PantheraParser_PLSQLParser.CROSS_VK, "cross"));
 
     // compare alias from subq
     CommonTree comparSubqAlias = super.addAlias((CommonTree) ((CommonTree) bottomSelect
@@ -219,8 +220,9 @@ public abstract class CommonFilterBlockProcessor extends BaseFilterBlockProcesso
    * process in with uncorrelated
    *
    * @param joinType
+   * @throws SqlXlateException
    */
-  void processInUC() {
+  void processInUC() throws SqlXlateException {
 
     this.makeTop();
 
@@ -229,20 +231,23 @@ public abstract class CommonFilterBlockProcessor extends BaseFilterBlockProcesso
     CommonTree compareElementAlias = super.addSelectItem((CommonTree) topSelect
         .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST), super.cloneSubQOpElement());
 
-    this.makeJoin(FilterBlockUtil.createSqlASTNode(PantheraExpParser.LEFTSEMI_VK, "leftsemi"));
+    this.makeJoin(FilterBlockUtil.createSqlASTNode(subQNode, PantheraExpParser.LEFTSEMI_VK, "leftsemi"));
 
     // compare alias from subq
+    if (bottomSelect.getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST) == null) {
+      throw new SqlXlateException(bottomSelect, "No select-list or select * in subquery!");
+    }
     CommonTree comparSubqAlias = super.addAlias((CommonTree) ((CommonTree) bottomSelect
         .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST)).getChild(0));
 
     // on
     // FIXME which is first?
-    CommonTree on = super.buildOn(FilterBlockUtil.createSqlASTNode(
-        PantheraParser_PLSQLParser.EQUALS_OP, "="), super.createCascatedElementWithTableName(
+    CommonTree equal = FilterBlockUtil.createSqlASTNode(subQNode, PantheraParser_PLSQLParser.EQUALS_OP, "=");
+    CommonTree on = super.buildOn(equal, super.createCascatedElementWithTableName(equal,
         (CommonTree) topAlias.getChild(0), (CommonTree) compareElementAlias.getChild(0)), super
-        .createCascatedElementWithTableName((CommonTree) bottomAlias.getChild(0),
+        .createCascatedElementWithTableName(equal, (CommonTree) bottomAlias.getChild(0),
             (CommonTree) comparSubqAlias.getChild(0)));
-    FilterBlockUtil.attachChild(join, on);
+    join.addChild(on);
 
     this.makeEnd();
   }
@@ -256,22 +261,22 @@ public abstract class CommonFilterBlockProcessor extends BaseFilterBlockProcesso
     CommonTree compareElementAlias = super.addSelectItem((CommonTree) topSelect
         .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST), super.cloneSubQOpElement());
 
-    this.makeJoin(FilterBlockUtil.createSqlASTNode(PantheraExpParser.LEFTSEMI_VK, "leftsemi"));
+    this.makeJoin(FilterBlockUtil.createSqlASTNode(subQNode, PantheraExpParser.LEFTSEMI_VK, "leftsemi"));
 
     // compare alias from subq
     CommonTree comparSubqAlias = super.addAlias((CommonTree) ((CommonTree) bottomSelect
         .getFirstChildWithType(PantheraParser_PLSQLParser.SELECT_LIST)).getChild(0));
 
     // on
+    CommonTree equal = FilterBlockUtil.createSqlASTNode(subQNode, PantheraParser_PLSQLParser.EQUALS_OP, "=");
     CommonTree leftChild = compareElementAlias.getType() == PantheraParser_PLSQLParser.ALIAS ? super
-        .createCascatedElementWithTableName((CommonTree) topAlias.getChild(0),
+        .createCascatedElementWithTableName(equal, (CommonTree) topAlias.getChild(0),
             (CommonTree) compareElementAlias.getChild(0))
         : compareElementAlias;
-    CommonTree on = super.buildOn(FilterBlockUtil.createSqlASTNode(
-        PantheraParser_PLSQLParser.EQUALS_OP, "="), leftChild, super
-        .createCascatedElementWithTableName((CommonTree) bottomAlias.getChild(0),
+    CommonTree on = super.buildOn(equal, leftChild, super
+        .createCascatedElementWithTableName(equal, (CommonTree) bottomAlias.getChild(0),
             (CommonTree) comparSubqAlias.getChild(0)));
-    FilterBlockUtil.attachChild(join, on);
+    join.addChild(on);
 
     super.rebuildSelectListByFilter(false, false, bottomAlias, topAlias);
     this.makeEnd();
@@ -285,7 +290,7 @@ public abstract class CommonFilterBlockProcessor extends BaseFilterBlockProcesso
    * @throws SqlXlateException
    */
   void processNotInUC() throws SqlXlateException {
-    CommonTree joinType = FilterBlockUtil.createSqlASTNode(PantheraParser_PLSQLParser.CROSS_VK,
+    CommonTree joinType = FilterBlockUtil.createSqlASTNode(subQNode, PantheraParser_PLSQLParser.CROSS_VK,
         "cross");
     this.makeTop();
 
@@ -308,7 +313,7 @@ public abstract class CommonFilterBlockProcessor extends BaseFilterBlockProcesso
     // FIXME which is first?
     CommonTree where = super.buildWhere(FilterBlockUtil.dupNode(subQNode), comparSubqAlias,
         compareElementAlias);
-    FilterBlockUtil.attachChild(closingSelect, where);
+    closingSelect.addChild(where);
     super.rebuildArrayContains((CommonTree) where.getChild(0));
   }
 
@@ -318,23 +323,9 @@ public abstract class CommonFilterBlockProcessor extends BaseFilterBlockProcesso
    * @param joinType
    * @throws SqlXlateException
    */
-  void processNotExistsC() throws SqlXlateException {
-    // minuend tree
-    CommonTree minuendSelect = FilterBlockUtil.cloneTree(topSelect);
-
-    this.processExistsC();
-
-    // not in
-    super.subQNode = super.buildNotIn4Minus(minuendSelect, topSelect);
-    bottomSelect = topSelect;
-    topSelect = minuendSelect;
-    // super.fbContext.setLogicTopSelect(topSelect);
-    this.processNotInUC();
-  }
-
   void processNotExistsCByLeftJoin() throws SqlXlateException {
     this.makeTop();
-    super.joinTypeNode = FilterBlockUtil.createSqlASTNode(PantheraParser_PLSQLParser.CROSS_VK,
+    super.joinTypeNode = FilterBlockUtil.createSqlASTNode(subQNode, PantheraParser_PLSQLParser.CROSS_VK,
         PantheraExpParser.LEFT_STR);
     this.makeJoin(joinTypeNode);
 
@@ -355,22 +346,27 @@ public abstract class CommonFilterBlockProcessor extends BaseFilterBlockProcesso
     super.buildWhereByFB(null, null, null);
   }
 
-  public void processExistsUC() {
+  public void processExistsUC() throws SqlXlateException {
     this.makeTop();
-    this.makeJoin(FilterBlockUtil.createSqlASTNode(PantheraExpParser.CROSS_VK, "cross"));
-    CommonTree limit = SqlXlateUtil.newSqlASTNode(PantheraExpParser.LIMIT_VK, "limit");
+    this.makeJoin(FilterBlockUtil.createSqlASTNode(subQNode, PantheraExpParser.CROSS_VK, "cross"));
+    CommonTree limit = FilterBlockUtil.createSqlASTNode(subQNode, PantheraExpParser.LIMIT_VK, "limit");
     bottomSelect.addChild(limit);
-    CommonTree limitNum = SqlXlateUtil.newSqlASTNode(PantheraExpParser.UNSIGNED_INTEGER, "1");
+    CommonTree limitNum = FilterBlockUtil.createSqlASTNode(subQNode, PantheraExpParser.UNSIGNED_INTEGER, "1");
     limit.addChild(limitNum);
     this.makeEnd();
   }
 
   public void processNotExistsUC() throws SqlXlateException {
     this.makeTop();
-    bottomSelect = super.reCreateBottomSelect(super.createTableRefElement(bottomSelect), super
-        .createCountAsteriskSelectList());
-    this.makeJoin(FilterBlockUtil.createSqlASTNode(PantheraExpParser.CROSS_VK, "cross"));
+    try{
+      CommonTree oldSelect = (CommonTree) subQNode.getChild(0).getChild(0);
+      bottomSelect = super.reCreateBottomSelect(oldSelect, super.createTableRefElement(bottomSelect), super
+          .createCountAsteriskSelectList());
+    } catch (NullPointerException e) {
+      throw new SqlXlateException(subQNode, "subquery is not complete.");
+    }
+    this.makeJoin(FilterBlockUtil.createSqlASTNode(subQNode, PantheraExpParser.CROSS_VK, "cross"));
     this.makeEnd();
-    super.reBuildNotExist4UCWhere(topSelect, (CommonTree) this.bottomAlias.getChild(0));
+    super.reBuildNotExist4UCWhere(subQNode.parent, topSelect, (CommonTree) this.bottomAlias.getChild(0));
   }
 }

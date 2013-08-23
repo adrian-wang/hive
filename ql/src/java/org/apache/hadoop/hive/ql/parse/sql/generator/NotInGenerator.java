@@ -31,7 +31,7 @@ public class NotInGenerator extends BaseHiveASTGenerator {
     ASTNode not = super.newHiveASTNode(HiveParser.KW_NOT, "NOT");
     super.attachHiveNode(hiveRoot, currentHiveNode, not);
     currentHiveNode = not;
-    return GeneratorFactory.getGenerator(PantheraExpParser.SQL92_RESERVED_IN).generateHiveAST(
+    return GeneratorFactory.getGenerator(currentSqlNode, PantheraExpParser.SQL92_RESERVED_IN).generateHiveAST(
         hiveRoot, sqlRoot, currentHiveNode, currentSqlNode, context);
 
   }

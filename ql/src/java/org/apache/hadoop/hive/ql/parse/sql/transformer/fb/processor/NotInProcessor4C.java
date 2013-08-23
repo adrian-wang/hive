@@ -44,7 +44,7 @@ public class NotInProcessor4C extends CommonFilterBlockProcessor {
         .getFirstChildWithType(PantheraExpParser.SELECT_LIST)).getChild(0).getChild(0).getChild(0);
     buildAnyElement(rightIn, bottomSelect);
 
-    CommonTree equal = FilterBlockUtil.createSqlASTNode(PantheraExpParser.EQUALS_OP, "=");
+    CommonTree equal = FilterBlockUtil.createSqlASTNode(subQNode, PantheraExpParser.EQUALS_OP, "=");
     equal.addChild(leftIn);
     equal.addChild(rightIn);
 
@@ -52,7 +52,7 @@ public class NotInProcessor4C extends CommonFilterBlockProcessor {
         .getFirstChildWithType(PantheraExpParser.SQL92_RESERVED_WHERE);
     CommonTree logicExpr = (CommonTree) where.getChild(0);
     CommonTree oldCondition = (CommonTree) logicExpr.deleteChild(0);
-    CommonTree and = FilterBlockUtil.createSqlASTNode(PantheraExpParser.SQL92_RESERVED_AND, "and");
+    CommonTree and = FilterBlockUtil.createSqlASTNode(subQNode, PantheraExpParser.SQL92_RESERVED_AND, "and");
     logicExpr.addChild(and);
     and.addChild(oldCondition);
     and.addChild(equal);
@@ -67,7 +67,7 @@ public class NotInProcessor4C extends CommonFilterBlockProcessor {
     int index = selectList.getChildIndex();
     bottomSelect.deleteChild(index);
     SqlXlateUtil.addCommonTreeChild(bottomSelect, index, FilterBlockUtil.createSqlASTNode(
-        PantheraExpParser.ASTERISK, "*"));
+        subQNode, PantheraExpParser.ASTERISK, "*"));
 
     super.processNotExistsCByLeftJoin();
   }

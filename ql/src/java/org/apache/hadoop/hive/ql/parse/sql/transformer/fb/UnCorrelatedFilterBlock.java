@@ -39,10 +39,10 @@ public class UnCorrelatedFilterBlock extends NormalFilterBlock {
       CommonTree condition = this.getASTNode();
       if (typeFB instanceof WhereFilterBlock) {
         CommonTree topSelect = fbContext.getQueryStack().peek().cloneSimpleQuery();
-        CommonTree where = FilterBlockUtil.createSqlASTNode(PantheraExpParser.SQL92_RESERVED_WHERE,
+        CommonTree where = FilterBlockUtil.createSqlASTNode(condition, PantheraExpParser.SQL92_RESERVED_WHERE,
             "where");
         topSelect.addChild(where);
-        CommonTree logicExpr = FilterBlockUtil.createSqlASTNode(PantheraExpParser.LOGIC_EXPR,
+        CommonTree logicExpr = FilterBlockUtil.createSqlASTNode(condition, PantheraExpParser.LOGIC_EXPR,
             "LOGIC_EXPR");
         where.addChild(logicExpr);
         logicExpr.addChild(condition);

@@ -203,8 +203,8 @@ public class CrossJoinTransformer extends BaseSqlASTTransformer {
           //
           // Create a new TRUE node and replace the current node with this new node.
           //
-          CommonTree trueNode = SqlXlateUtil.newSqlASTNode(
-              PantheraParser_PLSQLParser.SQL92_RESERVED_TRUE, "true");
+          CommonTree trueNode = FilterBlockUtil.createSqlASTNode(
+              node, PantheraParser_PLSQLParser.SQL92_RESERVED_TRUE, "true");
           node.getParent().setChild(node.getChildIndex(), trueNode);
           return;
         }
@@ -253,8 +253,8 @@ public class CrossJoinTransformer extends BaseSqlASTTransformer {
         //
         // Create a new TRUE node and replace the current node with this new node.
         //
-        CommonTree trueNode = SqlXlateUtil.newSqlASTNode(
-            PantheraParser_PLSQLParser.SQL92_RESERVED_TRUE, "true");
+        CommonTree trueNode = FilterBlockUtil.createSqlASTNode(
+            node, PantheraParser_PLSQLParser.SQL92_RESERVED_TRUE, "true");
         node.getParent().setChild(node.getChildIndex(), trueNode);
       }
     }
@@ -298,7 +298,7 @@ public class CrossJoinTransformer extends BaseSqlASTTransformer {
         if (col.getColAlias().equals(columnName)) {
           table = col.getTblAlias();
           // Add table leaf node because HIVE needs table name for join operation.
-          CommonTree tableNameNode = SqlXlateUtil.newSqlASTNode(PantheraParser_PLSQLParser.ID,
+          CommonTree tableNameNode = FilterBlockUtil.createSqlASTNode(anyElement, PantheraParser_PLSQLParser.ID,
               table);
           CommonTree columnNode = (CommonTree) anyElement.getChild(0);
           anyElement.setChild(0, tableNameNode);
@@ -365,7 +365,7 @@ public class CrossJoinTransformer extends BaseSqlASTTransformer {
     }
 
     if (!joinInfo.joinPairInfo.isEmpty() || !joinInfo.joinFilterInfo.isEmpty()) {
-      throw new SqlXlateException("Cross join transformer: bad cross join!");
+      throw new SqlXlateException(topTableRef, "Cross join transformer: bad cross join!");
     }
   }
 
@@ -383,9 +383,9 @@ public class CrossJoinTransformer extends BaseSqlASTTransformer {
       //
       // Generate the join condition sub-tree.
       //
-     CommonTree newOnNode = SqlXlateUtil.newSqlASTNode(
-          PantheraParser_PLSQLParser.SQL92_RESERVED_ON, "on");
-      logicExprNode = SqlXlateUtil.newSqlASTNode(PantheraParser_PLSQLParser.LOGIC_EXPR,
+     CommonTree newOnNode = FilterBlockUtil.createSqlASTNode(
+          joinNode, PantheraParser_PLSQLParser.SQL92_RESERVED_ON, "on");
+      logicExprNode = FilterBlockUtil.createSqlASTNode(joinNode, PantheraParser_PLSQLParser.LOGIC_EXPR,
           "LOGIC_EXPR");
       newOnNode.addChild(logicExprNode);
 
@@ -421,8 +421,8 @@ public class CrossJoinTransformer extends BaseSqlASTTransformer {
     }
 
     while (iterator.hasNext()) {
-      CommonTree andNode = SqlXlateUtil.newSqlASTNode(
-          PantheraParser_PLSQLParser.SQL92_RESERVED_AND, "and");
+      CommonTree andNode = FilterBlockUtil.createSqlASTNode(
+          expressionRoot, PantheraParser_PLSQLParser.SQL92_RESERVED_AND, "and");
       andNode.addChild(expressionRoot);
       andNode.addChild(iterator.next());
       expressionRoot = andNode;

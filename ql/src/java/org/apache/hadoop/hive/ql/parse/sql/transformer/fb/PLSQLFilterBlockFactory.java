@@ -101,7 +101,7 @@ public class PLSQLFilterBlockFactory extends FilterBlockFactory {
         if (correlated) {
           return true;
         }
-        throw new SqlXlateException("Correlated level is more than 2");
+        throw new SqlXlateException((CommonTree) child.getChild(0), "Correlated level is more than 2");
       } else {// only columnName
         String columnName = child.getChild(0).getText();
         CommonTree bottomSelect = selectStack.pop();
@@ -123,7 +123,7 @@ public class PLSQLFilterBlockFactory extends FilterBlockFactory {
             return true;
           }
         }
-        throw new SqlXlateException("Correlated level is more than 2");
+        throw new SqlXlateException((CommonTree) child.getChild(0), "Correlated level is more than 2");
       }
     }
 
@@ -158,7 +158,8 @@ public class PLSQLFilterBlockFactory extends FilterBlockFactory {
           if (correlated) {
             return true;
           }
-          throw new SqlXlateException("Correlated level is more than 2");
+          //FIXME here add appropriate node
+          throw new SqlXlateException(null, "Correlated level is more than 2");
         }
       }
     }

@@ -34,11 +34,11 @@ public class AsteriskGenerator extends BaseHiveASTGenerator {
       //
       assert (currentSqlNode.getChildCount() == 2);
       ASTNode ret = SqlXlateUtil.newASTNode(HiveParser.STAR, "*");
-      SqlXlateUtil.attachChild(currentHiveNode, ret);
-      return generateChildren(hiveRoot, sqlRoot, ret, currentSqlNode, context);      
+      currentHiveNode.addChild(ret);
+      return generateChildren(hiveRoot, sqlRoot, ret, currentSqlNode, context);
     } else {
       ASTNode ret = super.buildAllColRef();
-      SqlXlateUtil.attachChild(currentHiveNode, ret);
+      currentHiveNode.addChild(ret);
       return true;
     }
   }

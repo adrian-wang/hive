@@ -22,8 +22,8 @@ import java.util.Stack;
 import org.antlr33.runtime.tree.CommonTree;
 import org.apache.hadoop.hive.ql.parse.sql.PantheraExpParser;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
-import org.apache.hadoop.hive.ql.parse.sql.SqlXlateUtil;
 import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
+import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.FilterBlockUtil;
 
 import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
 
@@ -80,12 +80,13 @@ public class RowNumTransformer  extends BaseSqlASTTransformer  {
             //
             // Create a limit token and attach it to the select node as the last child.
             //
-            CommonTree limit = SqlXlateUtil.newSqlASTNode(PantheraExpParser.LIMIT_VK, "limit");
+            CommonTree limit = FilterBlockUtil.createSqlASTNode(operator, PantheraExpParser.LIMIT_VK, "limit");
             node.addChild(limit);
             //
             // Create a UNSIGNED_INTEGER token and attach it to the limit token.
             //
-            CommonTree limitNum = SqlXlateUtil.newSqlASTNode(PantheraExpParser.UNSIGNED_INTEGER, Integer.toString(rownum));
+            CommonTree limitNum = FilterBlockUtil.createSqlASTNode(
+                (CommonTree) operator.getChild(1), PantheraExpParser.UNSIGNED_INTEGER, Integer.toString(rownum));
             limit.addChild(limitNum);
             //
             // Delete the where child.

@@ -99,7 +99,7 @@ public abstract class BaseHiveASTGenerator implements HiveASTGenerator {
 
   void attachHiveNode(ASTNode hiveRoot, ASTNode currentHiveNode,
       ASTNode ret) {
-    SqlXlateUtil.attachChild(currentHiveNode, ret);
+    currentHiveNode.addChild(ret);
     if (hiveRoot != null && (hiveRoot.getChildren() == null || hiveRoot.getChildren().size() == 0)) {
       hiveRoot.addChild(currentHiveNode);
     }
@@ -108,9 +108,9 @@ public abstract class BaseHiveASTGenerator implements HiveASTGenerator {
   ASTNode buildTmpDestinationNode() {
     ASTNode desNode = SqlXlateUtil.newASTNode(HiveParser.TOK_DESTINATION, "TOK_DESTINATION");
     ASTNode dirNode = SqlXlateUtil.newASTNode(HiveParser.TOK_DIR, "TOK_DIR");
-    SqlXlateUtil.attachChild(desNode, dirNode);
+    desNode.addChild(dirNode);
     ASTNode tmpNode = SqlXlateUtil.newASTNode(HiveParser.TOK_TMP_FILE, "TOK_TMP_FILE");
-    SqlXlateUtil.attachChild(dirNode, tmpNode);
+    dirNode.addChild(tmpNode);
     return desNode;
 
   }
@@ -118,9 +118,9 @@ public abstract class BaseHiveASTGenerator implements HiveASTGenerator {
   ASTNode buildAllColRef() {
     ASTNode select = SqlXlateUtil.newASTNode(HiveParser.TOK_SELECT, "TOK_SELECT");
     ASTNode selExpr = SqlXlateUtil.newASTNode(HiveParser.TOK_SELEXPR, "TOK_SELEXPR");
-    SqlXlateUtil.attachChild(select, selExpr);
+    select.addChild(selExpr);
     ASTNode allColRef = SqlXlateUtil.newASTNode(HiveParser.TOK_ALLCOLREF, "TOK_ALLCOLREF");
-    SqlXlateUtil.attachChild(selExpr, allColRef);
+    selExpr.addChild(allColRef);
     return select;
   }
 

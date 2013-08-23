@@ -98,7 +98,7 @@ public class AndFilterBlock extends LogicFilterBlock {
             for (int k = 0; k < anyElement.getChildCount(); k++) {
               anyElement.deleteChild(k);
             }
-            CommonTree newColumn = FilterBlockUtil.createSqlASTNode(PantheraExpParser.ID, alias);
+            CommonTree newColumn = FilterBlockUtil.createSqlASTNode((CommonTree) selectItem.getChild(1).getChild(0), PantheraExpParser.ID, alias);
             anyElement.addChild(newColumn);
           }
         }

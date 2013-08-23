@@ -31,6 +31,7 @@ import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateUtil;
 import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
 import org.apache.hadoop.hive.ql.parse.sql.transformer.QueryInfo.Column;
+import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.FilterBlockUtil;
 
 import br.com.porcelli.parser.plsql.PantheraParser_PLSQLParser;
 
@@ -241,8 +242,8 @@ public class PrepareQueryInfoTransformer extends BaseSqlASTTransformer {
           aliasNode = SqlXlateUtil.newASTNode(HiveParser.Identifier, aliasGen
               .generateAliasName());
           // Create a new SqlASTNode for alias for convinient processing later.
-          CommonTree sqlAliasNode = SqlXlateUtil.newSqlASTNode(PantheraParser_PLSQLParser.ALIAS, "ALIAS");
-          sqlAliasNode.addChild(SqlXlateUtil.newSqlASTNode(PantheraParser_PLSQLParser.ID, aliasNode.getText()));
+          CommonTree sqlAliasNode = FilterBlockUtil.createSqlASTNode(src, PantheraParser_PLSQLParser.ALIAS, "ALIAS");
+          sqlAliasNode.addChild(FilterBlockUtil.createSqlASTNode(src, PantheraParser_PLSQLParser.ID, aliasNode.getText()));
           // Attach it to the TABLE_REF_ELEMENT node as the first child.
           assert(src.getChildCount() == 1);
           CommonTree tmpNode = (CommonTree) src.getChild(0);

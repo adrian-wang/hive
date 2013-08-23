@@ -20,7 +20,6 @@ package org.apache.hadoop.hive.ql.parse.sql.generator;
 import org.antlr33.runtime.tree.CommonTree;
 import org.apache.hadoop.hive.ql.parse.ASTNode;
 import org.apache.hadoop.hive.ql.parse.HiveParser;
-import org.apache.hadoop.hive.ql.parse.sql.SqlXlateUtil;
 import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
 
 public class PostCascatedElementGenerator extends BaseHiveASTGenerator {
@@ -31,12 +30,12 @@ public class PostCascatedElementGenerator extends BaseHiveASTGenerator {
     if (currentHiveNode.getChildCount() == 2&&currentHiveNode.getType()==HiveParser.TOK_SELEXPR) {
 
       ASTNode dot = super.newHiveASTNode(HiveParser.DOT, ".");
-      SqlXlateUtil.attachChild(dot, (ASTNode) currentHiveNode.getChild(0));
+      dot.addChild((ASTNode) currentHiveNode.getChild(0));
       // if children count == 2 the second should only be text element
-      SqlXlateUtil.attachChild(dot, (ASTNode) currentHiveNode.getChild(1).getChild(0));
+      dot.addChild((ASTNode) currentHiveNode.getChild(1).getChild(0));
       currentHiveNode.deleteChild(0);
       currentHiveNode.deleteChild(0);
-      SqlXlateUtil.attachChild(currentHiveNode, dot);
+      currentHiveNode.addChild(dot);
       LOG.debug("Generated Cascated Element : " + dot.toStringTree());
       return true;
     }

@@ -18,8 +18,10 @@
 
 package org.apache.hadoop.hive.ql.parse.sql;
 
+import org.antlr33.runtime.tree.CommonTree;
+
 /**
- * 
+ *
  * Exceptions thrown at Translation phase.
  *
  */
@@ -27,21 +29,62 @@ public class SqlXlateException extends Exception {
 
   private static final long serialVersionUID = 1L;
 
+  public CommonTree node = null;
   /**
    * Constructor.
-   * 
-   * @param e wrapped exception
+   *
+   * @param e the associated exception thrown from Sql Parser
    */
-  public SqlXlateException(Exception e){
+  public SqlXlateException(SqlXlateException e) {
     super(e);
+    this.node = e.node;
   }
-  
-  /**
-   * Constructor.
-   * 
-   * @param msg the error message
-   */
-  public SqlXlateException(String msg){
-    super(msg);
+
+  public SqlXlateException(CommonTree node, Exception e) {
+    super(e);
+    this.node = node;
   }
+
+  public SqlXlateException(CommonTree node) {
+    super(commonTreeTrace(node));
+    this.node = node;
+  }
+
+  public SqlXlateException(CommonTree node, String msg) {
+    super(msg + ":" + commonTreeTrace(node));
+    this.node = node;
+  }
+
+  public void outputException(String origin) {
+    if (this.node == null) {
+      return ;
+    }
+    int linenum = this.node.getLine() - 1;
+    if (linenum == -1) {
+      System.out.println("Error node '"+ this.node.getText().toUpperCase() + "': " + this.toString()) ;
+      return ;
+    }
+    String[] linetext = origin.split("\n");
+    linetext[linetext.length - 1] += " ;";
+    String lineptr = linetext[linenum].replaceAll(".", " ");
+    int i = 0;
+    for(; i <= linenum; i++) {
+      System.out.println(linetext[i].toUpperCase());
+    }
+    System.out.println(lineptr.subSequence(0, this.node.getCharPositionInLine()) + "^" +
+        lineptr.subSequence(this.node.getCharPositionInLine() + 1, lineptr.length()));
+    for(; i < linetext.length; i++) {
+      System.out.println(linetext[i].toUpperCase());
+    }
+    System.out.println("Error node '"+ this.node.getText().toUpperCase() + "': " + this.toString());
+  }
+
+  private static String commonTreeTrace(CommonTree node) {
+    // TODO Improve this
+    if(node == null) {
+      return "";
+    }
+    return "Error(s) near line " + node.getLine() + ":" + node.getCharPositionInLine();
+  }
+
 }

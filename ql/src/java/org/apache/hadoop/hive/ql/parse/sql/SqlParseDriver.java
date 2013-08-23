@@ -266,6 +266,15 @@ public class SqlParseDriver {
       LOG.error("SQL parse Error :" + e.toString());
       throw new SqlParseException(e);
     }
+    //check the tree
+    SqlASTChecker checker = new SqlASTChecker();
+    try {
+      checker.checkSqlAST(r.getTree());
+    } catch (SqlXlateException e) {
+      LOG.error("SQL parse Error :" + e.toString());
+      e.outputException(command);
+      throw e;
+    }
     LOG.info("Parsing Completed.");
 
     // Translate phase
@@ -277,7 +286,8 @@ public class SqlParseDriver {
       trans = new SqlASTTranslator(this.conf);
       hiveAST = trans.translate(sqlAST);
     } catch (SqlXlateException e) {
-      LOG.error("SQL transform error :" + e.toString());
+      LOG.error("SQL transform error: " + e.toString());
+      e.outputException(command);
       throw e;
     }
     LOG.info("Hive AST after translation : " + hiveAST.toStringTree());

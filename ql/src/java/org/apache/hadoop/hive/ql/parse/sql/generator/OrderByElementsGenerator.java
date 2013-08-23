@@ -28,9 +28,9 @@ public class OrderByElementsGenerator extends BaseHiveASTGenerator {
   @Override
   public boolean generate(ASTNode hiveRoot, CommonTree sqlRoot, ASTNode currentHiveNode,
       CommonTree currentSqlNode, TranslateContext context) throws Exception {
-    ASTNode ret = SqlXlateUtil.newASTNode(HiveParser.TOK_ORDERBY,"TOK_ORDERBY");
-    assert(currentHiveNode.getChild(0).getType()==HiveParser.TOK_QUERY);
-    super.attachHiveNode(hiveRoot, (ASTNode)currentHiveNode.getChild(0).getChild(1), ret);
+    ASTNode ret = SqlXlateUtil.newASTNode(HiveParser.TOK_ORDERBY, "TOK_ORDERBY");
+    ASTNode tokQuery = (ASTNode) currentHiveNode.getFirstChildWithType(HiveParser.TOK_QUERY);
+    super.attachHiveNode(hiveRoot, (ASTNode) tokQuery.getChild(1), ret);
     return super.generateChildren(hiveRoot, sqlRoot, ret, currentSqlNode, context);
   }
 

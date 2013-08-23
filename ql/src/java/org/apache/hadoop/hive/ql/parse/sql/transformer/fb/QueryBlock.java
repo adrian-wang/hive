@@ -83,7 +83,7 @@ public class QueryBlock extends BaseFilterBlock {
       }
       if (selectList != null && aggregationList != null) {
         if (selectList.getChildCount() != aggregationList.size()) {
-          throw new SqlXlateException("mismatch select item's size after transformed.");
+          throw new SqlXlateException(selectList, "mismatch select item's size after transformed.");
         }
         for (int i = 0; i < selectList.getChildCount(); i++) {
           CommonTree func = aggregationList.get(i);
@@ -108,10 +108,11 @@ public class QueryBlock extends BaseFilterBlock {
           } else if (select.getFirstChildWithType(PantheraExpParser.SELECT_LIST) != null) {
             position = select.getFirstChildWithType(PantheraExpParser.SELECT_LIST).getChildIndex();
           } else {
-            throw new SqlXlateException("No select list");
+            throw new SqlXlateException(select, "No select list");
           }
           select.deleteChild(position);
-          selectList = FilterBlockUtil.createSqlASTNode(PantheraExpParser.SELECT_LIST,
+          selectList = FilterBlockUtil.createSqlASTNode(countAsterisk
+              .getSelectItem(), PantheraExpParser.SELECT_LIST,
               "SELECT_LIST");
           SqlXlateUtil.addCommonTreeChild(select, position, selectList);
 

@@ -85,9 +85,9 @@ public class NotEqualJoinTransformer extends BaseSqlASTTransformer {
     CommonTree selectList = (CommonTree) select
         .getFirstChildWithType(PantheraExpParser.SELECT_LIST);
     CommonTree on = FilterBlockUtil.findOnlyNode(join, PantheraExpParser.SQL92_RESERVED_ON);
-    CommonTree where = FilterBlockUtil.createSqlASTNode(PantheraExpParser.SQL92_RESERVED_WHERE,
+    CommonTree where = FilterBlockUtil.createSqlASTNode(on, PantheraExpParser.SQL92_RESERVED_WHERE,
         "where");
-    CommonTree logic = FilterBlockUtil.createSqlASTNode(PantheraExpParser.LOGIC_EXPR, "LOGIC_EXPR");
+    CommonTree logic = FilterBlockUtil.createSqlASTNode(on, PantheraExpParser.LOGIC_EXPR, "LOGIC_EXPR");
     where.addChild(logic);
     select.addChild(where);
     assert (on != null && selectList != null && tableAlias != null);
@@ -123,13 +123,13 @@ public class NotEqualJoinTransformer extends BaseSqlASTTransformer {
       }
       // correlated equal condition,group by it, only process one condition now.
       if (bottomKeys != null && topKeys != null && op.getType() == PantheraExpParser.EQUALS_OP) {
-        CommonTree group = FilterBlockUtil.createSqlASTNode(PantheraExpParser.SQL92_RESERVED_GROUP,
+        CommonTree group = FilterBlockUtil.createSqlASTNode(op, PantheraExpParser.SQL92_RESERVED_GROUP,
             "group");
         select.addChild(group);
         CommonTree groupByElement = FilterBlockUtil.createSqlASTNode(
-            PantheraExpParser.GROUP_BY_ELEMENT, "GROUP_BY_ELEMENT");
+            op, PantheraExpParser.GROUP_BY_ELEMENT, "GROUP_BY_ELEMENT");
         group.addChild(groupByElement);
-        CommonTree expr = FilterBlockUtil.createSqlASTNode(PantheraExpParser.EXPR, "EXPR");
+        CommonTree expr = FilterBlockUtil.createSqlASTNode(op, PantheraExpParser.EXPR, "EXPR");
         groupByElement.addChild(expr);
         CommonTree cascatedElement = FilterBlockUtil.cloneTree((CommonTree) bottomKeys.get(0));
         cascatedElement.getChild(0).deleteChild(0);
@@ -167,20 +167,20 @@ public class NotEqualJoinTransformer extends BaseSqlASTTransformer {
           countAlias.getToken().setText(countAliasStr);
           CommonTree countCascatedElement = (CommonTree) countSelectItem.getChild(0).deleteChild(0);
           CommonTree countStandardFunction = FilterBlockUtil.createSqlASTNode(
-              PantheraParser_PLSQLParser.STANDARD_FUNCTION, "STANDARD_FUNCTION");
+              notEqualNode, PantheraParser_PLSQLParser.STANDARD_FUNCTION, "STANDARD_FUNCTION");
           CommonTree function = FilterBlockUtil.createSqlASTNode(
-              PantheraParser_PLSQLParser.COUNT_VK, "count");
-          FilterBlockUtil.attachChild(countStandardFunction, function);
-          CommonTree expr = FilterBlockUtil.createSqlASTNode(PantheraParser_PLSQLParser.EXPR,
+              notEqualNode, PantheraParser_PLSQLParser.COUNT_VK, "count");
+          countStandardFunction.addChild(function);
+          CommonTree expr = FilterBlockUtil.createSqlASTNode(notEqualNode, PantheraParser_PLSQLParser.EXPR,
               "EXPR");
-          FilterBlockUtil.attachChild(function, expr);
-          FilterBlockUtil.attachChild(expr, countCascatedElement);
+          function.addChild(expr);
+          expr.addChild(countCascatedElement);
           countSelectItem.getChild(0).addChild(countStandardFunction);
           selectList.addChild(countSelectItem);
 
           // max
           CommonTree maxCascatedElement = (CommonTree) selectItem.getChild(0).deleteChild(0);
-          CommonTree standardFunction = FilterBlockUtil.createFunction("max", maxCascatedElement);
+          CommonTree standardFunction = FilterBlockUtil.createFunction(notEqualNode, "max", maxCascatedElement);
           selectItem.getChild(0).addChild(standardFunction);
         }
       }
@@ -189,22 +189,22 @@ public class NotEqualJoinTransformer extends BaseSqlASTTransformer {
       notEqualNode.getToken().setType(PantheraExpParser.EQUALS_OP);
       notEqualNode.getToken().setText("=");
 
-      CommonTree equal = FilterBlockUtil.createSqlASTNode(PantheraExpParser.EQUALS_OP, "=");
-      CommonTree cascated = FilterBlockUtil.createSqlASTNode(PantheraExpParser.CASCATED_ELEMENT,
+      CommonTree equal = FilterBlockUtil.createSqlASTNode(notEqualNode, PantheraExpParser.EQUALS_OP, "=");
+      CommonTree cascated = FilterBlockUtil.createSqlASTNode(notEqualNode, PantheraExpParser.CASCATED_ELEMENT,
           "CASCATED_ELEMENT");
       equal.addChild(cascated);
-      CommonTree anyElement = FilterBlockUtil.createSqlASTNode(PantheraExpParser.ANY_ELEMENT,
+      CommonTree anyElement = FilterBlockUtil.createSqlASTNode(notEqualNode, PantheraExpParser.ANY_ELEMENT,
           "ANY_ELEMENT");
       cascated.addChild(anyElement);
-      CommonTree id = FilterBlockUtil.createSqlASTNode(PantheraExpParser.ID, countAliasStr);
+      CommonTree id = FilterBlockUtil.createSqlASTNode(notEqualNode, PantheraExpParser.ID, countAliasStr);
       anyElement.addChild(id);
-      CommonTree one = FilterBlockUtil.createSqlASTNode(PantheraExpParser.UNSIGNED_INTEGER, "1");
+      CommonTree one = FilterBlockUtil.createSqlASTNode(notEqualNode, PantheraExpParser.UNSIGNED_INTEGER, "1");
       equal.addChild(one);
       CommonTree and = FilterBlockUtil
-          .createSqlASTNode(PantheraExpParser.SQL92_RESERVED_AND, "and");
+          .createSqlASTNode(notEqualNode, PantheraExpParser.SQL92_RESERVED_AND, "and");
       and.addChild(equal);
       and.addChild(notEqualNode);
-      CommonTree or = FilterBlockUtil.createSqlASTNode(PantheraExpParser.SQL92_RESERVED_OR, "or");
+      CommonTree or = FilterBlockUtil.createSqlASTNode(notEqualNode, PantheraExpParser.SQL92_RESERVED_OR, "or");
       or.addChild(and);
       CommonTree oldCondition = (CommonTree) whereLogicExpr.deleteChild(0);
       or.addChild(oldCondition);
@@ -270,7 +270,7 @@ public class NotEqualJoinTransformer extends BaseSqlASTTransformer {
         getWhereKey(currentTableAlias, (CommonTree) filterOp.getChild(i), list);
       }
     } else {
-      throw new SqlXlateException("unknow filter operation:" + filterOp.getText());
+      throw new SqlXlateException(filterOp, "unknow filter operation:" + filterOp.getText());
     }
 
   }

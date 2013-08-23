@@ -87,15 +87,15 @@ public class BetweenTransformer extends BaseSqlASTTransformer {
     }
     CommonTree leftOp;
     if (isNot) {
-      leftOp = FilterBlockUtil.createSqlASTNode(PantheraExpParser.LESS_THAN_OP, "<");
+      leftOp = FilterBlockUtil.createSqlASTNode(tree, PantheraExpParser.LESS_THAN_OP, "<");
     } else {
-      leftOp = FilterBlockUtil.createSqlASTNode(PantheraExpParser.GREATER_THAN_OR_EQUALS_OP, ">=");
+      leftOp = FilterBlockUtil.createSqlASTNode(tree, PantheraExpParser.GREATER_THAN_OR_EQUALS_OP, ">=");
     }
     CommonTree rightOp;
     if (isNot) {
-      rightOp = FilterBlockUtil.createSqlASTNode(PantheraExpParser.GREATER_THAN_OP, ">");
+      rightOp = FilterBlockUtil.createSqlASTNode(tree, PantheraExpParser.GREATER_THAN_OP, ">");
     } else {
-      rightOp = FilterBlockUtil.createSqlASTNode(PantheraExpParser.LESS_THAN_OR_EQUALS_OP, "<=");
+      rightOp = FilterBlockUtil.createSqlASTNode(tree, PantheraExpParser.LESS_THAN_OR_EQUALS_OP, "<=");
     }
     leftOp.addChild(leftColumn);
     for (CommonTree leftData : leftVarList) {
@@ -108,9 +108,9 @@ public class BetweenTransformer extends BaseSqlASTTransformer {
 
     CommonTree op;
     if (isNot) {
-      op = FilterBlockUtil.createSqlASTNode(PantheraExpParser.SQL92_RESERVED_OR, "or");
+      op = FilterBlockUtil.createSqlASTNode(tree, PantheraExpParser.SQL92_RESERVED_OR, "or");
     } else {
-      op = FilterBlockUtil.createSqlASTNode(PantheraExpParser.SQL92_RESERVED_AND, "and");
+      op = FilterBlockUtil.createSqlASTNode(tree, PantheraExpParser.SQL92_RESERVED_AND, "and");
     }
     op.addChild(leftOp);
     op.addChild(rightOp);

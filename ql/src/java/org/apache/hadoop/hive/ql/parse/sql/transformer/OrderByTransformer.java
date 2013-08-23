@@ -21,7 +21,6 @@ import java.util.List;
 
 import org.antlr33.runtime.tree.CommonTree;
 import org.apache.hadoop.hive.ql.parse.sql.SqlXlateException;
-import org.apache.hadoop.hive.ql.parse.sql.SqlXlateUtil;
 import org.apache.hadoop.hive.ql.parse.sql.TranslateContext;
 import org.apache.hadoop.hive.ql.parse.sql.transformer.QueryInfo.Column;
 import org.apache.hadoop.hive.ql.parse.sql.transformer.fb.FilterBlockUtil;
@@ -73,13 +72,13 @@ public class OrderByTransformer extends BaseSqlASTTransformer {
             try {
               column = selectRowInfo.get(seq);
             } catch (IndexOutOfBoundsException e) {
-              throw new SqlXlateException("Invalid column number in order by clause.");
+              throw new SqlXlateException(ct, "Invalid column number in order by clause.");
             }
-            CommonTree cascatedElement = SqlXlateUtil.newSqlASTNode(
-                PantheraParser_PLSQLParser.CASCATED_ELEMENT, "CASCATED_ELEMENT");
-            CommonTree anyElement = SqlXlateUtil.newSqlASTNode(
-                PantheraParser_PLSQLParser.ANY_ELEMENT, "ANY_ELEMENT");
-            CommonTree col = SqlXlateUtil.newSqlASTNode(PantheraParser_PLSQLParser.ID, column
+            CommonTree cascatedElement = FilterBlockUtil.createSqlASTNode(
+                ct, PantheraParser_PLSQLParser.CASCATED_ELEMENT, "CASCATED_ELEMENT");
+            CommonTree anyElement = FilterBlockUtil.createSqlASTNode(
+                ct, PantheraParser_PLSQLParser.ANY_ELEMENT, "ANY_ELEMENT");
+            CommonTree col = FilterBlockUtil.createSqlASTNode(ct, PantheraParser_PLSQLParser.ID, column
                 .getColAlias());
             expr.deleteChild(0);
             expr.addChild(cascatedElement);
@@ -90,18 +89,18 @@ public class OrderByTransformer extends BaseSqlASTTransformer {
             CommonTree alias = (CommonTree) item.getChild(1);
             if (alias == null) {
               // FIXME It should change output column name of result set.
-              alias = FilterBlockUtil.createSqlASTNode(PantheraParser_PLSQLParser.ALIAS, "ALIAS");
+              alias = FilterBlockUtil.createSqlASTNode(item, PantheraParser_PLSQLParser.ALIAS, "ALIAS");
               CommonTree aliasName = FilterBlockUtil.createSqlASTNode(
-                  PantheraParser_PLSQLParser.ID, "panthera_col_" + seq);
+                  item, PantheraParser_PLSQLParser.ID, "panthera_col_" + seq);
               alias.addChild(aliasName);
               item.addChild(alias);
             }
-            CommonTree cascatedElement = SqlXlateUtil.newSqlASTNode(
-                PantheraParser_PLSQLParser.CASCATED_ELEMENT, "CASCATED_ELEMENT");
-            CommonTree anyElement = SqlXlateUtil.newSqlASTNode(
-                PantheraParser_PLSQLParser.ANY_ELEMENT, "ANY_ELEMENT");
-            CommonTree col = SqlXlateUtil.newSqlASTNode(PantheraParser_PLSQLParser.ID, alias
-                .getChild(0).getText());
+            CommonTree col = FilterBlockUtil.createSqlASTNode(
+                (CommonTree) alias.getChild(0), PantheraParser_PLSQLParser.ID, alias.getChild(0).getText());
+            CommonTree cascatedElement = FilterBlockUtil.createSqlASTNode(
+                col, PantheraParser_PLSQLParser.CASCATED_ELEMENT, "CASCATED_ELEMENT");
+            CommonTree anyElement = FilterBlockUtil.createSqlASTNode(
+                col, PantheraParser_PLSQLParser.ANY_ELEMENT, "ANY_ELEMENT");
             cascatedElement.addChild(anyElement);
             anyElement.addChild(col);
             expr.deleteChild(0);

@@ -131,7 +131,7 @@ public abstract class FilterBlockFactory {
         return fbl.get(0);
       }
       if (fbl.size() > 1) {
-        throw new SqlXlateException("Error to prepare filter block: " + node.getType()
+        throw new SqlXlateException(node, "Error to prepare filter block: " + node.getType()
             + node.getText());
       }
       return null;
@@ -142,7 +142,7 @@ public abstract class FilterBlockFactory {
   FilterBlock buildLogicOp(CommonTree node, List<FilterBlock> fbl, int type)
       throws SqlXlateException {
     if (fbl == null || fbl.size() != 2) {
-      throw new SqlXlateException("Error to prepare filter block: " + node.getType()
+      throw new SqlXlateException(node, "Error to prepare filter block: " + node.getType()
           + node.getText());
     }
     FilterBlock fb;
@@ -165,7 +165,7 @@ public abstract class FilterBlockFactory {
         fb = new OrFilterBlock();
         break;
       default:
-        throw new SqlXlateException("Error to prepare filter block: " + node.getType()
+        throw new SqlXlateException(node, "Error to prepare filter block: " + node.getType()
             + node.getText());
       }
 
@@ -212,7 +212,7 @@ public abstract class FilterBlockFactory {
         }
       }
       if (fbl.size() > 0) {
-        throw new SqlXlateException("Error to prepare filter block: " + node.getType()
+        throw new SqlXlateException(null, "Error to prepare filter block: " + node.getType()
             + node.getText());
       }
       boolean correlated = false;
@@ -308,7 +308,7 @@ public abstract class FilterBlockFactory {
     public FilterBlock build(QueryInfo node, Stack<CommonTree> selectStack, CommonTree node2,
         List<FilterBlock> fbl) throws SqlXlateException {
       if (fbl.isEmpty() || fbl.size() > 1) {
-        throw new SqlXlateException("Error to prepare filter block:error NOT logic ");
+        throw new SqlXlateException(null, "Error to prepare filter block:error NOT logic ");
       }
       FilterBlock fb = fbl.get(0);
       CommonTree astNode = (CommonTree) fb.getASTNode();
@@ -345,7 +345,7 @@ public abstract class FilterBlockFactory {
         // EXIST -> NOT EXISTS
         else {
           CommonTree notNode = FilterBlockUtil.createSqlASTNode(
-              PantheraExpParser.SQL92_RESERVED_NOT, "not");
+              astNode, PantheraExpParser.SQL92_RESERVED_NOT, "not");
           int position = astNode.childIndex;
           parent.deleteChild(position);
           notNode.addChild(astNode);
@@ -411,7 +411,7 @@ public abstract class FilterBlockFactory {
         astNode.getToken().setText("IS_NULL");
         break;
       default:
-        throw new SqlXlateException("Unsupported logic express in NOT:" + astNode.getText());
+        throw new SqlXlateException(astNode, "Unsupported logic express in NOT:" + astNode.getText());
       }
 
     }

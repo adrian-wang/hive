@@ -25,6 +25,8 @@ import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.parse.ASTNode;
 import org.apache.hadoop.hive.ql.parse.sql.generator.GeneratorFactory;
 import org.apache.hadoop.hive.ql.parse.sql.generator.HiveASTGenerator;
+import org.apache.hadoop.hive.ql.parse.sql.generator.text.QueryTextGenerator;
+import org.apache.hadoop.hive.ql.parse.sql.generator.text.TextGeneratorFactory;
 import org.apache.hadoop.hive.ql.parse.sql.transformer.SqlASTTransformer;
 import org.apache.hadoop.hive.ql.parse.sql.transformer.TransformerBuilder;
 
@@ -67,6 +69,17 @@ public class SqlASTTranslator {
     transformer.transformAST(sqlASTRoot, context);
     LOG.info("Transformed SQL AST : " + sqlASTRoot.toStringTree());
 
+    QueryTextGenerator tg = TextGeneratorFactory.getTextGenerator(sqlASTRoot);
+    String recoveredQuery = "";
+    try {
+      recoveredQuery += tg.textGenerateQuery(sqlASTRoot, context);
+    } catch (Exception tgEx) {
+      LOG.error(tgEx.getMessage());
+      recoveredQuery +=  "Failed.";
+      //throw new SqlXlateException(tgEx);
+    }
+    LOG.info("Rebuilded SQL Query : " + recoveredQuery);
+
     HiveASTGenerator generator = GeneratorFactory.getGenerator(sqlASTRoot);
     ASTNode hiveTopNode = new ASTNode();
     try {
@@ -78,7 +91,7 @@ public class SqlASTTranslator {
       // System.out.println("--------"+(e-b));
     } catch (Exception e) {
       LOG.error(e.getMessage());
-      throw new SqlXlateException(e);
+      throw new SqlXlateException(null, e);
     }
 
     ret = (ASTNode) hiveTopNode.getChild(0);

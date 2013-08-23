@@ -38,19 +38,17 @@ public class OrFilterBlock extends LogicFilterBlock {
     CommonTree rightSelect = this.getChildren().get(1).getTransformedNode();
     CommonTree topSelect = this.buildUnionSelect(leftSelect, rightSelect, context);
 
-    CommonTree leftSelectList = (CommonTree) leftSelect
-        .getFirstChildWithType(PantheraExpParser.SELECT_LIST);
-    topSelect.addChild(FilterBlockUtil.cloneSelectListByAlias(leftSelectList));
+    topSelect.addChild(FilterBlockUtil.cloneSelectListByAliasFromSelect(leftSelect));
     this.setTransformedNode(topSelect);
   }
 
   private CommonTree buildUnionSelect(CommonTree leftSelect, CommonTree rightSelect,
       TranslateContext context) {
-    CommonTree union = FilterBlockUtil.createSqlASTNode(PantheraExpParser.SQL92_RESERVED_UNION,
+    CommonTree union = FilterBlockUtil.createSqlASTNode(this.getASTNode(), PantheraExpParser.SQL92_RESERVED_UNION,
         "union");
     union.addChild(rightSelect);
     CommonTree topSelect = FilterBlockUtil.createSqlASTNode(
-        PantheraParser_PLSQLParser.SQL92_RESERVED_SELECT, "select");
+        this.getASTNode(), PantheraParser_PLSQLParser.SQL92_RESERVED_SELECT, "select");
     CommonTree subquery = FilterBlockUtil.makeSelectBranch(topSelect, context);
     subquery.addChild(leftSelect);
     subquery.addChild(union);

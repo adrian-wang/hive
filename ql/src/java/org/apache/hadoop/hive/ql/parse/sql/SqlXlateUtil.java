@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
+import org.antlr33.runtime.CommonToken;
 import org.antlr33.runtime.tree.CommonTree;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.logging.Log;
@@ -98,60 +99,8 @@ public final class SqlXlateUtil {
     return newASTNode(other.getToken());
   }
 
-  /**
-   * Set the parent child relation ship between two nodes
-   *
-   * @param parent
-   * @param child
-   */
-  public static void attachChild(ASTNode parent, ASTNode child) {
-    assert (parent != null);
-    if (child == null) {
-      return;
-    }
-    parent.addChild(child);
-  }
-
-  /**
-   * Set the parent child relation ship between two nodes
-   *
-   * @param parent
-   * @param child
-   */
-  public static void attachChild(SqlASTNode parent, SqlASTNode child) {
-    assert (parent != null);
-    if (child == null) {
-      return;
-    }
-    parent.addChild(child);
-  }
-
-  /**
-   * Create a new SqlASTNode
-   *
-   * @param token
-   *          token for CommonTree
-   * @return a new SqlASTNode
-   */
-  public static SqlASTNode newSqlASTNode(org.antlr33.runtime.Token token) {
-    SqlASTNode n = new SqlASTNode(token);
-    LOG.debug("creating SqlASTNode :" + n.toString());
-    return n;
-  }
-
   public static SqlASTNode newSqlASTNode(SqlASTNode src) {
-    return new SqlASTNode(src.getToken());
-  }
-
-  /**
-   * Create a new SqlASTNode
-   *
-   * @param tokenType
-   * @param tokenStr
-   * @return
-   */
-  public static SqlASTNode newSqlASTNode(int tokenType, String tokenStr) {
-    return newSqlASTNode(new org.antlr33.runtime.CommonToken(tokenType, tokenStr));
+    return new SqlASTNode(new CommonToken(src.getToken()));
   }
 
   /**
@@ -163,7 +112,7 @@ public final class SqlXlateUtil {
    */
   public static void error(SqlASTNode src) throws SqlXlateException {
     LOG.error("Unsupported grammar starting at :" + src.toStringTree());
-    throw new SqlXlateException("Error when Transformaing PLSQL AST node - type:"
+    throw new SqlXlateException((CommonTree) src, "Error when Transformaing PLSQL AST node - type:"
         + src.getToken().getType() + ", text:" + src.getText());
   }
 
@@ -565,8 +514,8 @@ public final class SqlXlateUtil {
     } else if (right == null) {
       return left;
     } else {
-      SqlXlateUtil.attachChild(op, left);
-      SqlXlateUtil.attachChild(op, right);
+      op.addChild(left);
+      op.addChild(right);
       return op;
     }
   }
@@ -580,7 +529,7 @@ public final class SqlXlateUtil {
   public static ASTNode duplicateSubTree(ASTNode src) {
     ASTNode newNode = SqlXlateUtil.newASTNode(src);
     for (int i = 0; i < src.getChildCount(); i++) {
-      SqlXlateUtil.attachChild(newNode, duplicateSubTree((ASTNode) src.getChild(i)));
+      newNode.addChild(duplicateSubTree((ASTNode) src.getChild(i)));
     }
     return newNode;
   }
@@ -594,7 +543,7 @@ public final class SqlXlateUtil {
   public static SqlASTNode duplicateSubTree(SqlASTNode src) {
     SqlASTNode newNode = SqlXlateUtil.newSqlASTNode(src);
     for (int i = 0; i < src.getChildCount(); i++) {
-      SqlXlateUtil.attachChild(newNode, duplicateSubTree((SqlASTNode) src.getChild(i)));
+      newNode.addChild(duplicateSubTree((SqlASTNode) src.getChild(i)));
     }
     return newNode;
   }
@@ -620,11 +569,11 @@ public final class SqlXlateUtil {
 
     if (!tabAlias.isEmpty()) {
       ASTNode dot = SqlXlateUtil.newASTNode(HiveParser.DOT, ".");
-      SqlXlateUtil.attachChild(dot, item);
-      SqlXlateUtil.attachChild(item, SqlXlateUtil.newASTNode(HiveParser.Identifier, tabAlias));
+      dot.addChild(item);
+      item.addChild(SqlXlateUtil.newASTNode(HiveParser.Identifier, tabAlias));
       item = dot;
     }
-    SqlXlateUtil.attachChild(item, SqlXlateUtil.newASTNode(HiveParser.Identifier, colAlias));
+    item.addChild(SqlXlateUtil.newASTNode(HiveParser.Identifier, colAlias));
     return item;
   }
 
@@ -715,7 +664,7 @@ public final class SqlXlateUtil {
         db = Hive.get(conf);
         tblRRMap = new HashMap<String, RowResolver>();
       } catch (HiveException e) {
-        throw new SqlXlateException("HiveException thrown : " + e);
+        throw new SqlXlateException(null, "HiveException thrown : " + e);
       }
     }
 
@@ -730,7 +679,7 @@ public final class SqlXlateUtil {
       try {
         return db.getTable(tabName);
       } catch (HiveException e) {
-        throw new SqlXlateException("HiveException thrown : " + e);
+        throw new SqlXlateException(null, "HiveException thrown : " + e);
       }
     }
 
@@ -745,7 +694,7 @@ public final class SqlXlateUtil {
       try {
         return db.getTable(dbName, tabName);
       } catch (HiveException e) {
-        throw new SqlXlateException("HiveException thrown : " + e);
+        throw new SqlXlateException(null, "HiveException thrown : " + e);
       }
     }
 
@@ -772,7 +721,7 @@ public final class SqlXlateUtil {
           return rr;
         }
       } catch (HiveException e) {
-        throw new SqlXlateException("HiveException thrown : " + e);
+        throw new SqlXlateException(null, "HiveException thrown : " + e);
       }
     }
 
@@ -795,7 +744,7 @@ public final class SqlXlateUtil {
           return rr;
         }
       } catch (HiveException e) {
-        throw new SqlXlateException("HiveException thrown : " + e);
+        throw new SqlXlateException(null, "HiveException thrown : " + e);
       }
     }
 
@@ -875,23 +824,6 @@ public final class SqlXlateUtil {
   }
 
   /**
-   * Add NOT node to the top of ast
-   *
-   * @param rawFilterExpr
-   * @param b
-   * @return
-   */
-  public static SqlASTNode revertFilter(SqlASTNode src, boolean duplicate) {
-    if (duplicate) {
-      src = duplicateSubTree(src);
-    }
-    SqlASTNode not = newSqlASTNode(PantheraParser_PLSQLParser.SQL92_RESERVED_NOT, "not");
-    not.setQueryInfo(src.getQueryInfo());
-    SqlXlateUtil.attachChild(not, src);
-    return not;
-  }
-
-  /**
    * exchange left & right branch<br>
    * if only one branch, no effect.
    *
@@ -954,9 +886,7 @@ public final class SqlXlateUtil {
       parent.getChildren().add(index, child);
       child.setParent(parent);
       child.setChildIndex(index);
-      for (int i = index + 1; i < parent.getChildCount(); i++) {
-        parent.getChild(i).setChildIndex(parent.getChild(i).getChildIndex() + 1);
-      }
+      parent.freshenParentAndChildIndexes(index + 1);
     }
   }
 

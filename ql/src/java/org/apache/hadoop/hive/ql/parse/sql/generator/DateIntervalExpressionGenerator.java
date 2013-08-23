@@ -64,26 +64,27 @@ public class DateIntervalExpressionGenerator extends BaseHiveASTGenerator {
       CommonTree dateStringNode = (CommonTree) currentSqlNode.getChild(1);
       CommonTree intervalStringNode = (CommonTree) currentSqlNode.getChild(3);
       CommonTree intervalUnitNode = (CommonTree) currentSqlNode.getChild(4);
-      if (dateStringNode.getType() != PantheraParser_PLSQLParser.CHAR_STRING ||
-          intervalStringNode.getType() != PantheraParser_PLSQLParser.CHAR_STRING ||
+      if (dateStringNode.getType() != PantheraParser_PLSQLParser.CHAR_STRING) {
+        throw new SqlXlateException(dateStringNode, "Unsupported date value expression.");
+      } else if (intervalStringNode.getType() != PantheraParser_PLSQLParser.CHAR_STRING ||
           (intervalUnitNode.getType() != PantheraParser_PLSQLParser.YEAR_VK &&
               intervalUnitNode.getType() != PantheraParser_PLSQLParser.MONTH_VK &&
           intervalUnitNode.getType() != PantheraParser_PLSQLParser.DAY_VK)) {
-        throw new SqlXlateException("Unsupported date or interval value expression.");
+        throw new SqlXlateException(intervalUnitNode, "Unsupported interval value expression.");
       }
 
       Date date;
       try {
         date = Date.valueOf(dateStringNode.getText().replace('\'', ' ').trim());
       } catch (IllegalArgumentException e) {
-        throw new SqlXlateException("Unsupported date or interval value expression.");
+        throw new SqlXlateException(dateStringNode, "Unsupported date value expression.");
       }
 
       int intervalValue;
       try {
         intervalValue = Integer.parseInt(intervalStringNode.getText().replace('\'', ' ').trim());
       } catch (NumberFormatException e) {
-        throw new SqlXlateException("Unsupported date or interval value expression.");
+        throw new SqlXlateException(intervalStringNode, "Unsupported interval value expression.");
       }
 
       int field;

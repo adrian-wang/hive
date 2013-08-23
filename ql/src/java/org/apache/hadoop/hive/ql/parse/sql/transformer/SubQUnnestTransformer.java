@@ -58,25 +58,6 @@ public class SubQUnnestTransformer extends BaseSqlASTTransformer {
   }
 
   /**
-   * Transform SQL AST tree.<br>
-   * If the transformation need to be processed with every QueryInfo by multi-threads, overload the
-   * method.(TODO can't support, because qinfo should be travel by depth-first for subquery
-   * inlineview)
-   *
-   * @deprecated
-   * @param tree
-   * @param context
-   * @throws SqlXlateException
-   *
-   */
-  @Deprecated
-  void transformQInfo(CommonTree tree, TranslateContext context) throws SqlXlateException {
-    for (QueryInfo qf : context.getqInfoList()) {
-      this.transformFilterBlock(qf, context);
-    }
-  }
-
-  /**
    * Transform inline view firstly.
    *
    * @param tree
@@ -115,7 +96,7 @@ public class SubQUnnestTransformer extends BaseSqlASTTransformer {
     }
     FilterBlock fb = qf.getFilterBlockTreeRoot();
     if (!(fb instanceof QueryBlock)) {
-      throw new SqlXlateException("Error FilterBlock tree" + fb.toStringTree());
+      throw new SqlXlateException(null, "Error FilterBlock tree" + fb.toStringTree());
     }
 
     fb.process(new FilterBlockContext(qf), context);

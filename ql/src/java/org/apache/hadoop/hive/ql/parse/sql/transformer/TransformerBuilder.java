@@ -28,8 +28,11 @@ public class TransformerBuilder {
 
   private static SqlASTTransformer tf =
       new OrderByTransformer(
+      new OrderByFunctionTransformer(
+      new IntersectTransformer(
+      new MinusTransformer(
       new PrepareQueryInfoTransformer(
-      new SetOperatorTransformer(
+      new UnionTransformer(
       new NotEqualJoinTransformer(
       new CrossJoinTransformer(
       new PrepareQueryInfoTransformer(
@@ -40,10 +43,15 @@ public class TransformerBuilder {
       new MultipleTableSelectTransformer(
       new WhereConditionOptimizationTransformer(
       new PrepareQueryInfoTransformer(
+      new UnionTransformer(
+      new IntersectTransformer(
+      new MinusTransformer(
       new NaturalJoinTransformer(
+      new AllAnyTransformer(
       new RowNumTransformer(
       new BetweenTransformer(
-      new NothingTransformer()))))))))))))))));
+      new UsingTransformer(
+      new NothingTransformer()))))))))))))))))))))))));
 
   private TransformerBuilder() {
   }

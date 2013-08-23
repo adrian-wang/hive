@@ -29,7 +29,7 @@ public class ExplainGenerator extends BaseHiveASTGenerator {
   public boolean generate(ASTNode hiveRoot, CommonTree sqlRoot, ASTNode currentHiveNode,
       CommonTree currentSqlNode, TranslateContext context) throws Exception {
     ASTNode explainNode = SqlXlateUtil.newASTNode(HiveParser.TOK_EXPLAIN, "TOK_EXPLAIN");
-    SqlXlateUtil.attachChild(currentHiveNode,explainNode);
+    currentHiveNode.addChild(explainNode);
     return generateChildren(hiveRoot, sqlRoot, explainNode, currentSqlNode, context);
   }
 
