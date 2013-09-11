@@ -58,16 +58,6 @@ Under "Project Panthera", we are building ASE, a new analytical SQL engine for H
       <td></td>
       <td>select a from x union all select a from y </td>
    </tr>
-   <tr>
-      <td>UNION</td>
-      <td></td>
-      <td>select a from x union select b from y </td>
-   </tr>
-   <tr>
-      <td>NATURAL JOIN</td>
-      <td></td>
-      <td>select a from x natural left join y </td>
-   </tr>
 </table>
 
  - You can also click [here](http://intel-hadoop.github.io/project-panthera-ase/) to see what ASE supports in detail.
