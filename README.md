@@ -24,8 +24,8 @@ Under "Project Panthera", we are building ASE, a new analytical SQL engine for H
 
 ---
 ### Feature List ###
- - Support all Hive query
- - Base on Hive Select Syntax, Panthera ASE support:
+ - 1. Support all Hive query syntax which is compatible SQL92.
+ - 2. Base on 1, Panthera ASE support:
 
 <table>
    <tr>
