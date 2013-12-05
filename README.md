@@ -1,3 +1,5 @@
+#### The main branch of this project has been moved to [branch-0.12](https://github.com/intel-hadoop/project-panthera-ase/tree/branch-0.12/README.md "branch-0.12"). ####
+
 # An Analytical SQL Engine (ASE) for Hadoop #
 
 #### Project contact: [Zhihui Li] (mailto:zhihui.li@intel.com), [Jason Dai](mailto:jason.dai@intel.com)
