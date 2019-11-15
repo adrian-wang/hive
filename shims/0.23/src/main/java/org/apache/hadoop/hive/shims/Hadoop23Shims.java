@@ -1331,7 +1331,7 @@ public class Hadoop23Shims extends HadoopShimsSecure {
 
   @Override
   public HadoopShims.HdfsEncryptionShim createHdfsEncryptionShim(FileSystem fs, Configuration conf) throws IOException {
-    if (isHdfsEncryptionSupported()) {
+    if (isHdfsEncryptionSupported() && conf.getBoolean("hive.dfs.encrypted.support.enable", false)) {
       URI uri = fs.getUri();
       if ("hdfs".equals(uri.getScheme())) {
         return new HdfsEncryptionShim(uri, conf);
