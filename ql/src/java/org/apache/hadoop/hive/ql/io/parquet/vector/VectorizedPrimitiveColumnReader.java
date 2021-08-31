@@ -455,7 +455,8 @@ public class VectorizedPrimitiveColumnReader extends BaseVectorizedColumnReader 
       readRepetitionAndDefinitionLevels();
       if (definitionLevel >= maxDefLevel) {
         c.vector[rowId] = skipProlepticConversion ?
-            dataColumn.readLong() : CalendarUtils.convertDateToProleptic((int) dataColumn.readLong());
+            dataColumn.readInteger() :
+            CalendarUtils.convertDateToProleptic((int) dataColumn.readInteger());
         if (dataColumn.isValid()) {
           c.isNull[rowId] = false;
           c.isRepeating = c.isRepeating && (c.vector[0] == c.vector[rowId]);
@@ -555,8 +556,9 @@ public class VectorizedPrimitiveColumnReader extends BaseVectorizedColumnReader 
       for (int i = rowId; i < rowId + num; ++i) {
         dc.vector[i] =
             skipProlepticConversion ?
-                dictionary.readLong((int) dictionaryIds.vector[i]) :
-                CalendarUtils.convertDateToProleptic((int) dictionary.readLong((int) dictionaryIds.vector[i]));
+                dictionary.readInteger((int) dictionaryIds.vector[i]) :
+                CalendarUtils.convertDateToProleptic(
+                    (int) dictionary.readInteger((int) dictionaryIds.vector[i]));
         if (!dictionary.isValid()) {
           setNullValue(column, i);
           dc.vector[i] = 0;

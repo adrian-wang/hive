@@ -154,8 +154,8 @@ public class VectorizedListColumnReader extends BaseVectorizedColumnReader {
     case INT:
     case BYTE:
     case SHORT:
-      return dataColumn.readInteger();
     case DATE:
+      return dataColumn.readInteger();
     case INTERVAL_YEAR_MONTH:
     case LONG:
       return dataColumn.readLong();
@@ -191,12 +191,12 @@ public class VectorizedListColumnReader extends BaseVectorizedColumnReader {
     case INT:
     case BYTE:
     case SHORT:
+    case DATE:
       resultList = new ArrayList<Integer>(total);
       for (int i = 0; i < total; ++i) {
         resultList.add(dictionary.readInteger(intList.get(i)));
       }
       break;
-    case DATE:
     case INTERVAL_YEAR_MONTH:
     case LONG:
       resultList = new ArrayList<Long>(total);
@@ -277,11 +277,6 @@ public class VectorizedListColumnReader extends BaseVectorizedColumnReader {
     setChildrenInfo(lcv, total, elementNum);
     switch (category) {
     case BOOLEAN:
-      lcv.child = new LongColumnVector(total);
-      for (int i = 0; i < valueList.size(); i++) {
-        ((LongColumnVector) lcv.child).vector[i] = ((List<Integer>) valueList).get(i);
-      }
-      break;
     case INT:
     case BYTE:
     case SHORT:
@@ -294,6 +289,7 @@ public class VectorizedListColumnReader extends BaseVectorizedColumnReader {
       }
       break;
     case DOUBLE:
+    case FLOAT:
       lcv.child = new DoubleColumnVector(total);
       for (int i = 0; i < valueList.size(); i++) {
         ((DoubleColumnVector) lcv.child).vector[i] = ((List<Double>) valueList).get(i);
@@ -308,12 +304,6 @@ public class VectorizedListColumnReader extends BaseVectorizedColumnReader {
       for (int i = 0; i < valueList.size(); i++) {
         byte[] src = ((List<byte[]>) valueList).get(i);
         ((BytesColumnVector) lcv.child).setRef(i, src, 0, src.length);
-      }
-      break;
-    case FLOAT:
-      lcv.child = new DoubleColumnVector(total);
-      for (int i = 0; i < valueList.size(); i++) {
-        ((DoubleColumnVector) lcv.child).vector[i] = ((List<Float>) valueList).get(i);
       }
       break;
     case DECIMAL:
