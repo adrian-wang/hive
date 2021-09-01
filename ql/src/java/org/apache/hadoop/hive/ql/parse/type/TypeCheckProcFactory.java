@@ -145,6 +145,7 @@ public class TypeCheckProcFactory<T> {
     WINDOWING_TOKENS.add(HiveParser.TOK_PARTITIONINGSPEC);
     WINDOWING_TOKENS.add(HiveParser.TOK_DISTRIBUTEBY);
     WINDOWING_TOKENS.add(HiveParser.TOK_SORTBY);
+    WINDOWING_TOKENS.add(HiveParser.TOK_ORDERBY);
     WINDOWING_TOKENS.add(HiveParser.TOK_CLUSTERBY);
     WINDOWING_TOKENS.add(HiveParser.TOK_WINDOWSPEC);
     WINDOWING_TOKENS.add(HiveParser.TOK_WINDOWRANGE);
@@ -1411,6 +1412,8 @@ public class TypeCheckProcFactory<T> {
       boolean isFunction = (expr.getType() == HiveParser.TOK_FUNCTION ||
           expr.getType() == HiveParser.TOK_FUNCTIONSTAR ||
           expr.getType() == HiveParser.TOK_FUNCTIONDI);
+      boolean isWindowFunc = (isFunction &&
+          ((ASTNode) expr.getChildren().get(expr.getChildCount() - 1)).getType() == HiveParser.TOK_WINDOWSPEC);
 
       if (!ctx.getAllowDistinctFunctions() && expr.getType() == HiveParser.TOK_FUNCTIONDI) {
         throw new SemanticException(
@@ -1419,9 +1422,9 @@ public class TypeCheckProcFactory<T> {
 
       // Create all children
       int childrenBegin = (isFunction ? 1 : 0);
-      List<T> children = new ArrayList<T>(
-          expr.getChildCount() - childrenBegin);
-      for (int ci = childrenBegin; ci < expr.getChildCount(); ci++) {
+      int childrenLen = (isWindowFunc ? expr.getChildCount() - 1 : expr.getChildCount());
+      List<T> children = new ArrayList<T>(childrenLen - childrenBegin);
+      for (int ci = childrenBegin; ci < childrenLen; ci++) {
         if (nodeOutputs[ci] == ALIAS_PLACEHOLDER) {
           continue;
         }
